@@ -1,97 +1,14 @@
 type: ai
 name: docsmith
-keep_text_in_tool_uses: true
 task_render_mode: collapse
+
 instructions:
   - role: system
     url: ./main-system-prompt.md
 
 input_key: message
 skills:
-  - type: function
-    name: askUserQuestion
-    description: |
-      Use this tool when you need to ask the user questions during execution. This allows you to:
-      1. Gather user preferences or requirements
-      2. Clarify ambiguous instructions
-      3. Get decisions on implementation choices as you work
-      4. Offer choices to the user about what direction to take.
-
-      Usage notes:
-      - The system automatically adds an "✏️ Other" option to all questions, allowing users to provide custom text input. DO NOT add your own "Other", "需要调整", or similar options - they will cause duplication.
-      - Only provide the specific action options (e.g., "✅ Confirm"). The "Other" option is handled by the system.
-      - Use multiSelect: true to allow multiple answers to be selected for a question
-      - If you recommend a specific option, make that the first option in the list and add "(Recommended)" at the end of the label
-    input_schema:
-      type: object
-      properties:
-        questions:
-          type: array
-          items:
-            type: object  
-            properties:
-              question:
-                type: string
-                description: The complete question to ask
-              header:
-                type: string
-                description: Short label(max 12 chars)
-              options:
-                type: array
-                items:
-                  type: string
-                description:
-                  Available choices (2 ~ 4 options)
-              # multiSelect:
-              #   type: boolean
-              #   description: Allow multiple selections
-            required:
-              - question
-              - header
-      required:
-        - questions
-    process: |
-      const {questions} = input
-
-      const answers = []
-      const OTHER_OPTION = '✏️ Other'
-
-      for (const item of questions) {
-        let answer
-
-        if (item?.options?.length) {
-          answer = await options.prompts.select({
-            message: item.question,
-            choices: [
-              ...item.options.map(option => ({
-                name: option,
-                description: option,
-                value: option
-              })),
-              {
-                name: OTHER_OPTION,
-                description: 'Enter your own response',
-                value: OTHER_OPTION
-              }
-            ]
-          })
-
-          if (answer === OTHER_OPTION) {
-            answer = await options.prompts.input({
-              message: 'Please enter your response:'
-            })
-          }
-        } else {
-          answer = await options.prompts.input({
-            message: item.question
-          })
-        }
-
-        answers.push({question: item.question, answer})
-      }
-
-      return {answers}
-
+  - type: "@aigne/agent-library/ask-user-question"
 
 afs:
   modules:
