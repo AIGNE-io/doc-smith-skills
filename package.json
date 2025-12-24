@@ -1,0 +1,17 @@
+{
+  "name": "@aigne/doc-smith",
+  "version": "0.9.8-alpha.3",
+  "description": "AI-driven documentation generation tool built on the AIGNE Framework",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "aigne.yaml",
+  "type": "module",
+  "bin": "aigne.yaml",
+  "keywords": [],
+  "author": "Arcblock <blocklet@arcblock.io> https://github.com/blocklet",
+  "license": "Elastic-2.0",
+  "dependencies": {
+    "@aigne/cli": "^1.59.0-beta.4"
+  }
+}
