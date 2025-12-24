@@ -43,17 +43,20 @@
 **处理方式：**
 1. 扫描所有文档查找 `:::PATCH` 标记
 2. 读取 PATCH 内的修改指令
-3. 执行精确替换
+3. 在指定位置完成 PATCH要求的修改，可能包含：替换原始内容、删除内容、新增内容
 4. 删除整个 PATCH 标记
 
 **PATCH 标记格式：**
 ```markdown
 ::: PATCH
-修改说明或新内容
+# Original
+DocSmith 直接修改用户文档并写回到原项目。
+
+# Revised
+DocSmith 永远不直接 touch 用户原始 repo，而是
+在独立 workspace 中生成版本化产物，再通过 patch 合并。
 :::
 ```
-
-**来源：** 仅通过文档内标记（不会出现在 Changeset 文件中）
 
 ## 三种输入方式处理
 
@@ -133,10 +136,6 @@ ls -la .aigne/doc-smith/docs/
 **执行优先级：** 全局修改 → 结构重写 → PATCH
 
 **全局修改：**
-```bash
-# 获取所有文档
-find .aigne/doc-smith/docs/ -name "*.md"
-```
 对每个文档：
 - 读取内容
 - 应用规则（替换、删除、添加）
