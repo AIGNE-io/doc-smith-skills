@@ -48,10 +48,10 @@ doc-smith-skill/
 ├── doc-smith/             # Skill 主目录
 │   ├── SKILL.md           # Skill 主文档（中文）
 │   └── references/        # 参考文档
-│       ├── document_structure_schema.md   # 文档结构 Schema
-│       ├── structure_confirmation_guide.md # 结构确认指南
-│       ├── structure_planning_guide.md    # 结构规划指南
-│       └── user_intent_guide.md           # 用户意图指南
+│       ├── document-structure-schema.md   # 文档结构 Schema
+│       ├── structure-confirmation-guide.md # 结构确认指南
+│       ├── structure-planning-guide.md    # 结构规划指南
+│       └── user-intent-guide.md           # 用户意图指南
 ├── scripts/               # 安装/卸载脚本
 │   ├── install.sh         # 安装脚本
 │   ├── uninstall.sh       # 卸载脚本
@@ -99,10 +99,10 @@ doc-smith-skill/
 
 - **SKILL.md** - Skill 完整使用指南，包含工作流程、最佳实践等
 - **references/**
-  - **document_structure_schema.md** - 文档结构 YAML 的完整 Schema 说明
-  - **structure_planning_guide.md** - 文档结构规划指南
-  - **structure_confirmation_guide.md** - 结构确认流程指南
-  - **user_intent_guide.md** - 用户意图理解指南
+  - **document-structure-schema.md** - 文档结构 YAML 的完整 Schema 说明
+  - **structure-planning-guide.md** - 文档结构规划指南
+  - **structure-confirmation-guide.md** - 结构确认流程指南
+  - **user-intent-guide.md** - 用户意图理解指南
 
 所有文档均已翻译为中文，方便理解和编辑。
 

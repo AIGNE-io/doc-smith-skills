@@ -83,7 +83,7 @@ DocSmith 永远不直接 touch 用户原始 repo，而是
 
 **重要：**
 - 格式自由，自然语言描述
-- 参见 `references\changeset_schema.md` 了解识别规则
+- 参见 `references\changeset-schema.md` 了解识别规则
 
 ### 方式 3：文档内 PATCH 标记
 

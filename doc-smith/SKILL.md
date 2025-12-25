@@ -48,31 +48,31 @@ DocSmith 分析工作区内容（代码、文件、媒体）并生成：
 ### 2. 推断用户意图
 
 首先检查用户意图文件是否已存在，如果存在向用户问询是否需要修改。
-用户意图格式参考： `references\user_intent_guide.md`
+用户意图格式参考： `references\user-intent-guide.md`
 
 ### 3. 规划文档结构
 
 首先检查文档结构文件是否已存在，如果存在执行第 5 步骤 ，向用户问询是否需要修改。
-文档结构规划要求参考： `references\structure_planning_guide.md`
+文档结构规划要求参考： `references\structure-planning-guide.md`
 
 ### 4. 生成 document_structure.yaml
 
-文档结构数据结构参考： `references\document_structure_schema.md`
+文档结构数据结构参考： `references\document-structure-schema.md`
 
 ### 5. 确认文档结构
 
-向用户展示的结构请参考： `references\structure_confirmation_guide.md`
+向用户展示的结构请参考： `references\structure-confirmation-guide.md`
 
 ### 6. 生成文档内容
 
 为结构中的每个文档在 `.aigne/doc-smith/docs/` 中创建 markdown 文件。
-文档内容生成要求参考：`references\document_content_guide.md`
+文档内容生成要求参考：`references\document-content-guide.md`
 
 ### 7. 更新已有文档
 
 仅当 `.aigne/doc-smith/docs/` 已存在时处理文档更新。
-处理流程请参考 `references\document_update_guide.md` 和 `references\changeset_schema.md`
-文档的更新需要符合文档内容的生成要求，参考：`references\document_content_guide.md`
+处理流程请参考 `references\document-update-guide.md` 和 `references\changeset-schema.md`
+文档的更新需要符合文档内容的生成要求，参考：`references\document-content-guide.md`
 
 ## 输出结构
 
@@ -93,7 +93,7 @@ DocSmith 分析工作区内容（代码、文件、媒体）并生成：
 ## 关键原则
 
 - **参考引用文件**：执行到每个步骤时，如果提供了参考文件，必须先阅读参考文件中的要求
-- **文档内容要求**：执行任何文档相关的生成、更新，都需要参考`references\document_content_guide.md`，确保文档符合要求
+- **文档内容要求**：执行任何文档相关的生成、更新，都需要参考`references\document-content-guide.md`，确保文档符合要求
 - **基于用户意图**：所有规划和生成都应参考 `user_intent.md`
 - **最小必要原则**：只生成用户意图中明确需要的文档
 - **批量执行**：生成文档内容时优先批量执行，缩短执行时间
