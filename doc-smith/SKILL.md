@@ -65,14 +65,14 @@ DocSmith 分析工作区内容（代码、文件、媒体）并生成：
 
 ### 6. 生成文档内容
 
-为结构中的每个文档在 `.aigne/doc-smith/docs/` 中创建 markdown 文件。使用 YAML 中的 `path` 作为文件路径，从 `sourcePaths` 提取信息，编写清晰、结构化的内容。
-
-在文档开头和结尾添加导航链接，引导用户阅读相关文档（开头：前置条件、父主题；结尾：相关主题、下一步、子文档）。
+为结构中的每个文档在 `.aigne/doc-smith/docs/` 中创建 markdown 文件。
+文档内容生成要求参考：`references\document_content_guide.md`
 
 ### 7. 更新已有文档
 
 仅当 `.aigne/doc-smith/docs/` 已存在时处理文档更新。
 处理流程请参考 `references\document_update_guide.md` 和 `references\changeset_schema.md`
+文档的更新需要符合文档内容的生成要求，参考：`references\document_content_guide.md`
 
 ## 输出结构
 
@@ -89,25 +89,6 @@ DocSmith 分析工作区内容（代码、文件、媒体）并生成：
     └── api/
         └── authentication.md
 ```
-
-## 媒体资源
-
-当工作区中存在媒体文件（图片、视频）时：
-
-**发现：**
-```bash
-find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.gif" -o -name "*.mp4" \)
-```
-
-**在 markdown 中引用：**
-```markdown
-![架构图](../path/to/diagram.png)
-
-<!-- 或相对于文档位置 -->
-![截图](../../screenshots/ui.png)
-```
-
-**不要复制**媒体文件。直接从它们的工作区位置引用。
 
 ## 关键原则
 
