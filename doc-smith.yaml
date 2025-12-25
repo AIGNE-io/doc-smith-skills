@@ -2,6 +2,11 @@ type: ai
 name: docsmith
 task_render_mode: collapse
 
+model:
+  cache_config:
+    autoBreakpoints:
+      lastMessage: true
+
 instructions:
   - role: system
     url: ./main-system-prompt.md
