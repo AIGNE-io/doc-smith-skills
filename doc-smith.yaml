@@ -1,4 +1,4 @@
-type: ai
+type: "@aigne/agent-library/agent-skill-manager"
 name: docsmith
 task_render_mode: collapse
 
@@ -7,9 +7,8 @@ model:
     autoBreakpoints:
       lastMessage: true
 
-instructions:
-  - role: system
-    url: ./main-system-prompt.md
+history_config:
+  enabled: true
 
 input_key: message
 skills:
@@ -17,6 +16,11 @@ skills:
 
 afs:
   modules:
+    - module: history
+      options:
+        storage:
+          url: file:./.aigne/history.db
+
     - module: local-fs
       options:
         name: workspace
