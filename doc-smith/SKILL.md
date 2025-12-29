@@ -71,8 +71,12 @@ DocSmith 分析工作区内容（代码、文件、媒体）并生成：
 ### 7. 更新已有文档
 
 仅当 `.aigne/doc-smith/docs/` 已存在时处理文档更新。
-处理流程请参考 `references\document-update-guide.md` 和 `references\changeset-schema.md`
-文档的更新需要符合文档内容的生成要求，参考：`references\document-content-guide.md`
+
+**更新流程参考：**
+- 整体流程与输入识别：`references\update-workflow.md`
+- Changeset 文件处理：`references\changeset-guide.md`
+- PATCH 标记处理：`references\patch-guide.md`
+- 文档内容要求：`references\document-content-guide.md`
 
 ## 输出结构
 
