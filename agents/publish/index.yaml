@@ -1,0 +1,24 @@
+type: team
+name: publish
+alias:
+  - pub
+  - p
+description: 发布文档到在线平台
+skills:
+  - url: ./init-config.mjs
+    default_input:
+      skipIfExists: true
+      checkOnly: true
+  - url: ./check-docs.mjs
+  - url: ./load-structure.mjs
+  - url: ./save-sidebar.mjs
+  - url: ./publish-docs.mjs
+input_schema:
+  type: object
+  properties:
+    appUrl:
+      type: string
+      description: 网站 URL（可选 - 留空则交互式设置）
+    with-branding:
+      type: boolean
+      description: 更新网站品牌信息（标题、描述、Logo）

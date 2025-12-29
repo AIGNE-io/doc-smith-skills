@@ -12,6 +12,15 @@
   "author": "Arcblock <blocklet@arcblock.io> https://github.com/blocklet",
   "license": "Elastic-2.0",
   "dependencies": {
-    "@aigne/cli": "^1.59.0-beta.4"
+    "@aigne/cli": "^1.59.0-beta.4",
+    "@aigne/publish-docs": "^0.14.3",
+    "@aigne/secrets": "^0.1.5",
+    "@blocklet/payment-broker-client": "^1.23.3",
+    "chalk": "^5.5.0",
+    "fs-extra": "^11.3.1",
+    "open": "^10.2.0",
+    "p-limit": "^7.2.0",
+    "ufo": "^1.6.1",
+    "yaml": "^2.8.0"
   }
 }
