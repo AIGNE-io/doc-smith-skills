@@ -14,6 +14,7 @@ input_key: message
 skills:
   - type: "@aigne/agent-library/ask-user-question"
   - ./agents/publish/index.yaml
+  - ./agents/bash-executor/bash-executor.mjs
 
 afs:
   modules:
