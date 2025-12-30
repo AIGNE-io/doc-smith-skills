@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import chalk from "chalk";
@@ -16,23 +17,25 @@ import { getProjectInfo, detectSystemLanguage } from "../../utils/project.mjs";
  */
 export default async function initConfig(
   {
-    outputPath = ".aigne/doc-smith",
     fileName = "config.yaml",
     skipIfExists = false,
     appUrl,
     checkOnly = false,
   } = {},
-  options,
+  options
 ) {
+  // Detect workspace mode (new structure with config.yaml in root)
+  const configPath = "./";
+
   // Check only mode
   if (checkOnly) {
-    const filePath = join(outputPath, fileName);
+    const filePath = join(configPath, fileName);
     const configContent = await readFile(filePath, "utf8").catch(() => null);
 
     if (!configContent || configContent.trim() === "") {
       console.log("⚠️  No configuration file found.");
       console.log(
-        `🚀 Configuration will be created automatically when you run the publish command.`,
+        `🚀 Configuration will be created automatically when you run the publish command.`
       );
       process.exit(0);
     }
@@ -43,7 +46,7 @@ export default async function initConfig(
 
   // Skip if exists mode
   if (skipIfExists) {
-    const filePath = join(outputPath, fileName);
+    const filePath = join(configPath, fileName);
     const configContent = await readFile(filePath, "utf8").catch(() => null);
 
     if (configContent && configContent.trim() !== "") {
@@ -64,9 +67,8 @@ export default async function initConfig(
   input.projectDesc = projectInfo.description.trim();
   input.projectLogo = projectInfo.icon;
 
-  // Set defaults
-  input.docsDir = `${outputPath}/docs`;
-  input.sourcesPath = ["./"];
+  input.docsDir = "./docs";
+  input.sourcesPath = ["sources/"];
   input.translateLanguages = [];
 
   // Generate YAML content
@@ -74,16 +76,18 @@ export default async function initConfig(
 
   // Save file
   try {
-    const filePath = join(outputPath, fileName);
+    const filePath = join(configPath, fileName);
     const dirPath = dirname(filePath);
 
     await mkdir(dirPath, { recursive: true });
     await writeFile(filePath, yamlContent, "utf8");
 
     console.log(
-      `\n✅ Configuration created successfully: ${chalk.cyan(filePath)}`,
+      `\n✅ Configuration created successfully: ${chalk.cyan(filePath)}`
     );
-    console.log("💡 You can edit this file to customize your publishing settings.\n");
+    console.log(
+      "💡 You can edit this file to customize your publishing settings.\n"
+    );
 
     if (skipIfExists) {
       const config = await loadConfigFromFile();
@@ -92,9 +96,7 @@ export default async function initConfig(
 
     return {};
   } catch (error) {
-    console.error(
-      `❌ Failed to create configuration file: ${error.message}`,
-    );
+    console.error(`❌ Failed to create configuration file: ${error.message}`);
     return {
       inputGeneratorStatus: false,
       inputGeneratorError: error.message,

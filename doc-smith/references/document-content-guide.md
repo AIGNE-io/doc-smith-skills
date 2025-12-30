@@ -4,7 +4,7 @@
 
 ## 基本要求
 
-为结构中的每个文档在 `.aigne/doc-smith/docs/` 中创建 markdown 文件：
+为结构中的每个文档在 `docs/` 目录中创建 markdown 文件：
 - 使用 YAML 中的 `path` 作为文件路径
 - 从 `sourcePaths` 提取信息
 - 编写清晰、结构化的内容
@@ -36,7 +36,7 @@
 
 #### 1. 确定文档输出目录
 
-从 `document-structure.yaml` 的文档配置中读取，文档输出目录固定为：`.aigne/doc-smith/docs/`
+从 `planning/document-structure.yaml` 的文档配置中读取，文档输出目录固定为：`docs/`
 
 #### 2. 查找所有媒体文件
 
@@ -59,19 +59,19 @@ find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.g
 ```
 
 **层级对照表：**
-- 文档在 `docs/` → 3层 → `../../../`
-- 文档在 `docs/api/` → 4层 → `../../../../`
-- 文档在 `docs/api/auth/` → 5层 → `../../../../../`
+- 文档在 `docs/` → 1层 → `../`
+- 文档在 `docs/api/` → 2层 → `../../`
+- 文档在 `docs/api/auth/` → 3层 → `../../../`
 - 规律：每增加一层子目录，增加一个 `../`
 
 **示例：**
-- 文档：`.aigne/doc-smith/docs/getting-started.md`（3层）
-- 图片：`./assets/run/screenshot.png`
-- 结果：`../../../assets/run/screenshot.png`
+- 文档：`docs/getting-started.md`（1层）
+- 图片：在 workspace 的 `sources/my-project/assets/run/screenshot.png`
+- 结果：`../sources/my-project/assets/run/screenshot.png`
 
 **常见错误：**
-- ❌ 层级数数错（`docs/` 用了 `../../` 而非 `../../../`）
-- ❌ 忘记计算子目录（`docs/api/` 用了 3层而非 4层）
+- ❌ 层级数数错（`docs/` 用了 `../../` 而非 `../`）
+- ❌ 忘记计算子目录（`docs/api/` 用了 1层而非 2层）
 
 ### 生成文档时的图片处理
 

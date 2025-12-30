@@ -12,7 +12,7 @@ project:
 documents:                    # 必需：文档对象数组
   - title: "文档标题"         # 必需：文档标题
     description: "简要摘要"   # 必需：此文档涵盖的内容
-    path: "/filename.md"      # 必需：相对于 .aigne/doc-smith/docs/ 的路径
+    path: "/filename.md"      # 必需：相对于 docs/ 的路径
                               # 示例：/overview.md, /getting-started.md, /api/authentication.md
     sourcePaths:              # 必需：源文件路径数组（相对路径，不使用 'workspace:' 前缀）
       - "src/main.py"         # 为此文档内容提供信息的文件
@@ -41,7 +41,7 @@ documents:                    # 必需：文档对象数组
 
 - **title**（必需）：文档的显示标题
 - **description**（必需）：内容简要摘要
-- **path**（必需）：相对于 `.aigne/doc-smith/docs/` 的文件路径
+- **path**（必需）：相对于 `docs/` 的文件路径
   - 必须以 `/` 开头
   - 必须以 `.md` 结尾
   - 可以包含子目录：`/api/endpoints.md`

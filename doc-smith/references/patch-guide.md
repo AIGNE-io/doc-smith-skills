@@ -55,7 +55,7 @@ PATCH 是**文档内的确定性文本改动标记**，只执行准确的变更�
 
 ```bash
 pattern: ":::\s*PATCH"
-path: .aigne/doc-smith/docs/
+path: docs/
 output_mode: files_with_matches
 ```
 
@@ -65,7 +65,7 @@ output_mode: files_with_matches
 1. 解析 PATCH 类型（替换/插入/删除）
 2. 定位目标位置
 3. 执行变更
-4. **删除整个 `:::PATCH ... :::` 块**
+4. **删除整个 `::: PATCH ... :::` 块**
 
 ### 3. 处理错误
 
@@ -79,7 +79,7 @@ output_mode: files_with_matches
 
 - **优先级**：PATCH 先于结构重写执行
 - **批量处理**：一次性扫描所有文档
-- **必须删除标记**：执行后删除 `:::PATCH ... :::` 块，避免重复执行
+- **必须删除标记**：执行后删除 `::: PATCH ... :::` 块，避免重复执行
 
 ## 与 Changeset 的关系
 

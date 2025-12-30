@@ -34,7 +34,7 @@ export default async function publishDocs(
     projectName,
     projectDesc,
     projectLogo,
-    outputDir = ".aigne/doc-smith/output",
+    outputDir = "./planning",
     "with-branding": withBrandingOption,
   },
   options
@@ -46,7 +46,9 @@ export default async function publishDocs(
     // Load document structure from output directory
     const documentStructure = await loadDocumentStructure(outputDir);
     if (!documentStructure || documentStructure.length === 0) {
-      console.warn("⚠️  No document structure found. Sidebar generation may be limited.");
+      console.warn(
+        "⚠️  No document structure found. Sidebar generation may be limited."
+      );
     }
 
     // move work dir to tmp-dir
@@ -341,7 +343,8 @@ publishDocs.input_schema = {
     },
     outputDir: {
       type: "string",
-      description: "Output directory containing document structure file (default: .aigne/doc-smith/output).",
+      description:
+        "Output directory containing document structure file (default: ./planning).",
     },
     appUrl: {
       type: "string",

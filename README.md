@@ -71,28 +71,74 @@ doc-smith-skill/
 
 ### 2. 使用 Skill
 
-在任何项目中打开 Claude Code，输入：
+#### Workspace 模式 (推荐)
+
+DocSmith 现在使用独立 workspace 目录，不会污染源仓库。
+
+**创建并使用 workspace：**
+
+```bash
+# 1. 创建空目录作为 workspace
+mkdir my-docs-workspace
+cd my-docs-workspace
+
+# 2. 打开 Claude Code 并执行 doc-smith
+# 输入: 使用 doc-smith 生成文档
+```
+
+**初始化流程：**
+DocSmith 会引导你完成初始化：
+1. 询问输出语言（如：zh、en）
+2. 询问源仓库 Git URL（可选，如果源代码在本地可不提供）
+3. 自动创建目录结构
+4. 自动添加源仓库为 git submodule（如果提供了 URL）
+5. 生成 config.yaml 配置文件
+6. 初始化 git 仓库并提交
+
+**后续操作：**
+DocSmith 会：
+1. 分析源仓库内容
+2. 推断用户意图
+3. 规划文档结构
+4. 生成结构化的 Markdown 文档
+5. 询问是否提交到 Git
+
+### 3. Workspace 目录结构
 
 ```
-使用 doc-smith skill 为当前仓库生成文档
+my-docs-workspace/              # 独立 workspace 目录
+├── config.yaml                 # workspace 配置文件
+├── sources/                    # 源仓库 (git submodule)
+│   └── my-project/
+├── intent/
+│   └── user-intent.md          # 用户意图描述
+├── planning/
+│   └── document-structure.yaml # 文档结构计划
+├── docs/                       # 生成的文档
+│   ├── overview.md
+│   ├── getting-started.md
+│   └── api/
+│       └── authentication.md
+└── cache/                      # 临时数据 (不纳入 git)
 ```
 
-然后根据提示操作，DocSmith 会：
-1. 分析你的工作区
-2. 规划文档结构
-3. 生成 `document-structure.yaml`
-4. 创建结构化的 Markdown 文档
+### 4. 版本管理
 
-### 3. 查看生成的文档
+Workspace 是一个独立的 Git 仓库，支持完整的版本管理：
 
-所有文档将生成在：
+```bash
+# 查看历史
+git log
 
-```
-.aigne/doc-smith/
-├── output/
-│   └── document-structure.yaml    # 文档结构定义
-└── docs/
-    └── [生成的文档文件]
+# 查看变更
+git diff
+
+# 回滚版本
+git revert <commit-hash>
+
+# 推送到远程仓库（可选）
+git remote add origin <your-repo-url>
+git push -u origin main
 ```
 
 ## 文档说明
@@ -134,8 +180,16 @@ cp -r doc-smith ~/.claude/skills/
 ## 注意事项
 
 - 确保 Claude Code 已正确安装
-- Skill 需要访问工作区文件
-- 生成的文档会创建在 `.aigne/doc-smith/` 目录
+- 确保 Git 已安装（用于 submodule 和版本管理）
+- Workspace 需要在空目录中初始化
+- 生成的文档在独立的 workspace 目录中，不会污染源仓库
+
+## 迁移说明
+
+如果你之前使用过旧版本（`.aigne/doc-smith/` 目录结构），建议：
+1. 创建新的 workspace 目录
+2. 重新生成文档
+3. 旧版本数据可以手动迁移到新的 workspace 目录结构中
 
 ## 支持
 
