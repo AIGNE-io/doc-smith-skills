@@ -1,6 +1,6 @@
 ---
 name: doc-smith
-description: "从工作区数据源生成和更新全面的文档，包括代码仓库、文本文件和媒体资源。当用户请求以下操作时使用此技能：(1) 从代码或文件创建或生成文档，(2) 构建文档结构或文档详情，(3) 分析工作区内容以生成有组织的文档，(4) 将代码/项目内容转换为可读文档，(5) 更新、修改或改进已有文档，(6) 应用术语统一、风格调整等全局修改，(7) 重写文档的特定章节或段落，(8) 处理 changeset 文件或 PATCH 标记的修改请求。支持技术文档、用户指南、API 参考和一般文档需求的生成与维护。"
+description: "从工作区数据源生成和更新全面的文档，包括代码仓库、文本文件和媒体资源。当用户请求以下操作时使用此技能：(1) 从代码或文件创建或生成文档，(2) 构建文档结构或文档详情，(3) 更新、修改或改进已有文档，(4) 重写文档的特定章节或段落，(5) 处理 changeset 文件或 PATCH 标记的修改请求。支持技术文档、用户指南、API 参考和一般文档需求的生成与维护。"
 ---
 
 # DocSmith
@@ -48,25 +48,25 @@ DocSmith 分析工作区内容（代码、文件、媒体）并生成：
 ### 2. 推断用户意图
 
 首先检查用户意图文件是否已存在，如果存在向用户问询是否需要修改。
-用户意图格式参考： `references\user-intent-guide.md`
+用户意图格式**必须**参考： `references\user-intent-guide.md`
 
 ### 3. 规划文档结构
 
 首先检查文档结构文件是否已存在，如果存在执行第 5 步骤 ，向用户问询是否需要修改。
-文档结构规划要求参考： `references\structure-planning-guide.md`
+文档结构规划要求**必须**参考： `references\structure-planning-guide.md`
 
 ### 4. 生成 document-structure.yaml
 
-文档结构数据结构参考： `references\document-structure-schema.md`
+文档结构数据结构**必须**参考： `references\document-structure-schema.md`
 
 ### 5. 确认文档结构
 
-向用户展示的结构请参考： `references\structure-confirmation-guide.md`
+向用户展示的结构**必须**参考： `references\structure-confirmation-guide.md`
 
 ### 6. 生成文档内容
 
 为结构中的每个文档在 `.aigne/doc-smith/docs/` 中创建 markdown 文件。
-文档内容生成要求参考：`references\document-content-guide.md`
+文档内容生成要求**必须**参考：`references\document-content-guide.md`
 
 ### 7. 更新已有文档
 
@@ -75,8 +75,12 @@ DocSmith 分析工作区内容（代码、文件、媒体）并生成：
 **更新流程参考：**
 - 整体流程与输入识别：`references\update-workflow.md`
 - Changeset 文件处理：`references\changeset-guide.md`
-- PATCH 标记处理：`references\patch-guide.md`
+- PATCH 标记处理 (每次文档更新都需要检查文档中是否有 PATCH 需要处理)：`references\patch-guide.md`
 - 文档内容要求：`references\document-content-guide.md`
+
+如果涉及文档结构的修改，需要参考以下信息：
+- 文档结构数据结构参考： `document-structure-schema.md`
+- 向用户展示的结构请参考： `structure-confirmation-guide.md`
 
 ## 输出结构
 
