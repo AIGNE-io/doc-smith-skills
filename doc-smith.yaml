@@ -1,6 +1,8 @@
 type: "@aigne/agent-library/agent-skill-manager"
 name: docsmith
 task_render_mode: collapse
+instructions:
+  url: ./prompt/doc-smith.md
 
 model:
   cache_config:
