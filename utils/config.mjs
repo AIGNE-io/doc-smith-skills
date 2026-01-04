@@ -39,9 +39,7 @@ function handleStringValueUpdate(key, value, comment, fileContent) {
 
   const yamlObject = { [key]: value };
   const yamlContent = yamlStringify(yamlObject).trim();
-  const formattedValue = yamlContent
-    .substring(yamlContent.indexOf(":") + 1)
-    .trim();
+  const formattedValue = yamlContent.substring(yamlContent.indexOf(":") + 1).trim();
 
   const lines = fileContent.split("\n");
   const keyRegex = new RegExp(`^${key}:\\s*`);
@@ -77,19 +75,13 @@ function handleArrayValueUpdate(key, value, comment, fileContent) {
   const formattedValue = yamlContent;
 
   const lines = fileContent.split("\n");
-  const keyStartIndex = lines.findIndex((line) =>
-    line.match(new RegExp(`^${key}:\\s*`))
-  );
+  const keyStartIndex = lines.findIndex((line) => line.match(new RegExp(`^${key}:\\s*`)));
 
   if (keyStartIndex !== -1) {
     let keyEndIndex = keyStartIndex;
     for (let i = keyStartIndex + 1; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (
-        line === "" ||
-        line.startsWith("#") ||
-        (!line.startsWith("- ") && !line.match(/^\w+:/))
-      ) {
+      if (line === "" || line.startsWith("#") || (!line.startsWith("- ") && !line.match(/^\w+:/))) {
         if (!line.startsWith("- ")) {
           keyEndIndex = i - 1;
           break;
@@ -119,17 +111,9 @@ function handleArrayValueUpdate(key, value, comment, fileContent) {
     }
 
     const replacementLines = formattedValue.split("\n");
-    lines.splice(
-      keyStartIndex,
-      keyEndIndex - keyStartIndex + 1,
-      ...replacementLines
-    );
+    lines.splice(keyStartIndex, keyEndIndex - keyStartIndex + 1, ...replacementLines);
 
-    if (
-      comment &&
-      keyStartIndex > 0 &&
-      !lines[keyStartIndex - 1].trim().startsWith("# ")
-    ) {
+    if (comment && keyStartIndex > 0 && !lines[keyStartIndex - 1].trim().startsWith("# ")) {
       lines.splice(keyStartIndex, 0, `# ${comment}`);
     }
   } else {
@@ -171,12 +155,7 @@ export async function saveValueToConfig(key, value, comment) {
     if (Array.isArray(value)) {
       updatedContent = handleArrayValueUpdate(key, value, comment, fileContent);
     } else {
-      updatedContent = handleStringValueUpdate(
-        key,
-        value,
-        comment,
-        fileContent
-      );
+      updatedContent = handleStringValueUpdate(key, value, comment, fileContent);
     }
 
     await fs.writeFile(configPath, updatedContent);
@@ -198,8 +177,7 @@ export function generateConfigYAML(input) {
     projectDesc: (input.projectDesc || "").trim(),
     projectLogo: input.projectLogo || "",
     locale: input.locale || "en",
-    translateLanguages:
-      input.translateLanguages?.filter((lang) => lang.trim()) || [],
+    translateLanguages: input.translateLanguages?.filter((lang) => lang.trim()) || [],
     docsDir: input.docsDir || "./docs",
     sourcesPath: input.sourcesPath || [],
     source: input.source || null,
@@ -231,8 +209,7 @@ export function generateConfigYAML(input) {
     }).trim();
     yaml += `${translateLanguagesSection}\n`;
   } else {
-    yaml +=
-      "# translateLanguages:  # A list of languages to translate the documentation to.\n";
+    yaml += "# translateLanguages:  # A list of languages to translate the documentation to.\n";
     yaml += "#   - zh  # Example: Chinese translation\n";
     yaml += "#   - en  # Example: English translation\n";
   }

@@ -7,6 +7,8 @@ agents:
   - doc-smith.yaml
   - agents/publish/index.yaml
   # - agents/preload-i18n.mjs
+  - agents/document-checker/structure-checker.mjs
+  - agents/document-checker/content-checker.mjs
 
 cli:
   agents:

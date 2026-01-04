@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import chalk from "chalk";
@@ -16,13 +15,8 @@ import { getProjectInfo, detectSystemLanguage } from "../../utils/project.mjs";
  * @returns {Promise<Object>} - Configuration object
  */
 export default async function initConfig(
-  {
-    fileName = "config.yaml",
-    skipIfExists = false,
-    appUrl,
-    checkOnly = false,
-  } = {},
-  options
+  { fileName = "config.yaml", skipIfExists = false, appUrl, checkOnly = false } = {},
+  _options,
 ) {
   // Detect workspace mode (new structure with config.yaml in root)
   const configPath = "./";
@@ -35,7 +29,7 @@ export default async function initConfig(
     if (!configContent || configContent.trim() === "") {
       console.log("⚠️  No configuration file found.");
       console.log(
-        `🚀 Configuration will be created automatically when you run the publish command.`
+        `🚀 Configuration will be created automatically when you run the publish command.`,
       );
       process.exit(0);
     }
@@ -82,12 +76,8 @@ export default async function initConfig(
     await mkdir(dirPath, { recursive: true });
     await writeFile(filePath, yamlContent, "utf8");
 
-    console.log(
-      `\n✅ Configuration created successfully: ${chalk.cyan(filePath)}`
-    );
-    console.log(
-      "💡 You can edit this file to customize your publishing settings.\n"
-    );
+    console.log(`\n✅ Configuration created successfully: ${chalk.cyan(filePath)}`);
+    console.log("💡 You can edit this file to customize your publishing settings.\n");
 
     if (skipIfExists) {
       const config = await loadConfigFromFile();

@@ -1,44 +1,42 @@
-import chalk from "chalk";
-import { getMainLanguageFiles } from "../../utils/docs.mjs";
+import checkStructure from "../document-checker/structure-checker.mjs";
+import checkContent from "../document-checker/content-checker.mjs";
 
 /**
- * Check if documents exist in the docs directory
- * @param {Object} params
- * @param {string} params.docsDir - Documentation directory
- * @param {string} params.locale - Main language locale
- * @param {Array} params.documentStructure - Document structure
- * @returns {Promise<Object>} - Result object
+ * Check document structure and content before publishing
+ * @returns {Promise<Object>} - Result object with valid flag and message
  */
-export default async function checkDocs({ docsDir = "./docs" }) {
-  const mainLanguageFiles = await getMainLanguageFiles(docsDir);
+export default async function checkDocs() {
+  // 1. Check document structure
+  const structureResult = await checkStructure();
 
-  if (mainLanguageFiles.length === 0) {
-    console.log(`⚠️  No documents found in the docs directory.`);
-    console.log(`💡 Please generate documentation first before publishing.`);
-    process.exit(0);
+  // If structure check failed and not fixed, return error
+  if (!structureResult.valid && !structureResult.fixed) {
+    return {
+      valid: false,
+      message: structureResult.message,
+    };
+  }
+
+  // 2. Check document content
+  const contentResult = await checkContent();
+
+  // If content check failed and not fixed, return error
+  if (!contentResult.valid && !contentResult.fixed) {
+    return {
+      valid: false,
+      message: contentResult.message,
+    };
   }
 
   return {
-    message: `Found ${mainLanguageFiles.length} document(s) in the docs directory`,
+    valid: true,
+    message: "✅ Document structure and content check passed.",
   };
 }
 
-checkDocs.description = "Check if documents exist before publishing";
+checkDocs.description = "Check document structure and content before publishing";
 
 checkDocs.input_schema = {
   type: "object",
-  properties: {
-    docsDir: {
-      type: "string",
-      description: "Documentation directory",
-    },
-    locale: {
-      type: "string",
-      description: "Main language locale",
-    },
-    documentStructure: {
-      type: "array",
-      description: "Document structure",
-    },
-  },
+  properties: {},
 };

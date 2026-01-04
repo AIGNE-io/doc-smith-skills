@@ -17,6 +17,8 @@ skills:
   - type: "@aigne/agent-library/ask-user-question"
   - ./agents/publish/index.yaml
   - ./agents/bash-executor/bash-executor.mjs
+  - ./agents/document-checker/structure-checker.mjs
+  - ./agents/document-checker/content-checker.mjs
 
 afs:
   modules:

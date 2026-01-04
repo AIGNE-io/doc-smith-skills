@@ -10,12 +10,9 @@ export default async function preloadI18n(_, options) {
   - **API 层**: Express 4.21 + TypeScript,提供 RESTful 接口、DID 认证和速率限制
   - **引擎层**: Puppeteer + 队列系统 + SQLite,负责核心自动化和数据存储
     `;
-  const resultWriter = await this.afs.write(
-    "/modules/doc-smith/docs/getting-started-image.md",
-    {
-      content,
-    }
-  );
+  const _resultWriter = await this.afs.write("/modules/doc-smith/docs/getting-started-image.md", {
+    content,
+  });
 
   const image = await this.afs.getImageBySlot(
     "/modules/doc-smith/docs/getting-started-image.md",
@@ -25,18 +22,15 @@ export default async function preloadI18n(_, options) {
         format: "jpg",
       },
       context: options.context,
-    }
+    },
   );
 
-  const result = await this.afs.read(
-    "/modules/doc-smith/docs/getting-started.md",
-    {
-      view: {
-        language: "en",
-      },
-      context: options.context,
-    }
-  );
+  const result = await this.afs.read("/modules/doc-smith/docs/getting-started.md", {
+    view: {
+      language: "en",
+    },
+    context: options.context,
+  });
 
   return {
     i18n: {
@@ -52,9 +46,8 @@ preloadI18n.afs = {
       module: "local-fs",
       options: {
         name: "doc-smith",
-        localPath: "${CWD}/.aigne/doc-smith",
-        description:
-          "The Doc Smith workspace for storing intermediate and output files",
+        localPath: `${process.cwd()}/.aigne/doc-smith`,
+        description: "The Doc Smith workspace for storing intermediate and output files",
       },
     },
   ],

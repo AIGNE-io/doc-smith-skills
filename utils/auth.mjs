@@ -5,11 +5,7 @@ import { createConnect } from "@aigne/cli/utils/aigne-hub/credential.js";
 import chalk from "chalk";
 import open from "open";
 import { joinURL, withQuery } from "ufo";
-import {
-  ComponentNotFoundError,
-  getComponentMountPoint,
-  InvalidBlockletError,
-} from "./http.mjs";
+import { ComponentNotFoundError, getComponentMountPoint, InvalidBlockletError } from "./http.mjs";
 import {
   BLOCKLET_ADD_COMPONENT_DOCS,
   CLOUD_SERVICE_URL_PROD,

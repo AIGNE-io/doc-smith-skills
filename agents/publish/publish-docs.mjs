@@ -35,9 +35,21 @@ export default async function publishDocs(
     projectLogo,
     outputDir = "./planning",
     "with-branding": withBrandingOption,
+    valid,
+    message: checkMessage,
   },
-  options
+  options,
 ) {
+  // Check if document validation passed
+  if (valid === false) {
+    return {
+      message:
+        `❌ Document validation failed. Publishing has been cancelled.\n\n` +
+        `${checkMessage || ""}\n\n` +
+        `💡 Please fix the issues above and retry publishing when the document check passes.`,
+    };
+  }
+
   const rawDocsDir = "./docs";
   let message;
   let shouldWithBranding = withBrandingOption || false;
@@ -46,9 +58,7 @@ export default async function publishDocs(
     // Load document structure from output directory
     const documentStructure = await loadDocumentStructure(outputDir);
     if (!documentStructure || documentStructure.length === 0) {
-      console.warn(
-        "⚠️  No document structure found. Sidebar generation may be limited."
-      );
+      console.warn("⚠️  No document structure found. Sidebar generation may be limited.");
     }
 
     // move work dir to tmp-dir
@@ -134,16 +144,14 @@ export default async function publishDocs(
       if (choice === "custom") {
         console.log(
           `${chalk.bold("\n💡 Tips")}\n\n` +
-            `Start here to run your own website:\n${chalk.cyan(DISCUSS_KIT_STORE_URL)}\n`
+            `Start here to run your own website:\n${chalk.cyan(DISCUSS_KIT_STORE_URL)}\n`,
         );
         const userInput = await options.prompts.input({
           message: "Please enter the URL of your website:",
           validate: (input) => {
             try {
               // Check if input contains protocol, if not, prepend https://
-              const urlWithProtocol = input.includes("://")
-                ? input
-                : `https://${input}`;
+              const urlWithProtocol = input.includes("://") ? input : `https://${input}`;
               new URL(urlWithProtocol);
               return true;
             } catch {
@@ -166,19 +174,18 @@ export default async function publishDocs(
         if (options?.prompts?.confirm) {
           if (shouldSyncBranding === void 0) {
             shouldSyncBranding = await options.prompts.confirm({
-              message:
-                "Would you like to update the project branding (title, description, logo)?",
+              message: "Would you like to update the project branding (title, description, logo)?",
               default: true,
             });
             await saveValueToConfig(
               "shouldSyncBranding",
               shouldSyncBranding,
-              "Should sync branding for documentation"
+              "Should sync branding for documentation",
             );
             shouldWithBranding = shouldSyncBranding;
           } else {
             console.log(
-              `Would you like to update the project branding (title, description, logo)? ${chalk.cyan(shouldSyncBranding ? "Yes" : "No")}`
+              `Would you like to update the project branding (title, description, logo)? ${chalk.cyan(shouldSyncBranding ? "Yes" : "No")}`,
             );
           }
         }
@@ -215,14 +222,10 @@ export default async function publishDocs(
 
     const appUrlInfo = new URL(appUrl);
 
-    const discussKitMountPoint = await getDiscussKitMountPoint(
-      appUrlInfo.origin
-    );
+    const discussKitMountPoint = await getDiscussKitMountPoint(appUrlInfo.origin);
     const discussKitUrl = joinURL(appUrlInfo.origin, discussKitMountPoint);
 
-    console.log(
-      `\nPublishing your documentation to ${chalk.cyan(discussKitUrl)}`
-    );
+    console.log(`\nPublishing your documentation to ${chalk.cyan(discussKitUrl)}`);
 
     const accessToken = await getAccessToken(appUrlInfo.origin, token, locale);
 
@@ -237,11 +240,8 @@ export default async function publishDocs(
       description: projectDesc || config?.projectDesc || "",
       icon: projectLogo || config?.projectLogo || "",
     };
-    let finalPath = null;
 
-    console.log(
-      `Publishing docs collection: ${chalk.cyan(projectInfo.name || boardId)}\n`
-    );
+    console.log(`Publishing docs collection: ${chalk.cyan(projectInfo.name || boardId)}\n`);
 
     // Skip image download - use icon URL directly
     if (shouldWithBranding) {
@@ -293,16 +293,8 @@ export default async function publishDocs(
       }
       message = `✅ Documentation published successfully!\n📖 Docs available at: ${chalk.cyan(docsUrl)}`;
 
-      await saveValueToConfig(
-        "checkoutId",
-        "",
-        "Checkout ID for document deployment service"
-      );
-      await saveValueToConfig(
-        "shouldSyncBranding",
-        "",
-        "Should sync branding for documentation"
-      );
+      await saveValueToConfig("checkoutId", "", "Checkout ID for document deployment service");
+      await saveValueToConfig("shouldSyncBranding", "", "Should sync branding for documentation");
     } else {
       // If the error is 401 or 403, it means the access token is invalid
       try {
@@ -337,14 +329,21 @@ export default async function publishDocs(
 publishDocs.input_schema = {
   type: "object",
   properties: {
+    valid: {
+      type: "boolean",
+      description: "Whether the document validation passed (from check-docs).",
+    },
+    message: {
+      type: "string",
+      description: "Message from document validation (from check-docs).",
+    },
     docsDir: {
       type: "string",
       description: "The directory of the documentation.",
     },
     outputDir: {
       type: "string",
-      description:
-        "Output directory containing document structure file (default: ./planning).",
+      description: "Output directory containing document structure file (default: ./planning).",
     },
     appUrl: {
       type: "string",
@@ -356,8 +355,7 @@ publishDocs.input_schema = {
     },
     "with-branding": {
       type: "boolean",
-      description:
-        "Update the website branding (title, description, and logo).",
+      description: "Update the website branding (title, description, and logo).",
     },
     projectName: {
       type: "string",

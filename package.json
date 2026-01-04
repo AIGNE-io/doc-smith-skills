@@ -6,6 +6,8 @@
     "access": "public"
   },
   "scripts": {
+    "lint": "biome lint && biome format",
+    "lint:fix": "biome lint --write && biome format --write",
     "update:deps": "npx -y taze major -r -w -f -n '/@abtnode|@aigne|@arcblock|@blocklet|@did-connect|@did-pay|@did-space|@nft-store|@nft-studio|@ocap/' && pnpm install && pnpm run deduplicate",
     "deduplicate": "pnpm dedupe"
   },
@@ -26,5 +28,8 @@
     "p-limit": "^7.2.0",
     "ufo": "^1.6.1",
     "yaml": "^2.8.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.4"
   }
 }
