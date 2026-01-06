@@ -4,11 +4,34 @@
 
 ## 基本要求
 
-为结构中的每个文档在 `docs/` 目录中创建 markdown 文件：
-- 使用 YAML 中的 `path` 作为文件路径
+为结构中的每个文档在 `docs/` 目录中创建文档文件夹和文件：
+- 使用 YAML 中的 `path` 创建文件夹
+- 生成 `.meta.yaml` 元信息文件
+- 生成语言版本的 markdown 文件
 - 从 `sourcePaths` 提取信息
 - 编写清晰、结构化的内容
 - **在生成文档内容时主动添加图片**（参见"媒体资源"章节）
+
+## 文档生成步骤
+
+### 6.1 读取配置
+
+读取 `config.yaml` 获取输出语言(locale)：
+
+### 6.2 使用 saveDocument 工具
+
+**重要**：新增文档时，必须使用 `saveDocument` 工具，不要手动创建文件和文件夹。
+**工具功能**：
+- 自动创建文档文件夹（`docs/overview/`）
+- 自动生成 `.meta.yaml`：
+- 自动保存语言文件（`docs/overview/zh.md`）
+
+### 6.3 编辑已有文档
+
+直接使用 Edit 工具修改对应的语言文件：
+### 6.4 批量生成
+
+为提高效率，批量生成多个文档内容，然后批量调用 saveDocument。
 
 ## 导航链接
 
@@ -59,15 +82,14 @@ find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.g
 ```
 
 **层级对照表：**
-- 文档在 `docs/` → 1层 → `../`
-- 文档在 `docs/api/` → 2层 → `../../`
-- 文档在 `docs/api/auth/` → 3层 → `../../../`
-- 规律：每增加一层子目录，增加一个 `../`
+- 文档在 `docs/overview/` → 2层（文件夹 + 语言文件） → `../../`
+- 文档在 `docs/api/authentication/` → 3层 → `../../../`
+- 规律：文件夹层级 + 1（语言文件在文件夹内）
 
 **示例：**
-- 文档：`docs/getting-started.md`（1层）
+- 文档：`docs/getting-started/zh.md`（2层）
 - 图片：在 workspace 的 `sources/my-project/assets/run/screenshot.png`
-- 结果：`../sources/my-project/assets/run/screenshot.png`
+- 结果：`../../sources/my-project/assets/run/screenshot.png`
 
 **常见错误：**
 - ❌ 层级数数错（`docs/` 用了 `../../` 而非 `../`）
@@ -123,7 +145,6 @@ find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.g
 
 1. **层次清晰**：使用恰当的标题层级（H1-H6）
 2. **段落简洁**：每个段落专注于单一主题
-3. **描述丰富**：每个段落提详细描述，帮助用户理解主题
-3. **代码示例**：提供实用的代码示例和说明
+3. **描述丰富**：每个段落有详细描述，帮助用户理解主题
 4. **列表使用**：用列表组织并列信息
 5. **强调重点**：使用粗体、引用等方式突出重要信息

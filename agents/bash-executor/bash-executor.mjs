@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 /**
  * 虚拟 Bash 执行器 - Git 专用
  * 支持的命令类型:
- * - Git 操作: init, clone, config, status, log, diff, branch, show, add, commit, fetch, pull, submodule
+ * - Git 操作: init, config, status, log, diff, branch, show, add, commit, fetch, pull, submodule
  *
  * 安全限制:
  * - 仅支持 git 命令,不支持其他 shell 命令
@@ -17,7 +17,6 @@ const ALLOWED_COMMANDS = {
   git: {
     // 初始化和克隆
     init: true,
-    clone: true,
 
     // 配置命令
     config: true,
@@ -39,6 +38,18 @@ const ALLOWED_COMMANDS = {
 
     // 子模块命令
     submodule: true,
+  },
+};
+
+// 需要重试的命令配置
+const RETRY_COMMANDS = {
+  git: {
+    submodule: {
+      update: {
+        maxRetries: 3, // 最大重试次数
+        retryDelay: 2000, // 重试间隔(毫秒)
+      },
+    },
   },
 };
 
@@ -66,7 +77,37 @@ function validateCommand(command, args = []) {
 }
 
 /**
- * 执行单个命令
+ * 检查命令是否需要重试
+ * @param {string} command - 命令名称(如 "git")
+ * @param {Array} args - 参数列表
+ * @returns {Object|null} - 重试配置或 null
+ */
+function getRetryConfig(command, args) {
+  if (command !== "git" || args.length < 2) {
+    return null;
+  }
+
+  const subCommand = args[0].toLowerCase();
+  const subSubCommand = args[1]?.toLowerCase();
+
+  // 检查是否在重试配置中
+  const retryConfig = RETRY_COMMANDS.git?.[subCommand]?.[subSubCommand];
+  return retryConfig || null;
+}
+
+/**
+ * 延迟执行
+ * @param {number} ms - 延迟毫秒数
+ */
+function sleep(ms) {
+  const start = Date.now();
+  while (Date.now() - start < ms) {
+    // 忙等待
+  }
+}
+
+/**
+ * 执行单个命令(带重试机制)
  */
 function executeCommand(command, args = []) {
   try {
@@ -76,29 +117,49 @@ function executeCommand(command, args = []) {
     // 构建完整命令用于显示和日志
     const fullCommand = [command, ...args].join(" ");
 
-    // 使用 spawnSync 可以同时捕获 stdout 和 stderr
-    const result = spawnSync(command, args, {
-      encoding: "utf-8",
-      maxBuffer: 10 * 1024 * 1024, // 10MB
-      timeout: 60000, // 60秒超时
-    });
+    // 检查是否需要重试
+    const retryConfig = getRetryConfig(command, args);
+    const maxRetries = retryConfig ? retryConfig.maxRetries : 0;
+    const retryDelay = retryConfig ? retryConfig.retryDelay : 0;
 
-    // 检查是否执行成功
-    if (result.status === 0 && !result.error) {
-      return {
-        success: true,
-        command: fullCommand,
-        output: result.stdout?.trim() || "",
-        error: result.stderr?.trim() || "", // 即使成功也返回 stderr,可能包含警告信息
-      };
+    let lastResult = null;
+
+    // 执行命令,失败时重试
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      // 如果是重试(不是第一次),先等待
+      if (attempt > 0) {
+        sleep(retryDelay);
+      }
+
+      // 使用 spawnSync 可以同时捕获 stdout 和 stderr
+      const result = spawnSync(command, args, {
+        encoding: "utf-8",
+        maxBuffer: 10 * 1024 * 1024, // 10MB
+        timeout: 600000, // 600秒超时(10分钟),克隆大型仓库可能需要更长时间
+      });
+
+      // 检查是否执行成功
+      // 注意:Git 命令(如 submodule)会将进度信息输出到 stderr
+      // 因此不能根据 stderr 是否有内容判断失败,只能根据退出码
+      if (result.status === 0 && !result.error) {
+        return {
+          success: true,
+          command: fullCommand,
+          output: result.stdout?.trim() || "",
+          error: result.stderr?.trim() || "", // stderr 可能包含进度信息或警告
+        };
+      }
+
+      // 记录失败结果,继续重试
+      lastResult = result;
     }
 
-    // 命令执行失败
+    // 所有重试都失败了,返回最后一次的错误
     return {
       success: false,
       command: fullCommand,
-      output: result.stdout?.trim() || "",
-      error: result.stderr?.trim() || result.error?.message || "命令执行失败",
+      output: lastResult.stdout?.trim() || "",
+      error: lastResult.stderr?.trim() || lastResult.error?.message || "命令执行失败",
     };
   } catch (error) {
     // 验证失败或其他异常
@@ -189,7 +250,7 @@ export default function executeSafeShellCommands({ commands }) {
 
 // 添加描述信息,帮助 LLM 理解何时调用此 agent
 executeSafeShellCommands.description =
-  "安全执行 Git 命令,支持的子命令包括: init/clone/config/status/log/diff/branch/show/add/commit/fetch/pull/submodule。" +
+  "安全执行 Git 命令,支持的子命令包括: init/config/status/log/diff/branch/show/add/commit/fetch/pull/submodule。" +
   "适用于需要批量执行多个有顺序依赖的 git 操作,如果某个命令失败会立即停止执行后续命令。";
 
 // 定义输入 schema

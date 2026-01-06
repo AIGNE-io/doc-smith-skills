@@ -47,7 +47,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 **详细流程参考**: `references/workspace-initialization.md`
 
-### 1. 分析工作区
+### 1. 分析数据源
 
 使用 Glob/Grep/Read 工具探索`sources`目录下的数据源，了解项目目的、结构、主要模块、现有文档和媒体资源。
 
@@ -75,18 +75,14 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 **调用方式**：使用 `checkStructure` 工具（自动检查 `planning/document-structure.yaml` 并修复错误）
 
-```
-工具: checkStructure
-```
-
 **校验结果处理**:
 
 - ✅ **成功（valid: true）**: 继续执行步骤 5
 
 - ❌ **失败（valid: false）**:
   1. 分析错误报告（errors 字段），理解哪些字段或格式不正确
-  2. 重新阅读 `references/document-structure-schema.md`
-  4. 修复错误或重新生成 `planning/document-structure.yaml`（完全重写）
+  2. 阅读 `references/document-structure-schema.md`
+  4. 修复错误或重新生成 `planning/document-structure.yaml`
   5. 重新调用 `checkStructure`
   6. 如果连续 3 次失败，向用户报告错误并询问如何处理
 
@@ -99,11 +95,17 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 5.1: 向用户展示的结构**必须**参考： `references/structure-confirmation-guide.md`
 5.2: 确认文档结构符合指定的数据结构，参考：`references/document-structure-schema.md`
+5.3: 如果用户提出修改意见，修改之后需要再次使用 `checkStructure`工具检查更新后的文档结构。
 
 ### 6. 生成文档内容
 
-为结构中的每个文档在 `docs/` 目录中创建 markdown 文件。
-文档内容生成要求**必须**参考：`references/document-content-guide.md`
+为文档结构中的每个文档生成内容并保存到 `docs/` 目录。
+
+**重要提示**：
+- **新增文档时，必须使用 `saveDocument` 工具**，不要手动创建文件夹和文件
+- **编辑已有文档时，直接使用 Edit 工具**修改对应的语言文件（如 `docs/overview/zh.md`）
+
+**详细步骤和要求**: 参考 `references/document-content-guide.md`
 
 ### 7. 更新已有文档
 
@@ -121,15 +123,11 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 ### 8. 结束前确认任务都已完成
 
-8.1 **重新执行 YAML 校验**
+8.1 **重新执行文档结构校验**
 
 在结束前，必须再次校验文档结构文件的完整性：
 
 **调用方式**：使用 `checkStructure` 工具
-
-```
-工具: checkStructure
-```
 
 如果校验失败，按照步骤 4.2 的错误处理流程处理。
 
@@ -138,10 +136,6 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 在结束前，必须执行文档内容检查：
 
 **调用方式**：使用 `checkContent` 工具
-
-```
-工具: checkContent
-```
 
 - ✅ **成功（valid: true）**: 继续后续流程
 
@@ -161,9 +155,9 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 8.3 **核对完成清单**
 
-- [ ] YAML 结构校验通过
+- [ ] 文档结构校验通过
 - [ ] 文档内容检查通过
-- [ ] 确认所有生成的文档文件路径与 `document-structure.yaml` 中的 path 字段一致
+- [ ] 确认所有生成的文档所在文件夹路径与 `document-structure.yaml` 中的 path 字段一致，并存在 .meta.yaml 文件和主语言文件
 - [ ] 确认文档内部链接都有效
 - [ ] 确认图片路径正确且文件存在
 
@@ -188,7 +182,7 @@ git commit -m "docsmith: generate v1 (lang=<语言>)"
 如果用户选择 No:
 提示: "跳过提交，可稍后手动执行: git add . && git commit"
 
-## Workspace 目录结构
+## Workspace 目录结构参考
 
 完成后：
 
@@ -202,10 +196,16 @@ workspace/                         # 独立 workspace 目录
 ├── planning/
 │   └── document-structure.yaml    # 文档结构计划
 ├── docs/                          # 生成的文档
-│   ├── overview.md
-│   ├── getting-started.md
+│   ├── overview/
+│   │   ├── .meta.yaml             # 元信息 (kind/source/default)
+│   │   └── zh.md                  # 语言版本文件
+│   ├── getting-started/
+│   │   ├── .meta.yaml
+│   │   └── zh.md
 │   └── api/
-│       └── authentication.md
+│       └── authentication/
+│           ├── .meta.yaml
+│           └── zh.md
 └── cache/                         # 临时数据 (不纳入 git)
 ```
 

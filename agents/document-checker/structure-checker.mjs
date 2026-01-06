@@ -2,9 +2,7 @@ import { readFile, writeFile, access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { parse as yamlParse, stringify as yamlStringify } from "yaml";
 import validateYamlStructure from "./validate-structure.mjs";
-
-// 固定的 YAML 文件路径
-const YAML_PATH = "planning/document-structure.yaml";
+import { PATHS } from "../../utils/agent-constants.mjs";
 
 /**
  * 文档结构修复器类
@@ -65,10 +63,11 @@ class DocumentStructureFixer {
       fixed = true;
     }
 
-    if (error.fix === "add_md_extension" && !doc.path.endsWith(".md")) {
-      doc.path = `${doc.path}.md`;
-      fixed = true;
-    }
+    // 移除：不再自动添加 .md 后缀
+    // if (error.fix === "add_md_extension" && !doc.path.endsWith(".md")) {
+    //   doc.path = `${doc.path}.md`;
+    //   fixed = true;
+    // }
 
     if (fixed) {
       this.fixCount++;
@@ -186,27 +185,28 @@ function formatRemainingErrors(errors) {
  * @returns {Promise<Object>} - 检查和修复结果
  */
 export default async function checkStructure() {
+  const yamlPath = PATHS.DOCUMENT_STRUCTURE;
   try {
     // 1. 检查文件是否存在
     try {
-      await access(YAML_PATH, constants.F_OK);
+      await access(yamlPath, constants.F_OK);
     } catch (_error) {
       return {
         success: false,
         valid: false,
         fileNotFound: true,
         message:
-          `❌ 文件不存在: ${YAML_PATH}\n\n` +
+          `❌ 文件不存在: ${yamlPath}\n\n` +
           `可能的原因：\n` +
           `1. 文件路径错误 - 请检查是否在正确的 workspace 目录中\n` +
-          `2. 文件名称错误 - 确认文件名为 document-structure.yaml\n` +
-          `3. 文档结构尚未生成 - 请先执行步骤 4.1 生成 document-structure.yaml\n`,
+          `2. 文件名称错误 - 确认文件名为 ${yamlPath}\n` +
+          `3. 文档结构尚未生成 - 请先执行步骤 4.1 生成 ${yamlPath}\n`,
       };
     }
 
     // 2. 调用校验
     const validationResult = await validateYamlStructure({
-      yamlPath: YAML_PATH,
+      yamlPath,
     });
 
     // 3. 如果校验通过，直接返回
@@ -221,7 +221,7 @@ export default async function checkStructure() {
 
     // 4. 如果有 FIXABLE 错误，先自动修复（无论是否有 FATAL 错误）
     if (validationResult.errors?.fixable?.length > 0) {
-      const content = await readFile(YAML_PATH, "utf8");
+      const content = await readFile(yamlPath, "utf8");
       const data = yamlParse(content);
 
       const fixer = new DocumentStructureFixer(data);
@@ -233,10 +233,10 @@ export default async function checkStructure() {
         defaultKeyType: "PLAIN",
         defaultStringType: "QUOTE_DOUBLE",
       });
-      await writeFile(YAML_PATH, fixedYaml, "utf8");
+      await writeFile(yamlPath, fixedYaml, "utf8");
 
       // 重新校验
-      const revalidation = await validateYamlStructure({ yamlPath: YAML_PATH });
+      const revalidation = await validateYamlStructure({ yamlPath });
 
       // 返回修复结果
       if (revalidation.errors.fatal.length === 0 && revalidation.errors.fixable.length === 0) {
@@ -245,7 +245,7 @@ export default async function checkStructure() {
           valid: false,
           fixed: true,
           fixedCount,
-          message: `⚠️  文件已更新，请使用 Read 工具重新读取 ${YAML_PATH} 并重新检查。`,
+          message: `⚠️  文件已更新，请使用 Read 工具重新读取 ${yamlPath} 并重新检查。`,
         };
       } else {
         // 部分修复
@@ -265,7 +265,7 @@ export default async function checkStructure() {
           fixed: true,
           fixedCount,
           message:
-            `❌ 存在致命错误，无法自动修复。️文件已更新，请使用 Read 工具重新读取 ${YAML_PATH} 。\n\n` +
+            `❌ 存在致命错误，无法自动修复。️文件已更新，请使用 Read 工具重新读取 ${yamlPath} 。\n\n` +
             `检测到以下问题：\n\n` +
             errorList,
           remainingErrors,

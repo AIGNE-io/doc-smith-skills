@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { parse as yamlParse } from "yaml";
+import { PATHS } from "../../utils/agent-constants.mjs";
 
 /**
  * 文档结构校验器类
@@ -130,6 +131,18 @@ class DocumentStructureValidator {
       const pathErrors = this.validatePath(doc.path, path);
       this.errors.fixable.push(...pathErrors);
 
+      // 检查 path 不能以 .md 结尾（这是 FATAL 错误）
+      if (doc.path.endsWith(".md")) {
+        this.errors.fatal.push({
+          type: "PATH_FORMAT",
+          path: `${path}.path`,
+          current: doc.path,
+          expected: doc.path.slice(0, -3),
+          message: "path 不应以 .md 结尾（应指向文件夹）",
+          suggestion: `将 path 改为 "${doc.path.slice(0, -3)}"`,
+        });
+      }
+
       // 检查 path 唯一性
       if (this.pathSet.has(doc.path)) {
         this.errors.fatal.push({
@@ -194,17 +207,6 @@ class DocumentStructureValidator {
         expected: `/${path}`,
         fix: "add_leading_slash",
         message: "path 必须以 / 开头",
-      });
-    }
-
-    if (!path.endsWith(".md")) {
-      errors.push({
-        type: "PATH_FORMAT",
-        path: `${location}.path`,
-        current: path,
-        expected: `${path}.md`,
-        fix: "add_md_extension",
-        message: "path 必须以 .md 结尾",
       });
     }
 
@@ -430,7 +432,7 @@ function formatOutput(result) {
  * @returns {Promise<Object>} - 校验结果
  */
 export default async function validateYamlStructure({
-  yamlPath = "planning/document-structure.yaml",
+  yamlPath = PATHS.DOCUMENT_STRUCTURE,
 }) {
   try {
     // 读取 YAML 文件

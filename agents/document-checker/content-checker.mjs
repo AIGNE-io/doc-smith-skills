@@ -1,10 +1,7 @@
 import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import validateDocumentContent from "./validate-content.mjs";
-
-// 固定的 YAML 文件路径
-const YAML_PATH = "planning/document-structure.yaml";
-const DOCS_DIR = "docs";
+import { PATHS } from "../../utils/agent-constants.mjs";
 
 /**
  * 文档内容修复器类
@@ -45,8 +42,8 @@ class DocumentContentFixer {
  * @returns {Promise<Object>} - 检查和修复结果
  */
 export default async function checkContent() {
-  const yamlPath = YAML_PATH;
-  const docsDir = DOCS_DIR;
+  const yamlPath = PATHS.DOCUMENT_STRUCTURE;
+  const docsDir = PATHS.DOCS_DIR;
   const autoFix = true;
   const checkRemoteImages = true;
   try {
@@ -62,8 +59,8 @@ export default async function checkContent() {
           `❌ 文件不存在: ${yamlPath}\n\n` +
           `可能的原因：\n` +
           `1. 文件路径错误 - 请检查是否在正确的 workspace 目录中\n` +
-          `2. 文件名称错误 - 确认文件名为 document-structure.yaml\n` +
-          `3. 文档结构尚未生成 - 请先执行步骤 4 生成 document-structure.yaml\n`,
+          `2. 文件名称错误 - 确认文件名为 ${yamlPath}\n` +
+          `3. 文档结构尚未生成 - 请先执行步骤 4 生成 ${yamlPath}\n`,
       };
     }
 
@@ -78,7 +75,7 @@ export default async function checkContent() {
           `❌ 文档目录不存在: ${docsDir}/\n\n` +
           `可能的原因：\n` +
           `1. 文档尚未生成 - 请先执行步骤 6.1 生成文档内容\n` +
-          `2. 目录路径错误 - 确认文档目录为 docs/\n`,
+          `2. 目录路径错误 - 确认文档目录为 ${docsDir}/\n`,
       };
     }
 

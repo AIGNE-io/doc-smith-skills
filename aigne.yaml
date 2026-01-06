@@ -9,6 +9,7 @@ agents:
   # - agents/preload-i18n.mjs
   - agents/document-checker/structure-checker.mjs
   - agents/document-checker/content-checker.mjs
+  - agents/localize/index.yaml
 
 cli:
   agents:

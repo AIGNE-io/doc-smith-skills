@@ -1,13 +1,15 @@
-import { readFile, access } from "node:fs/promises";
+import { readFile, access, readdir, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import { parse as yamlParse } from "yaml";
 import path from "node:path";
+import { collectDocumentPaths } from "../../utils/document-paths.mjs";
+import { PATHS } from "../../utils/agent-constants.mjs";
 
 /**
  * 文档内容校验器类
  */
 class DocumentContentValidator {
-  constructor(yamlPath = "planning/document-structure.yaml", docsDir = "docs") {
+  constructor(yamlPath = PATHS.DOCUMENT_STRUCTURE, docsDir = PATHS.DOCS_DIR) {
     this.yamlPath = yamlPath;
     this.docsDir = docsDir;
     this.errors = {
@@ -64,11 +66,22 @@ class DocumentContentValidator {
       const data = yamlParse(content);
 
       if (!data.documents || !Array.isArray(data.documents)) {
-        throw new Error("document-structure.yaml 缺少 documents 字段或格式错误");
+        throw new Error(`${this.yamlPath} 缺少 documents 字段或格式错误`);
       }
 
-      // 递归收集所有文档路径
-      this.collectDocuments(data.documents);
+      // 使用共享工具收集文档路径和元数据
+      const docsWithMeta = collectDocumentPaths(data.documents, { collectMetadata: true });
+
+      // 转换为内部格式
+      for (const doc of docsWithMeta) {
+        this.documents.push({
+          path: doc.displayPath,
+          filePath: doc.path,
+          title: doc.title || "未知文档",
+        });
+        this.documentPaths.add(doc.displayPath);
+      }
+
       this.stats.totalDocs = this.documents.length;
     } catch (error) {
       if (error.code === "ENOENT") {
@@ -79,45 +92,166 @@ class DocumentContentValidator {
   }
 
   /**
-   * 递归收集文档路径
+   * Layer 1: 验证文档文件存在性
    */
-  collectDocuments(docs, _parentPath = "") {
-    for (const doc of docs) {
-      if (doc.path) {
-        // 移除开头的斜杠用于文件系统路径
-        const filePath = doc.path.startsWith("/") ? doc.path.slice(1) : doc.path;
-        this.documents.push({
+  async validateDocumentFiles() {
+    for (const doc of this.documents) {
+      const docFolder = path.join(this.docsDir, doc.filePath);
+
+      // 检查 1: 文件夹存在且是目录
+      let folderExists = false;
+      try {
+        const stats = await stat(docFolder);
+        if (!stats.isDirectory()) {
+          this.errors.fatal.push({
+            type: "INVALID_DOCUMENT_FOLDER",
+            path: doc.path,
+            filePath: docFolder,
+            message: `路径不是文件夹: ${doc.path}`,
+            suggestion: "请确保 path 指向文件夹",
+          });
+          continue;
+        }
+        folderExists = true;
+      } catch (_error) {
+        this.errors.fatal.push({
+          type: "MISSING_DOCUMENT_FOLDER",
           path: doc.path,
-          filePath,
-          title: doc.title || "未知文档",
+          filePath: docFolder,
+          message: `文档文件夹缺失: ${doc.path}`,
+          suggestion: `请生成此文档文件夹，按指定格式生成文档`,
         });
-        this.documentPaths.add(doc.path);
+        continue;
       }
 
-      // 递归处理子文档
-      if (doc.children && Array.isArray(doc.children)) {
-        this.collectDocuments(doc.children, doc.path);
+      // 检查 2: .meta.yaml 存在且格式正确
+      if (folderExists) {
+        await this.validateMetaFile(docFolder, doc);
+
+        // 检查 3: 至少有一个语言文件
+        await this.validateLanguageFiles(docFolder, doc);
       }
     }
   }
 
   /**
-   * Layer 1: 验证文档文件存在性
+   * 校验 .meta.yaml
    */
-  async validateDocumentFiles() {
-    for (const doc of this.documents) {
-      const fullPath = path.join(this.docsDir, doc.filePath);
-      try {
-        await access(fullPath, constants.F_OK | constants.R_OK);
-      } catch (_error) {
+  async validateMetaFile(docFolder, doc) {
+    const metaPath = path.join(docFolder, ".meta.yaml");
+
+    try {
+      await access(metaPath, constants.F_OK | constants.R_OK);
+    } catch (_error) {
+      this.errors.fatal.push({
+        type: "MISSING_META_FILE",
+        path: doc.path,
+        filePath: metaPath,
+        message: `.meta.yaml 缺失: ${doc.path}`,
+        suggestion: "请在文档文件夹中创建 .meta.yaml",
+      });
+      return;
+    }
+
+    // 读取并校验内容
+    try {
+      const content = await readFile(metaPath, "utf8");
+      const meta = yamlParse(content);
+
+      // 必需字段校验
+      const requiredFields = ["kind", "source", "default"];
+      for (const field of requiredFields) {
+        if (!meta[field]) {
+          this.errors.fatal.push({
+            type: "INVALID_META",
+            path: doc.path,
+            field,
+            message: `.meta.yaml 缺少必需字段 "${field}": ${doc.path}`,
+            suggestion: `添加 ${field} 字段到 .meta.yaml`,
+          });
+        }
+      }
+
+      // kind 值校验
+      if (meta.kind && meta.kind !== "doc") {
         this.errors.fatal.push({
-          type: "MISSING_DOCUMENT",
+          type: "INVALID_META",
           path: doc.path,
-          filePath: fullPath,
-          message: `文档文件缺失: ${doc.path}`,
-          suggestion: `请生成此文档或从 document-structure.yaml 中移除`,
+          field: "kind",
+          message: `.meta.yaml 的 kind 应为 "doc"，当前为 "${meta.kind}"`,
+          suggestion: "修改为 kind: doc",
         });
       }
+    } catch (error) {
+      this.errors.fatal.push({
+        type: "INVALID_META",
+        path: doc.path,
+        message: `.meta.yaml 格式错误: ${error.message}`,
+        suggestion: "检查 YAML 语法是否正确",
+      });
+    }
+  }
+
+  /**
+   * 校验语言文件
+   */
+  async validateLanguageFiles(docFolder, doc) {
+    try {
+      const files = await readdir(docFolder);
+      const langFiles = files.filter(
+        (f) => f.endsWith(".md") && !f.startsWith(".") && /^[a-z]{2}(-[A-Z]{2})?\.md$/.test(f),
+      );
+
+      if (langFiles.length === 0) {
+        this.errors.fatal.push({
+          type: "MISSING_LANGUAGE_FILE",
+          path: doc.path,
+          message: `没有语言版本文件: ${doc.path}`,
+          suggestion: "请生成至少一个语言版本文件（如 zh.md, en.md）",
+        });
+        return;
+      }
+
+      // 检查 default 和 source 语言文件是否存在
+      const metaPath = path.join(docFolder, ".meta.yaml");
+      try {
+        const metaContent = await readFile(metaPath, "utf8");
+        const meta = yamlParse(metaContent);
+
+        if (meta.default) {
+          const defaultFile = `${meta.default}.md`;
+          if (!langFiles.includes(defaultFile)) {
+            this.errors.fatal.push({
+              type: "MISSING_DEFAULT_LANGUAGE",
+              path: doc.path,
+              defaultLang: meta.default,
+              message: `默认语言文件缺失: ${defaultFile}`,
+              suggestion: `生成 ${defaultFile} 或修改 .meta.yaml 中的 default 字段`,
+            });
+          }
+        }
+
+        if (meta.source) {
+          const sourceFile = `${meta.source}.md`;
+          if (!langFiles.includes(sourceFile)) {
+            this.errors.fatal.push({
+              type: "MISSING_SOURCE_LANGUAGE",
+              path: doc.path,
+              sourceLang: meta.source,
+              message: `源语言文件缺失: ${sourceFile}`,
+              suggestion: `生成 ${sourceFile} 或修改 .meta.yaml 中的 source 字段`,
+            });
+          }
+        }
+      } catch (_error) {
+        // .meta.yaml 错误已在 validateMetaFile 中报告
+      }
+    } catch (error) {
+      this.errors.fatal.push({
+        type: "READ_FOLDER_ERROR",
+        path: doc.path,
+        message: `无法读取文档文件夹: ${error.message}`,
+      });
     }
   }
 
@@ -125,35 +259,42 @@ class DocumentContentValidator {
    * Layer 2-4: 验证单个文档内容
    */
   async validateDocument(doc, checkRemoteImages) {
-    const fullPath = path.join(this.docsDir, doc.filePath);
+    const docFolder = path.join(this.docsDir, doc.filePath);
 
     try {
-      const content = await readFile(fullPath, "utf8");
-      this.stats.checkedDocs++;
+      // 读取 .meta.yaml 获取语言列表
+      const metaPath = path.join(docFolder, ".meta.yaml");
+      const metaContent = await readFile(metaPath, "utf8");
+      const _meta = yamlParse(metaContent);
 
-      // Layer 2: 内容解析和检查
-      this.checkEmptyDocument(content, doc);
-      this.checkHeadingHierarchy(content, doc);
+      // 获取所有语言文件
+      const files = await readdir(docFolder);
+      const langFiles = files.filter((f) => f.endsWith(".md") && !f.startsWith("."));
 
-      // Layer 3: 链接和图片验证
-      await this.validateLinks(content, doc);
-      await this.validateImages(content, doc, checkRemoteImages);
-    } catch (error) {
-      // 文件不存在的错误已在 Layer 1 报告，这里跳过
-      if (error.code !== "ENOENT") {
-        this.errors.fatal.push({
-          type: "READ_ERROR",
-          path: doc.path,
-          message: `无法读取文档: ${error.message}`,
-        });
+      // 检查每个语言版本
+      for (const langFile of langFiles) {
+        const fullPath = path.join(docFolder, langFile);
+        const content = await readFile(fullPath, "utf8");
+
+        this.stats.checkedDocs++;
+
+        // Layer 2: 内容解析和检查
+        this.checkEmptyDocument(content, doc, langFile);
+        this.checkHeadingHierarchy(content, doc, langFile);
+
+        // Layer 3: 链接和图片验证
+        await this.validateLinks(content, doc, langFile);
+        await this.validateImages(content, doc, langFile, checkRemoteImages);
       }
+    } catch (_error) {
+      // 错误已在 Layer 1 报告
     }
   }
 
   /**
    * Layer 4: 空文档检测
    */
-  checkEmptyDocument(content, doc) {
+  checkEmptyDocument(content, doc, langFile) {
     // 移除所有标题
     let cleaned = content.replace(/^#{1,6}\s+.+$/gm, "");
     // 移除空白字符
@@ -163,7 +304,8 @@ class DocumentContentValidator {
       this.errors.fatal.push({
         type: "EMPTY_DOCUMENT",
         path: doc.path,
-        message: `空文档: ${doc.path}`,
+        langFile,
+        message: `空文档: ${doc.path} (${langFile})`,
         suggestion: `文档内容不足（少于50字符），请补充实质内容或从结构中移除`,
       });
     }
@@ -172,7 +314,7 @@ class DocumentContentValidator {
   /**
    * Layer 4: 标题层级检查
    */
-  checkHeadingHierarchy(content, doc) {
+  checkHeadingHierarchy(content, doc, langFile) {
     // 先移除代码块中的内容，避免误判
     const contentWithoutCodeBlocks = this.removeCodeBlocks(content);
 
@@ -196,6 +338,7 @@ class DocumentContentValidator {
         this.errors.fatal.push({
           type: "HEADING_SKIP",
           path: doc.path,
+          langFile,
           line: curr.line,
           message: `标题从 H${prev.level} 跳到 H${curr.level}`,
           suggestion: `考虑将 "${"#".repeat(curr.level)} ${curr.text}" 改为 "${"#".repeat(prev.level + 1)} ${curr.text}"`,
@@ -268,7 +411,7 @@ class DocumentContentValidator {
   /**
    * Layer 3: 验证内部链接
    */
-  async validateLinks(content, doc) {
+  async validateLinks(content, doc, langFile) {
     // 获取代码块位置范围
     const codeBlockRanges = this.getCodeBlockRanges(content);
 
@@ -296,7 +439,7 @@ class DocumentContentValidator {
 
       // 识别内部文档链接（.md 结尾）
       if (linkUrl.endsWith(".md")) {
-        await this.validateInternalLink(linkUrl, doc, linkText);
+        await this.validateInternalLink(linkUrl, doc, linkText, langFile);
       }
     }
   }
@@ -304,20 +447,19 @@ class DocumentContentValidator {
   /**
    * 验证内部链接
    */
-  async validateInternalLink(linkUrl, doc, linkText) {
+  async validateInternalLink(linkUrl, doc, linkText, langFile) {
     let targetPath;
 
-    // 如果链接以 / 开头，说明是相对于 docs 目录的绝对路径
-    if (linkUrl.startsWith("/")) {
-      targetPath = linkUrl;
-    } else {
-      // 相对路径，需要根据当前文档目录计算
-      const docDir = path.dirname(doc.path);
+    // 链接预处理：移除语言文件名
+    const cleanLinkUrl = linkUrl
+      .replace(/\/[a-z]{2}(-[A-Z]{2})?\.md$/, "") // 移除 /zh.md 等
+      .replace(/\.md$/, ""); // 移除 .md
 
-      // 检查相对路径是否试图超出根目录
-      // 计算向上的层级数
-      const upLevels = (linkUrl.match(/\.\.\//g) || []).length;
-      // 计算当前文档的层级深度（根目录为0层）
+    if (cleanLinkUrl.startsWith("/")) {
+      targetPath = cleanLinkUrl;
+    } else {
+      const docDir = path.dirname(doc.path);
+      const upLevels = (cleanLinkUrl.match(/\.\.\//g) || []).length;
       const currentDepth = docDir === "/" ? 0 : docDir.split("/").filter((p) => p).length;
 
       if (upLevels > currentDepth) {
@@ -325,34 +467,32 @@ class DocumentContentValidator {
         this.errors.fatal.push({
           type: "BROKEN_LINK",
           path: doc.path,
+          langFile,
           link: linkUrl,
           linkText,
           message: `内部链接路径超出根目录: [${linkText}](${linkUrl})`,
-          suggestion: `链接向上 ${upLevels} 级，但当前文档只在第 ${currentDepth} 层，请修正链接路径`,
+          suggestion: `链接向上 ${upLevels} 级，但当前文档只在第 ${currentDepth} 层`,
         });
         return;
       }
 
-      targetPath = path.posix.join(docDir, linkUrl);
-      targetPath = path.posix.normalize(targetPath);
-
-      // 确保以 / 开头
+      targetPath = path.posix.normalize(path.posix.join(docDir, cleanLinkUrl));
       if (!targetPath.startsWith("/")) {
         targetPath = `/${targetPath}`;
       }
     }
 
-    // 检查目标文档是否在 document-structure 中
     if (!this.documentPaths.has(targetPath)) {
       this.stats.brokenLinks++;
       this.errors.fatal.push({
         type: "BROKEN_LINK",
         path: doc.path,
+        langFile,
         link: linkUrl,
         linkText,
         targetPath,
         message: `内部链接死链: [${linkText}](${linkUrl})`,
-        suggestion: `目标文档 ${targetPath} 不存在于 document-structure 中，请检查链接路径或生成目标文档`,
+        suggestion: `目标文档 ${targetPath} 不存在`,
       });
     }
   }
@@ -360,7 +500,7 @@ class DocumentContentValidator {
   /**
    * Layer 3: 验证图片
    */
-  async validateImages(content, doc, checkRemoteImages) {
+  async validateImages(content, doc, langFile, checkRemoteImages) {
     // 获取代码块位置范围
     const codeBlockRanges = this.getCodeBlockRanges(content);
 
@@ -382,12 +522,12 @@ class DocumentContentValidator {
         // 远程图片
         this.stats.remoteImages++;
         if (checkRemoteImages) {
-          await this.validateRemoteImage(imageUrl, doc, altText);
+          await this.validateRemoteImage(imageUrl, doc, altText, langFile);
         }
       } else {
         // 本地图片
         this.stats.localImages++;
-        await this.validateLocalImage(imageUrl, doc, altText);
+        await this.validateLocalImage(imageUrl, doc, altText, langFile);
       }
     }
   }
@@ -395,25 +535,26 @@ class DocumentContentValidator {
   /**
    * 验证本地图片
    */
-  async validateLocalImage(imageUrl, doc, altText) {
-    // 计算图片的绝对路径
-    const docDir = path.dirname(path.join(this.docsDir, doc.filePath));
+  async validateLocalImage(imageUrl, doc, altText, langFile) {
+    // 计算当前文档的完整路径（包含语言文件）
+    const fullDocPath = path.join(doc.filePath, langFile);
+    const docDir = path.dirname(path.join(this.docsDir, fullDocPath));
     const imagePath = path.resolve(docDir, imageUrl);
 
-    // 检查文件是否存在
     try {
       await access(imagePath, constants.F_OK);
 
-      // 验证相对路径层级是否正确
-      const expectedRelativePath = this.calculateExpectedRelativePath(doc.filePath, imagePath);
+      // 验证相对路径层级
+      const expectedRelativePath = this.calculateExpectedRelativePath(fullDocPath, imagePath);
       if (expectedRelativePath && imageUrl !== expectedRelativePath) {
-        this.errors.fatal.push({
+        this.errors.warnings.push({
           type: "IMAGE_PATH_LEVEL",
           path: doc.path,
+          langFile,
           imageUrl,
           expectedPath: expectedRelativePath,
           message: `图片路径层级可能不正确: ${imageUrl}`,
-          suggestion: `根据层级对照表，建议使用: ${expectedRelativePath}`,
+          suggestion: `建议使用: ${expectedRelativePath}`,
         });
       }
     } catch (_error) {
@@ -421,10 +562,11 @@ class DocumentContentValidator {
       this.errors.fatal.push({
         type: "MISSING_IMAGE",
         path: doc.path,
+        langFile,
         imageUrl,
         altText,
         message: `本地图片不存在: ${imageUrl}`,
-        suggestion: `根据文件名查找图片，检查图片路径是否正确，如果图片不存在则删除图片的使用`,
+        suggestion: `检查图片路径或删除图片引用`,
       });
     }
   }
@@ -433,10 +575,10 @@ class DocumentContentValidator {
    * 计算期望的相对路径
    */
   calculateExpectedRelativePath(docFilePath, absoluteImagePath) {
-    // 计算文档层级（docs/ 目录下的层级）
-    // 例如：introduction.md → ['introduction.md'] → 1层 → ../
-    //       api/auth.md → ['api', 'auth.md'] → 2层 → ../../
-    const pathParts = docFilePath.split("/");
+    // 计算文档层级（docs/ 目录下的层级，包含语言文件）
+    // 例如：overview/zh.md → ['overview', 'zh.md'] → 2层 → ../../
+    //       api/auth/zh.md → ['api', 'auth', 'zh.md'] → 3层 → ../../../
+    const pathParts = docFilePath.split("/").filter((p) => p);
     const depth = pathParts.length;
 
     // 生成回退路径
@@ -455,7 +597,7 @@ class DocumentContentValidator {
   /**
    * 验证远程图片
    */
-  async validateRemoteImage(imageUrl, doc, altText) {
+  async validateRemoteImage(imageUrl, doc, altText, langFile) {
     // 检查缓存
     if (this.remoteImageCache.has(imageUrl)) {
       const cached = this.remoteImageCache.get(imageUrl);
@@ -464,6 +606,7 @@ class DocumentContentValidator {
         this.errors.warnings.push({
           type: "REMOTE_IMAGE_INACCESSIBLE",
           path: doc.path,
+          langFile,
           imageUrl,
           altText,
           statusCode: cached.statusCode,
@@ -484,6 +627,7 @@ class DocumentContentValidator {
       this.errors.warnings.push({
         type: "REMOTE_IMAGE_INACCESSIBLE",
         path: doc.path,
+        langFile,
         imageUrl,
         altText,
         statusCode: result.statusCode,
@@ -614,8 +758,8 @@ function formatOutput(result) {
  * @returns {Promise<Object>} - 校验结果
  */
 export default async function validateDocumentContent({
-  yamlPath = "planning/document-structure.yaml",
-  docsDir = "docs",
+  yamlPath = PATHS.DOCUMENT_STRUCTURE,
+  docsDir = PATHS.DOCS_DIR,
   checkRemoteImages = true,
 } = {}) {
   try {

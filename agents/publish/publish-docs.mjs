@@ -23,6 +23,7 @@ import { ensureTmpDir } from "../../utils/files.mjs";
 import { getGithubRepoUrl } from "../../utils/git.mjs";
 import updateBranding from "../../utils/branding.mjs";
 import { generateSidebar, loadDocumentStructure } from "../../utils/docs.mjs";
+import { copyDocumentsToTemp } from "../../utils/docs-converter.mjs";
 
 const BASE_URL = process.env.DOC_SMITH_BASE_URL || CLOUD_SERVICE_URL_PROD;
 
@@ -69,7 +70,9 @@ export default async function publishDocs(
     await fs.mkdir(docsDir, {
       recursive: true,
     });
-    await fs.cp(rawDocsDir, docsDir, { recursive: true });
+
+    // Convert documents from new directory format to publish format
+    await copyDocumentsToTemp(rawDocsDir, docsDir);
 
     // Generate _sidebar.md in tmp directory
     const sidebar = generateSidebar(documentStructure || []);

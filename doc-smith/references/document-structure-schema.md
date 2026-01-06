@@ -12,8 +12,8 @@ project:
 documents:                    # 必需：文档对象数组
   - title: "文档标题"         # 必需：文档标题
     description: "简要摘要"   # 必需：此文档涵盖的内容
-    path: "/filename.md"      # 必需：相对于 docs/ 的路径
-                              # 示例：/overview.md, /getting-started.md, /api/authentication.md
+    path: "/filename"         # 必需：相对于 docs/ 的文件夹路径
+                              # 示例：/overview, /getting-started, /api/authentication
     sourcePaths:              # 必需：源文件路径数组（相对路径，不使用 'workspace:' 前缀）
       - "src/main.py"         # 为此文档内容提供信息的文件
       - "README.md"           # 如果没有特定源文件则使用空数组 []
@@ -24,7 +24,7 @@ documents:                    # 必需：文档对象数组
     children:                 # 可选：嵌套文档（相同结构）
       - title: "嵌套文档"
         description: "详细信息"
-        path: "/section/nested.md"
+        path: "/section/nested"
         sourcePaths:
           - "src/utils.py"
         # 嵌套文档不需要 icon
@@ -41,10 +41,9 @@ documents:                    # 必需：文档对象数组
 
 - **title**（必需）：文档的显示标题
 - **description**（必需）：内容简要摘要
-- **path**（必需）：相对于 `docs/` 的文件路径
+- **path**（必需）：相对于 `docs/` 的文件夹路径
   - 必须以 `/` 开头
-  - 必须以 `.md` 结尾
-  - 可以包含子目录：`/api/endpoints.md`
+  - 可以包含子目录：`/api/authentication`
 - **sourcePaths**（必需）：源文件路径数组
   - 相对于工作区根目录的路径
   - 不要包含 `workspace:` 前缀
@@ -71,21 +70,21 @@ project:
 documents:
   - title: "概述"
     description: "项目介绍和核心概念"
-    path: "/overview.md"
+    path: "/overview"
     sourcePaths:
       - "README.md"
     icon: "lucide:home"
 
   - title: "快速开始"
     description: "安装、配置和第一个示例"
-    path: "/getting-started.md"
+    path: "/getting-started"
     sourcePaths:
       - "docs/installation.md"
     icon: "lucide:rocket"
 
   - title: "API 参考"
     description: "API 使用说明"
-    path: "/api.md"
+    path: "/api"
     sourcePaths:
       - "src/api/"
     icon: "lucide:code"
@@ -100,27 +99,27 @@ project:
 documents:
   - title: "概述"
     description: "项目介绍"
-    path: "/overview.md"
+    path: "/overview"
     sourcePaths:
       - "README.md"
     icon: "lucide:home"
 
   - title: "核心功能"
     description: "主要功能模块说明"
-    path: "/features.md"
+    path: "/features"
     sourcePaths:
       - "src/core/"
     icon: "lucide:box"
     children:
       - title: "子功能 A"
         description: "子功能详细说明"
-        path: "/features/feature-a.md"
+        path: "/features/feature-a"
         sourcePaths:
           - "src/feature-a/"
 
       - title: "子功能 B"
         description: "子功能详细说明"
-        path: "/features/feature-b.md"
+        path: "/features/feature-b"
         sourcePaths:
           - "src/feature-b/"
 ```

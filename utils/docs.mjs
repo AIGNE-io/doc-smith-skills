@@ -162,14 +162,15 @@ function walk(nodes, indent = "") {
   for (const node of nodes) {
     const realIndent = node.parentId === null ? "" : indent;
 
-    // If path already ends with .md, use it directly
+    // Convert path to .md file path
+    // Keep directory structure instead of flattening
     let linkPath;
     if (node.path.endsWith(".md")) {
       linkPath = node.path.startsWith("/") ? node.path : `/${node.path}`;
     } else {
-      // Otherwise, convert to flattened file name
+      // Add .md suffix while preserving directory structure
       const relPath = node.path.replace(/^\//, "");
-      linkPath = `/${relPath.split("/").join("-")}.md`;
+      linkPath = `/${relPath}.md`;
     }
 
     out += `${realIndent}* [${node.title}](${linkPath})\n`;

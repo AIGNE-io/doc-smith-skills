@@ -1,0 +1,11 @@
+type: team
+name: translateToLanguages
+description: 为单个文档翻译成多种语言
+skills:
+  - url: ./prepare-doc-content.mjs # 读取源文档和旧翻译
+  - url: ./translate-document.yaml # 执行翻译（使用 glossary）
+  - url: ./save-translation.mjs    # 保存结果
+iterate_on: targetLanguages
+concurrency: 3
+mode: sequential
+include_input_in_output: true
