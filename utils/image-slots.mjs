@@ -5,9 +5,14 @@
 
 /**
  * Slot 正则表达式（用于替换操作）
+ * 支持以下格式：
+ * - <!-- afs:image id="..." key="..." desc="..." -->
+ * - <!-- afs:image id="..." desc="..." -->
+ * - <!-- afs:image id=\"...\" key=\"...\" desc=\"...\" -->
+ * - <!-- afs:image id=\"...\" desc=\"...\" -->
  */
 export const SLOT_REGEX =
-  /<!--\s*afs:image\s+id="([^"]+)"\s+(?:key="([^"]+)"\s+)?desc="([^"]+)"\s*-->/g;
+  /<!--\s*afs:image\s+id=\\?"([^\\"]+)\\?"(?:\s+key=\\?"([^\\"]+)\\?")?\s+desc=\\?"([^\\"]+)\\?"\s*-->/g;
 
 /**
  * 生成 key（如果 slot 未提供）
