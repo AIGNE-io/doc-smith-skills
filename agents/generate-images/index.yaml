@@ -18,7 +18,7 @@ skills:
       - url: ./generate-image.yaml
       - url: ./save-image-result.mjs
     iterate_on: generationTasks
-    concurrency: 1                    # 并发生成
+    concurrency: 5                    # 并发生成
   - url: ./generate-summary.mjs       # 生成总结报告
 
 input_schema:
