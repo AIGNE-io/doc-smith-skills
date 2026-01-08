@@ -63,35 +63,6 @@ export async function loadDocumentStructure(outputDir) {
     return null;
   }
 
-  // Try loading structure-plan.json first
-  try {
-    const structurePlanPath = join(outputDir, "structure-plan.json");
-    const structureExists = await pathExists(structurePlanPath);
-
-    if (structureExists) {
-      const structureContent = await readFile(structurePlanPath, "utf8");
-      if (structureContent?.trim()) {
-        try {
-          const trimmedContent = structureContent.trim();
-          if (trimmedContent.startsWith("[") || trimmedContent.startsWith("{")) {
-            const parsed = JSON.parse(structureContent);
-            if (Array.isArray(parsed)) {
-              return parsed;
-            }
-          } else {
-            console.warn("structure-plan.json contains non-JSON content, skipping parse");
-          }
-        } catch (parseError) {
-          console.error(`Failed to parse structure-plan.json: ${parseError.message}`);
-        }
-      }
-    }
-  } catch (readError) {
-    if (readError.code !== "ENOENT") {
-      console.warn(`Error reading structure-plan.json: ${readError.message}`);
-    }
-  }
-
   // Try loading document-structure.yaml as fallback
   try {
     const yamlPath = join(outputDir, "document-structure.yaml");

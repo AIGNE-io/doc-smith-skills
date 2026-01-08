@@ -5,15 +5,15 @@ alias:
 description: |
   将文档批量翻译成多种语言，支持一次翻译多个文档，一次翻译多种语言。
 skills:
-  - url: ./prepare-translation.mjs  # 检查和准备翻译任务
-  - url: ./load-glossary.mjs        # 读取术语表（一次）
+  - url: ./translate-documents/prepare-translation.mjs  # 检查和准备翻译任务
+  - url: ./translate-documents/load-glossary.mjs        # 读取术语表（一次）
   - type: team
     name: processAllDocuments       # 处理所有文档
     skills:
-      - url: ./translate-to-languages.yaml
+      - url: ./translate-documents/translate-to-languages.yaml
     iterate_on: translationTasks
     concurrency: 5
-  - url: ./generate-summary.mjs     # 生成最终总结报告
+  - url: ./translate-documents/generate-summary.mjs     # 生成最终总结报告
 input_schema:
   type: object
   properties:
@@ -30,6 +30,10 @@ input_schema:
         type: string
       description: |
         目标语言列表（必需，如 ["en", "ja", "fr"]），使用标准语言代码。
+    force:
+      type: boolean
+      description: |
+        是否强制重新翻译（可选，默认 false）。设为 true 时，即使源文档未变化也会重新翻译所有文档。
   required:
     - langs
 mode: sequential

@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { SUPPORTED_LANGUAGES } from "./constants.mjs";
 import { getGitHubRepoInfo } from "./git.mjs";
@@ -13,10 +14,28 @@ export async function getProjectInfo() {
   let defaultDescription = "";
   let defaultIcon = "";
   let fromGitHub = false;
+  let sourceDir = null;
 
   try {
+    // Get the first folder in sources directory
+    const sourcesPath = path.join(process.cwd(), "sources");
+
+    if (fs.existsSync(sourcesPath)) {
+      const entries = fs.readdirSync(sourcesPath, { withFileTypes: true });
+      const firstFolder = entries.find((entry) => entry.isDirectory());
+
+      if (firstFolder) {
+        sourceDir = path.join(sourcesPath, firstFolder.name);
+        defaultName = firstFolder.name;
+      }
+    }
+
+    // If no source directory found, fall back to current directory
+    const targetDir = sourceDir || process.cwd();
+
     const gitRemote = execSync("git remote get-url origin", {
       encoding: "utf8",
+      cwd: targetDir,
       stdio: ["pipe", "pipe", "ignore"],
     }).trim();
 

@@ -17,10 +17,12 @@ skills:
   - type: "@aigne/agent-library/ask-user-question"
   - ./agents/publish/index.yaml
   - ./agents/localize/index.yaml
-  - ./agents/bash-executor/bash-executor.mjs
-  - ./agents/document-checker/structure-checker.mjs
-  - ./agents/document-checker/content-checker.mjs
-  - ./agents/utils/save-document.mjs
+  - ./agents/generate-images/index.yaml
+  - ./agents/bash-executor/index.mjs
+  - ./agents/structure-checker/index.mjs
+  - ./agents/content-checker/index.mjs
+  - ./agents/save-document/index.mjs
+  - ./agents/update-image/index.yaml
 afs:
   modules:
     - module: history

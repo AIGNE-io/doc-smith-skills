@@ -36,6 +36,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 - 用户提供 changeset 文件路径
 - 文档中存在 `::: PATCH` 标记
 - 用户说"更新文档"、"修改文档"、"应用修改"
+- 用户希望更新文档中的图片，比希望在某篇文档中新增图片、删除图片或编辑某张图片
 
 ## 工作流程
 
@@ -109,13 +110,14 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 ### 7. 更新已有文档
 
-仅当 `docs/` 目录已存在时处理文档更新。
+仅当 `docs/` 目录已存在时处理文档更新、文档中图片更新。
 
 **更新流程参考：**
 - 整体流程与输入识别：`references/update-workflow.md`
 - Changeset 文件处理：`references/changeset-guide.md`
 - PATCH 标记处理 (每次文档更新都需要检查文档中是否有 PATCH 需要处理)：`references/patch-guide.md`
 - 文档内容要求：`references/document-content-guide.md`
+- 更新文档中的图片：使用`updateImage`工具
 
 如果涉及文档结构的修改，需要参考以下信息：
 - 文档结构数据结构参考： `references/document-structure-schema.md`
@@ -153,7 +155,14 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 - 不要跳过内容检查步骤
 - 检查失败时必须采取行动（修复或重新生成），不能忽略错误
 
-8.3 **核对完成清单**
+8.4 **检查是否存在 image slot 需要生成图片**
+
+当检测到文档需要展示技术类图片，但是数据源中没有提供的时候，会生成 `AFS Image Slot` 占位符，参考`references/document-content-guide.md`。
+根据`AFS Image Slot`生成的图片会保存在 `assets` 目录，可以根据 `key` 字段检查图片是否存在。
+文档生成结束之后，检查本次生成的文档中是否包含 `AFS Image Slot`, 如果存在需要向用户确认：文档中规划了一些图片，使用占位符表示，是否现在生成这些图片？
+如果用户希望生成这些图片，使用 `generateImages` Tool 自动生成文档中的图片。
+
+8.5 **核对完成清单**
 
 - [ ] 文档结构校验通过
 - [ ] 文档内容检查通过
@@ -188,6 +197,11 @@ git commit -m "docsmith: generate v1 (lang=<语言>)"
 
 ```
 workspace/                         # 独立 workspace 目录
+├── assets/                        # 生成的文档
+│   └── project-architecture/      # afs image slot 中的 key
+│       └── .meta.yaml             # 元信息 (kind/source/default)
+│       └── images/
+│          └── zh.png              # 语言版本文件
 ├── config.yaml                    # workspace 配置文件
 ├── sources/                       # 源仓库 (git submodule)
 │   └── my-project/
@@ -206,7 +220,7 @@ workspace/                         # 独立 workspace 目录
 │       └── authentication/
 │           ├── .meta.yaml
 │           └── zh.md
-└── cache/                         # 临时数据 (不纳入 git)
+└── cache/                         # 缓存数据
 ```
 
 ## 关键原则

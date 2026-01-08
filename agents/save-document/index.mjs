@@ -1,7 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { stringify as yamlStringify } from "yaml";
 import path from "node:path";
-import { normalizePath, loadDocumentPaths, isValidDocumentPath } from "../../utils/document-paths.mjs";
+import {
+  normalizePath,
+  loadDocumentPaths,
+  isValidDocumentPath,
+} from "../../utils/document-paths.mjs";
 import { PATHS, ERROR_CODES, FILE_TYPES, DOC_META_DEFAULTS } from "../../utils/agent-constants.mjs";
 
 /**

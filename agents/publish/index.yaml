@@ -5,8 +5,16 @@ alias:
   - p
 description: Publish DocSmith generated documentation to the online platform
 skills:
-  - url: ./init-config.mjs
-    default_input:
-      skipIfExists: true
-  - url: ./check-docs.mjs
+  - url: ./check.mjs
+  - url: ./translate-meta.mjs
   - url: ./publish-docs.mjs
+
+input_schema:
+  type: object
+  properties:
+    appUrl:
+      type: string
+      description: |
+        Website URL where docs will be published. 
+        The URL from the last publish will be saved in config.yaml `appUrl` and used as the default for the next publish.
+        Optional: Only used if a specific website URL is provided by the user.

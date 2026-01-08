@@ -5,11 +5,23 @@
 
 // 文档相关路径
 export const PATHS = {
+  // 项目根目录
+  DOC_SMITH_DIR: "./",
+
+  // 临时目录
+  TMP_DIR: ".tmp",
+
+  // 缓存目录
+  CACHE: "cache",
+
   // 文档结构文件
   DOCUMENT_STRUCTURE: "planning/document-structure.yaml",
 
   // 文档目录
   DOCS_DIR: "docs",
+
+  // 资源目录（图片等）
+  ASSETS_DIR: "assets",
 
   // 配置文件
   CONFIG: "config.yaml",

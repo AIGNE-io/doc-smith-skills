@@ -7,9 +7,12 @@ agents:
   - doc-smith.yaml
   - agents/publish/index.yaml
   # - agents/preload-i18n.mjs
-  - agents/document-checker/structure-checker.mjs
-  - agents/document-checker/content-checker.mjs
+  - agents/structure-checker/index.mjs
+  - agents/content-checker/index.mjs
   - agents/localize/index.yaml
+  - agents/generate-images/index.yaml
+  - agents/update-image/index.yaml
+  - agents/localize/translate-documents/translate-document.yaml
 
 cli:
   agents:

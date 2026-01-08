@@ -1,6 +1,6 @@
 import { readFile, access } from "node:fs/promises";
 import { constants } from "node:fs";
-import { PATHS } from "../../utils/agent-constants.mjs";
+import { PATHS } from "../../../utils/agent-constants.mjs";
 
 /**
  * 加载术语表

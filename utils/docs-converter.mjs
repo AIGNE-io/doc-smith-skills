@@ -1,5 +1,9 @@
 import { join, relative, dirname, basename } from "node:path";
 import fs from "fs-extra";
+import { parse as yamlParse } from "yaml";
+import { parseSlots } from "./image-slots.mjs";
+import { findImageWithFallback } from "./image-utils.mjs";
+import { PATHS } from "./agent-constants.mjs";
 
 /**
  * 扫描文档目录，识别所有包含 .meta.yaml 的文档目录
@@ -143,6 +147,75 @@ export function adjustImagePaths(content, depth) {
 }
 
 /**
+ * 从配置文件读取主语言
+ * @returns {Promise<string|null>} - 主语言代码，如果读取失败返回 null
+ */
+async function loadMainLocale() {
+  try {
+    const configPath = PATHS.CONFIG;
+    if (!(await fs.pathExists(configPath))) {
+      return null;
+    }
+    const content = await fs.readFile(configPath, "utf8");
+    const config = yamlParse(content);
+    return config?.locale || null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+/**
+ * 替换文档中的 AFS image slots 为真实图片引用
+ * @param {string} content - 文档内容
+ * @param {string} docPath - 文档路径（用于计算相对路径和生成 key）
+ * @param {string} locale - 当前文档语言
+ * @param {string} mainLocale - 主语言
+ * @param {number} depth - 文档深度（用于计算相对路径）
+ * @param {string} assetsDir - assets 目录路径
+ * @returns {Promise<string>} - 替换后的内容
+ */
+async function replaceImageSlots(
+  content,
+  docPath,
+  locale,
+  mainLocale,
+  depth,
+  assetsDir = "./assets",
+) {
+  // 解析所有 slots
+  const slots = parseSlots(content, docPath);
+
+  if (slots.length === 0) {
+    return content;
+  }
+
+  // 替换每个 slot
+  let result = content;
+  for (const slot of slots) {
+    const { key, desc, raw } = slot;
+
+    // 查找图片
+    const imagePath = await findImageWithFallback(key, locale, mainLocale, assetsDir);
+
+    if (imagePath) {
+      // 计算相对路径前缀
+      // depth 1: ../assets/{key}/images/{lang}.jpg  (从 tmp-docs/overview.md 访问 assets/)
+      // depth 2: ../../assets/{key}/images/{lang}.jpg  (从 tmp-docs/api/auth.md 访问 assets/)
+      // depth N: N 个 ../
+      const pathPrefix = "../".repeat(depth);
+      const imageRef = `${pathPrefix}assets/${imagePath}`;
+
+      // 替换 slot 为图片引用
+      const imageMarkdown = `![${desc}](${imageRef})`;
+      result = result.replace(raw, imageMarkdown);
+    }
+    // 如果图片不存在，保持 slot 不变（或者可以选择移除）
+  }
+
+  return result;
+}
+
+/**
  * 复制文档到临时目录并进行转换
  * @param {string} sourceDir - 源文档目录
  * @param {string} targetDir - 目标目录
@@ -157,11 +230,15 @@ export async function copyDocumentsToTemp(sourceDir, targetDir) {
     return { total: 0, converted: 0 };
   }
 
+  // 读取主语言（用于图片回退）
+  const mainLocale = await loadMainLocale();
+
   const stats = {
     total: documents.length,
     converted: 0,
     depth1: 0,
     depth2Plus: 0,
+    slotsReplaced: 0,
   };
 
   // 处理每个文档
@@ -175,10 +252,29 @@ export async function copyDocumentsToTemp(sourceDir, targetDir) {
     // 处理内容
     let processedContent = content;
 
-    // 1. 为内部链接添加 .md 后缀
+    // 1. 替换 AFS image slots 为真实图片引用
+    // 使用相对路径 relativePath 作为 docPath（需要添加前导 /）
+    const docPath = relativePath ? `/${relativePath}` : `/${dirName}`;
+    const contentBeforeSlotReplace = processedContent;
+    processedContent = await replaceImageSlots(
+      processedContent,
+      docPath,
+      locale,
+      mainLocale,
+      depth,
+      "./assets",
+    );
+    // 统计替换的 slot 数量
+    if (contentBeforeSlotReplace !== processedContent) {
+      const slotsBefore = (contentBeforeSlotReplace.match(/<!--\s*afs:image/g) || []).length;
+      const slotsAfter = (processedContent.match(/<!--\s*afs:image/g) || []).length;
+      stats.slotsReplaced += slotsBefore - slotsAfter;
+    }
+
+    // 2. 为内部链接添加 .md 后缀
     processedContent = addMarkdownSuffixToLinks(processedContent);
 
-    // 2. 调整图片路径
+    // 3. 调整图片路径
     processedContent = adjustImagePaths(processedContent, depth);
 
     // 创建目标目录并写入文件

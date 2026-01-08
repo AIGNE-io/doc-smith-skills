@@ -1,43 +1,19 @@
-import { readFile, access } from "node:fs/promises";
-import { constants } from "node:fs";
-import { parse as yamlParse } from "yaml";
-import { loadDocumentPaths, filterValidPaths } from "../../utils/document-paths.mjs";
-import { PATHS, ERROR_CODES } from "../../utils/agent-constants.mjs";
-
-/**
- * 加载配置文件获取源语言
- * @returns {Promise<string>} - 源语言代码
- */
-async function loadSourceLanguage() {
-  try {
-    await access(PATHS.CONFIG, constants.F_OK | constants.R_OK);
-    const content = await readFile(PATHS.CONFIG, "utf8");
-    const config = yamlParse(content);
-
-    if (!config.locale || typeof config.locale !== "string") {
-      throw new Error(ERROR_CODES.MISSING_LOCALE);
-    }
-
-    return config.locale;
-  } catch (error) {
-    if (error.message === ERROR_CODES.MISSING_LOCALE) {
-      throw error;
-    }
-    throw new Error(ERROR_CODES.MISSING_CONFIG_FILE);
-  }
-}
+import { loadDocumentPaths, filterValidPaths } from "../../../utils/document-paths.mjs";
+import { PATHS, ERROR_CODES } from "../../../utils/agent-constants.mjs";
+import { loadLocale, loadConfigFromFile, saveValueToConfig } from "../../../utils/config.mjs";
 
 /**
  * 准备翻译任务
  * @param {Object} input - 输入参数
  * @param {string[]} input.docs - 要翻译的文档路径列表（可选）
  * @param {string[]} input.langs - 目标语言列表（必需）
+ * @param {boolean} input.force - 是否强制重新翻译（可选，默认 false）
  * @returns {Promise<Object>} - 翻译任务列表或错误信息
  */
 export default async function prepareTranslation(input) {
   try {
     // 1. 验证 langs 参数
-    const { docs, langs } = input;
+    const { docs, langs, force = false } = input;
 
     if (!langs || !Array.isArray(langs) || langs.length === 0) {
       return {
@@ -51,7 +27,7 @@ export default async function prepareTranslation(input) {
     // 2. 读取源语言
     let sourceLanguage;
     try {
-      sourceLanguage = await loadSourceLanguage();
+      sourceLanguage = await loadLocale();
     } catch (error) {
       if (error.message === ERROR_CODES.MISSING_CONFIG_FILE) {
         return {
@@ -131,11 +107,34 @@ export default async function prepareTranslation(input) {
       docPaths = validDocPaths;
     }
 
-    // 6. 生成翻译任务
+    // 6. 更新 config.yaml 中的 translateLanguages（只处理新增）
+    try {
+      const config = await loadConfigFromFile();
+      const existingLanguages = config?.translateLanguages || [];
+
+      // 找出新增的语言（在 targetLanguages 中但不在 existingLanguages 中）
+      const newLanguages = targetLanguages.filter((lang) => !existingLanguages.includes(lang));
+
+      // 如果有新语言，更新配置
+      if (newLanguages.length > 0) {
+        const updatedLanguages = [...existingLanguages, ...newLanguages];
+        await saveValueToConfig(
+          "translateLanguages",
+          updatedLanguages,
+          "A list of languages to translate the documentation to",
+        );
+      }
+    } catch (error) {
+      // 如果更新失败，记录警告但不影响主流程
+      console.warn(`Failed to update translateLanguages in config.yaml: ${error.message}`);
+    }
+
+    // 7. 生成翻译任务
     // 将 targetLanguages 转换为对象数组，以便 iterate_on 可以使用
     const translationTasks = docPaths.map((path) => ({
       path,
       sourceLanguage,
+      force,
       targetLanguages: targetLanguages.map((lang) => ({ language: lang })),
     }));
 
@@ -176,6 +175,10 @@ prepareTranslation.input_schema = {
       type: "array",
       items: { type: "string" },
       description: "目标语言列表（必需，至少一个）",
+    },
+    force: {
+      type: "boolean",
+      description: "是否强制重新翻译（可选，默认 false。设为 true 时即使源文档未变化也重新翻译）",
     },
   },
   required: ["langs"],

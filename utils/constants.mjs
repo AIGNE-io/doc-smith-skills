@@ -15,12 +15,6 @@ export const DISCUSS_KIT_STORE_URL =
 export const BLOCKLET_ADD_COMPONENT_DOCS =
   "https://www.arcblock.io/docs/blocklet-developer/en/7zbw0GQXgcD6sCcjVfwqqT2s";
 
-// DocSmith directories
-export const DOC_SMITH_DIR = "./";
-export const TMP_DIR = ".tmp";
-export const TMP_DOCS_DIR = "docs";
-export const TMP_ASSETS_DIR = "assets";
-
 // Supported languages for documentation
 export const SUPPORTED_LANGUAGES = [
   { code: "en", label: "English (en)", sample: "Hello" },

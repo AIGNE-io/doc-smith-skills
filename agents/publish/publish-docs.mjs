@@ -10,13 +10,8 @@ import {
   getCachedAccessToken,
   getDiscussKitMountPoint,
 } from "../../utils/auth.mjs";
-import {
-  CLOUD_SERVICE_URL_PROD,
-  DISCUSS_KIT_STORE_URL,
-  DOC_SMITH_DIR,
-  TMP_DIR,
-  TMP_DOCS_DIR,
-} from "../../utils/constants.mjs";
+import { CLOUD_SERVICE_URL_PROD, DISCUSS_KIT_STORE_URL } from "../../utils/constants.mjs";
+import { PATHS } from "../../utils/agent-constants.mjs";
 import { deploy } from "../../utils/deploy.mjs";
 import { loadConfigFromFile, saveValueToConfig } from "../../utils/config.mjs";
 import { ensureTmpDir } from "../../utils/files.mjs";
@@ -36,20 +31,12 @@ export default async function publishDocs(
     projectLogo,
     outputDir = "./planning",
     "with-branding": withBrandingOption,
-    valid,
-    message: checkMessage,
+    config,
+    translatedMetadata,
   },
   options,
 ) {
-  // Check if document validation passed
-  if (valid === false) {
-    return {
-      message:
-        `❌ Document validation failed. Publishing has been cancelled.\n\n` +
-        `${checkMessage || ""}\n\n` +
-        `💡 Please fix the issues above and retry publishing when the document check passes.`,
-    };
-  }
+  // Note: Document validation is now done in check.mjs which throws errors on failure
 
   const rawDocsDir = "./docs";
   let message;
@@ -65,7 +52,7 @@ export default async function publishDocs(
     // move work dir to tmp-dir
     await ensureTmpDir();
 
-    const docsDir = join(DOC_SMITH_DIR, TMP_DIR, TMP_DOCS_DIR);
+    const docsDir = join(PATHS.DOC_SMITH_DIR, PATHS.TMP_DIR, PATHS.DOCS_DIR);
     await fs.rm(docsDir, { recursive: true, force: true });
     await fs.mkdir(docsDir, {
       recursive: true,
@@ -87,8 +74,10 @@ export default async function publishDocs(
       appUrl
     );
 
-    // Check if appUrl is default and not saved in config (only when not using env variable)
-    const config = await loadConfigFromFile();
+    // Use config from parameters or load from file as fallback
+    if (!config) {
+      config = await loadConfigFromFile();
+    }
     appUrl =
       process.env.DOC_SMITH_PUBLISH_URL ||
       process.env.DOC_DISCUSS_KIT_URL ||
@@ -235,7 +224,7 @@ export default async function publishDocs(
     process.env.DOC_ROOT_DIR = docsDir;
 
     const sidebarPath = join(docsDir, "_sidebar.md");
-    const publishCacheFilePath = join(DOC_SMITH_DIR, "upload-cache.yaml");
+    const publishCacheFilePath = join(PATHS.DOC_SMITH_DIR, PATHS.CACHE, "upload-cache.yaml");
 
     // Get project info from config
     const projectInfo = {
@@ -251,7 +240,7 @@ export default async function publishDocs(
       updateBranding({ appUrl: discussKitUrl, projectInfo, accessToken });
     }
 
-    // Construct boardMeta object (without translatedMetadata)
+    // Construct boardMeta object
     const boardMeta = {
       category: config?.documentPurpose || [],
       githubRepoUrl: getGithubRepoUrl(),
@@ -261,6 +250,11 @@ export default async function publishDocs(
         ...(config?.translateLanguages || []),
       ].filter((lang, index, arr) => arr.indexOf(lang) === index), // Remove duplicates
     };
+
+    // Add translatedMetadata if available
+    if (translatedMetadata) {
+      boardMeta.translation = translatedMetadata;
+    }
 
     const {
       success,
@@ -280,7 +274,6 @@ export default async function publishDocs(
       mediaFolder: rawDocsDir,
       cacheFilePath: publishCacheFilePath,
       boardMeta,
-      // No iconMap - removed feature
     });
 
     // Save values to config.yaml if publish was successful
@@ -319,7 +312,7 @@ export default async function publishDocs(
 
     // clean up tmp work dir in case of error
     try {
-      const docsDir = join(DOC_SMITH_DIR, TMP_DIR, TMP_DOCS_DIR);
+      const docsDir = join(PATHS.DOC_SMITH_DIR, PATHS.TMP_DIR, PATHS.DOCS_DIR);
       await fs.rm(docsDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
@@ -332,13 +325,9 @@ export default async function publishDocs(
 publishDocs.input_schema = {
   type: "object",
   properties: {
-    valid: {
-      type: "boolean",
-      description: "Whether the document validation passed (from check-docs).",
-    },
-    message: {
-      type: "string",
-      description: "Message from document validation (from check-docs).",
+    config: {
+      type: "object",
+      description: "Configuration object from check step.",
     },
     docsDir: {
       type: "string",
@@ -371,6 +360,10 @@ publishDocs.input_schema = {
     projectLogo: {
       type: "string",
       description: "The logo or icon of the project.",
+    },
+    translatedMetadata: {
+      type: "object",
+      description: "Translated metadata (title and description) for multiple languages.",
     },
   },
 };

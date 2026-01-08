@@ -31,16 +31,12 @@ ls -la
 #### 情况 3: 非空且未初始化 ⚠️
 **特征**: 目录包含文件,但不是已初始化的 workspace
 
+**提醒用户创建目录，停止执行，继续执行将产生错误的结果**
+
 **操作**: 提示用户并停止
 ```
-⚠️ 当前目录不是空目录,也未初始化为 workspace。
-
-建议:
-1. cd 到空目录并重新执行
-2. 或者创建新目录: mkdir my-workspace && cd my-workspace
-3. 或者清空当前目录后重新执行
-
-Doc Smith 需要在独立的 workspace 目录中工作,以避免污染源仓库。
+⚠️ 当前目录不是空目录,无法初始化为 workspace。
+Doc Smith 需要在独立的 workspace 目录中工作,以避免污染源仓库，请在空文件夹中再次执行 DocSmith。
 ```
 
 ---
@@ -52,7 +48,7 @@ Doc Smith 需要在独立的 workspace 目录中工作,以避免污染源仓库�
 ### 2.1 收集必要信息
 
 #### 信息 1: 输出语言 (必须)
-- 如果用户在请求中已指定语言 (如 "生成中文文档") → 直接使用
+- 如果用户在请求中已指定语言 (如 "生成中文文档") → 直接使用，语言代码参考下方列表中的代码
 - 否则询问用户:
   ```
   请选择文档输出语言:
@@ -69,7 +65,6 @@ Doc Smith 需要在独立的 workspace 目录中工作,以避免污染源仓库�
   11. Italiano (it)
   12. العربية (ar)
   13. 其他 (请输入语言代码)
-  4. 其他 (请输入语言代码)
   ```
 
 #### 信息 2: 源仓库 URL (必须)
@@ -102,7 +97,6 @@ mkdir -p intent planning docs cache sources
 # 3. 创建 .gitignore
 cat > .gitignore << 'EOF'
 # Workspace gitignore
-cache/
 .tmp/
 node_modules/
 EOF
@@ -152,7 +146,7 @@ source:
   branch: "main"
 
 # Documentation settings (for publish)
-projectLogo: ""
+projectLogo: "" 
 translateLanguages: []
 ```
 
@@ -160,6 +154,7 @@ translateLanguages: []
 - `workspaceVersion`: 固定为 "1.0"
 - `createdAt`: 使用当前时间,格式如 "2025-12-30T10:00:00Z"
 - `projectName`: 从 URL 推断或用户输入
+- `projectDesc`: 从仓库信息中分析生成
 - `locale`: 用户选择的语言代码 (zh/en/ja...)
 - `source.path`: submodule 路径
 - `source.url`: 源仓库 URL
@@ -193,7 +188,7 @@ git commit -m "docsmith: initialize workspace"
   intent/                  - 用户意图 (待生成)
   planning/                - 文档结构规划 (待生成)
   docs/                    - 生成的文档 (待生成)
-  cache/                   - 临时数据 (不提交)
+  cache/                   - 缓存目录数据
 
 输出语言: <语言>
 源仓库: <URL>
@@ -211,6 +206,8 @@ git commit -m "docsmith: initialize workspace"
 
 使用 Read 工具读取 `config.yaml`,验证必要字段:
 - `workspaceVersion`: 必须存在
+- `projectName`: 必须存在
+- `projectDesc`: 必须存在
 - `locale`: 必须存在
 - `source.url`: 必须存在
 - `source.path`: 必须存在
@@ -264,9 +261,6 @@ DocSmith 需要 Git 来管理 workspace 和源仓库。
 建议:
 1. 检查 URL 是否正确
 2. 检查是否有访问权限 (SSH key 或 token)
-3. 尝试手动 clone: git clone <URL>
-
-是否跳过 submodule,仅创建目录结构? (Y/n)
 ```
 
 ### 错误 3: 目录权限问题
@@ -294,7 +288,7 @@ DocSmith 需要 Git 来管理 workspace 和源仓库。
 ## 五、关键约束
 
 1. **空目录要求**: 初始化必须在空目录或已初始化的 workspace 进行
-2. **Git 依赖**: 必须安装 Git >= 2.13
+2. **Git 依赖**: 必须安装
 3. **独立目录**: Workspace 必须是独立目录,不能在源仓库内
 4. **Submodule**: 源仓库作为 git submodule 管理,不污染 workspace
 

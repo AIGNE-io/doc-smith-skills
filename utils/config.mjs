@@ -1,7 +1,9 @@
 import { existsSync, mkdirSync } from "node:fs";
 import fs from "node:fs/promises";
+import { constants } from "node:fs";
 import path from "node:path";
 import { parse, stringify as yamlStringify } from "yaml";
+import { PATHS, ERROR_CODES } from "./agent-constants.mjs";
 
 /**
  * Load config from config.yaml file
@@ -236,4 +238,28 @@ export function generateConfigYAML(input) {
   yaml += `${sourcesPathSection.replace(/^sourcesPath:/, "sourcesPath:  # The source code paths to analyze.")}\n`;
 
   return yaml;
+}
+
+/**
+ * 加载配置文件获取主语言 locale
+ * @returns {Promise<string>} - 主语言代码
+ * @throws {Error} - 配置文件不存在或 locale 字段缺失时抛出错误
+ */
+export async function loadLocale() {
+  try {
+    await fs.access(PATHS.CONFIG, constants.F_OK | constants.R_OK);
+    const content = await fs.readFile(PATHS.CONFIG, "utf8");
+    const config = parse(content);
+
+    if (!config.locale || typeof config.locale !== "string") {
+      throw new Error(ERROR_CODES.MISSING_LOCALE);
+    }
+
+    return config.locale;
+  } catch (error) {
+    if (error.message === ERROR_CODES.MISSING_LOCALE) {
+      throw error;
+    }
+    throw new Error(ERROR_CODES.MISSING_CONFIG_FILE);
+  }
 }

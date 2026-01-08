@@ -2,7 +2,12 @@ import { readFile, writeFile, access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { parse as yamlParse, stringify as yamlStringify } from "yaml";
 import path from "node:path";
-import { PATHS, ERROR_CODES, FILE_TYPES, DOC_META_DEFAULTS } from "../../utils/agent-constants.mjs";
+import {
+  PATHS,
+  ERROR_CODES,
+  FILE_TYPES,
+  DOC_META_DEFAULTS,
+} from "../../../utils/agent-constants.mjs";
 
 /**
  * 保存翻译结果并更新 .meta.yaml
@@ -10,11 +15,12 @@ import { PATHS, ERROR_CODES, FILE_TYPES, DOC_META_DEFAULTS } from "../../utils/a
  * @param {string} input.path - 文档路径
  * @param {string} input.targetFile - 目标文件路径
  * @param {string} input.targetLanguage - 目标语言代码
+ * @param {string} input.sourceHash - 源文档的 hash
  * @param {string} input.translation - 翻译内容
  * @returns {Promise<Object>} - 操作结果
  */
 export default async function saveTranslation(input) {
-  const { path: docPath, targetFile, targetLanguage, translation } = input;
+  const { path: docPath, targetFile, targetLanguage, sourceHash, translation } = input;
   try {
     // 1. 保存翻译文件
     await writeFile(targetFile, translation, "utf8");
@@ -52,7 +58,18 @@ export default async function saveTranslation(input) {
       meta.languages.push(targetLanguage);
     }
 
-    // 5. 保存更新后的 .meta.yaml
+    // 5. 初始化或更新 translations 对象
+    if (!meta.translations || typeof meta.translations !== "object") {
+      meta.translations = {};
+    }
+
+    // 6. 记录翻译信息（sourceHash 和翻译时间）
+    meta.translations[targetLanguage] = {
+      sourceHash,
+      translatedAt: new Date().toISOString(),
+    };
+
+    // 7. 保存更新后的 .meta.yaml
     const updatedMetaContent = yamlStringify(meta);
     await writeFile(metaPath, updatedMetaContent, "utf8");
 
@@ -81,12 +98,13 @@ export default async function saveTranslation(input) {
 // 添加描述信息
 saveTranslation.description =
   "保存翻译结果到目标文件，并更新文档的 .meta.yaml 文件。" +
-  "自动将目标语言添加到 languages 数组中，确保元信息的一致性。";
+  "自动将目标语言添加到 languages 数组中，" +
+  "记录源文档的 hash 和翻译时间到 translations 对象，用于后续判断是否需要重新翻译。";
 
 // 定义输入 schema
 saveTranslation.input_schema = {
   type: "object",
-  required: ["path", "targetFile", "targetLanguage", "translation"],
+  required: ["path", "targetFile", "targetLanguage", "sourceHash", "translation"],
   properties: {
     path: {
       type: "string",
@@ -99,6 +117,10 @@ saveTranslation.input_schema = {
     targetLanguage: {
       type: "string",
       description: "目标语言代码",
+    },
+    sourceHash: {
+      type: "string",
+      description: "源文档的 SHA256 hash",
     },
     translation: {
       type: "string",

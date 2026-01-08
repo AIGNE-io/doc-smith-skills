@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { join } from "node:path";
-import { DOC_SMITH_DIR, TMP_DIR } from "./constants.mjs";
+import { PATHS } from "./agent-constants.mjs";
 
 // Shared extension → MIME type mapping table
 const EXT_TO_MIME = {
@@ -60,7 +60,7 @@ export function getMimeType(filePath) {
  * @returns {Promise<void>}
  */
 export async function ensureTmpDir() {
-  const tmpDir = join(process.cwd(), DOC_SMITH_DIR, TMP_DIR);
+  const tmpDir = join(process.cwd(), PATHS.DOC_SMITH_DIR, PATHS.TMP_DIR);
   if (!existsSync(tmpDir)) {
     mkdirSync(tmpDir, { recursive: true });
   }

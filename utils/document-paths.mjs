@@ -40,10 +40,7 @@ export function normalizePath(rawPath) {
  * @returns {Set|Array} - 路径集合或路径对象数组
  */
 export function collectDocumentPaths(docs, options = {}) {
-  const {
-    includeBothFormats = false,
-    collectMetadata = false,
-  } = options;
+  const { includeBothFormats = false, collectMetadata = false } = options;
 
   const paths = collectMetadata ? [] : new Set();
 
