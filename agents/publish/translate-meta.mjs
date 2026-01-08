@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { AIAgent } from "@aigne/core";
 import fs from "fs-extra";
 import { parse as yamlParse, stringify as yamlStringify } from "yaml";
+import z from "zod";
 
 import { PATHS } from "../../utils/agent-constants.mjs";
 import { loadDocumentStructure } from "../../utils/docs.mjs";
@@ -61,30 +62,30 @@ export default async function translateMeta({ config }, options) {
 
   const titleLanguages = languages.filter((lang) => !titleTranslation[lang]);
   const descLanguages = languages.filter((lang) => !descTranslation[lang]);
-  // const titleTranslationSchema = z.object(
-  //   titleLanguages.reduce((shape, lang) => {
-  //     shape[lang] = z.string();
-  //     return shape;
-  //   }, {}),
-  // );
-  // const descTranslationSchema = z.object(
-  //   descLanguages.reduce((shape, lang) => {
-  //     shape[lang] = z.string();
-  //     return shape;
-  //   }, {}),
-  // );
+  const titleTranslationSchema = z.object(
+    titleLanguages.reduce((shape, lang) => {
+      shape[lang] = z.string();
+      return shape;
+    }, {}),
+  );
+  const descTranslationSchema = z.object(
+    descLanguages.reduce((shape, lang) => {
+      shape[lang] = z.string();
+      return shape;
+    }, {}),
+  );
 
   const agent = AIAgent.from({
     name: "translateMeta",
     instructions:
       "You are an **Elite Polyglot Localization and Translation Specialist** with extensive professional experience across multiple domains. Your core mission is to produce translations that are not only **100% accurate** to the source meaning but are also **natively fluent, highly readable, and culturally appropriate** in the target language.",
     inputKey: "message",
-    // outputSchema: z.object({
-    //   title: titleTranslationSchema.describe("Translated titles with language codes as keys"),
-    //   desc: descTranslationSchema.describe(
-    //     "Translated descriptions with language codes as keys. Each description MUST be within 100 characters.",
-    //   ),
-    // }),
+    outputSchema: z.object({
+      title: titleTranslationSchema.describe("Translated titles with language codes as keys"),
+      desc: descTranslationSchema.describe(
+        "Translated descriptions with language codes as keys. Each description MUST be within 100 characters.",
+      ),
+    }),
   });
   if (titleLanguages.length > 0 || descLanguages.length > 0) {
     const translatedMetadata = await options.context.invoke(agent, {
