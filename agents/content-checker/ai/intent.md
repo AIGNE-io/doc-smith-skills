@@ -32,16 +32,13 @@ Content Checker 在文档生成流程的最后阶段执行：
 ### 输入
 
 - 可选输入：
-  - `yamlPath`: 文档结构文件路径
-  - `docsDir`: 文档目录路径
   - `docs`: 要检查的文档路径数组，如 `["/overview", "/api/introduction"]`，如果不提供则检查所有文档
-  - `checkRemoteImages`: 是否检查远程图片可访问性
 
 - 自动获取：
-  - 从 `PATHS` 常量自动获取默认路径 (`planning/document-structure.yaml`, `docs/`)
+  - 从 `PATHS` 常量自动获取文档结构文件路径 (`planning/document-structure.yaml`)
+  - 从 `PATHS` 常量自动获取文档目录路径 (`docs/`)
   - `autoFix` 默认为 `true`
   - `checkRemoteImages` 默认为 `true`
-  - `docs` 默认为 `undefined`（检查所有文档）
 
 ### 输出
 
@@ -150,7 +147,7 @@ Content Checker 在文档生成流程的最后阶段执行：
   - 在 skill 或其他 agent 中通过 `import checkContent from './agents/content-checker/index.mjs'` 调用
   - 返回结构化的检查结果对象
   - 支持两种调用方式：
-    - 检查所有文档：`checkContent()` 或 `checkContent({ yamlPath, docsDir })`
+    - 检查所有文档：`checkContent()`
     - 检查指定文档：`checkContent({ docs: ["/overview", "/api/introduction"] })`
 
 - **无需 skills-entry 配置**：

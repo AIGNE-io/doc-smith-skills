@@ -9,9 +9,10 @@ import { PATHS } from "../../utils/agent-constants.mjs";
  * 文档内容校验器类
  */
 class DocumentContentValidator {
-  constructor(yamlPath = PATHS.DOCUMENT_STRUCTURE, docsDir = PATHS.DOCS_DIR) {
+  constructor(yamlPath = PATHS.DOCUMENT_STRUCTURE, docsDir = PATHS.DOCS_DIR, docs = undefined) {
     this.yamlPath = yamlPath;
     this.docsDir = docsDir;
+    this.docsFilter = docs ? new Set(docs) : null;
     this.errors = {
       fatal: [],
       fixable: [],
@@ -74,6 +75,13 @@ class DocumentContentValidator {
 
       // 转换为内部格式
       for (const doc of docsWithMeta) {
+        // 如果指定了 docs 过滤器，则只添加匹配的文档
+        if (this.docsFilter && !this.docsFilter.has(doc.displayPath)) {
+          // 仍需添加到 documentPaths 用于链接验证
+          this.documentPaths.add(doc.displayPath);
+          continue;
+        }
+
         this.documents.push({
           path: doc.displayPath,
           filePath: doc.path,
@@ -754,16 +762,18 @@ function formatOutput(result) {
  * @param {Object} params
  * @param {string} params.yamlPath - 文档结构 YAML 文件路径
  * @param {string} params.docsDir - 文档目录路径
+ * @param {string[]} params.docs - 要检查的文档路径数组，如 ['/overview', '/api/introduction']，如果不提供则检查所有文档
  * @param {boolean} params.checkRemoteImages - 是否检查远程图片
  * @returns {Promise<Object>} - 校验结果
  */
 export default async function validateDocumentContent({
   yamlPath = PATHS.DOCUMENT_STRUCTURE,
   docsDir = PATHS.DOCS_DIR,
+  docs = undefined,
   checkRemoteImages = true,
 } = {}) {
   try {
-    const validator = new DocumentContentValidator(yamlPath, docsDir);
+    const validator = new DocumentContentValidator(yamlPath, docsDir, docs);
     const result = await validator.validate(checkRemoteImages);
 
     const formattedOutput = formatOutput(result);

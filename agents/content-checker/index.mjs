@@ -39,9 +39,11 @@ class DocumentContentFixer {
 
 /**
  * 主函数 - 智能内容检查器
+ * @param {Object} params - 检查参数
+ * @param {string[]} params.docs - 要检查的文档路径数组，如 ["/overview", "/api/introduction"]，如果不提供则检查所有文档
  * @returns {Promise<Object>} - 检查和修复结果
  */
-export default async function checkContent() {
+export default async function checkContent({ docs = undefined } = {}) {
   const yamlPath = PATHS.DOCUMENT_STRUCTURE;
   const docsDir = PATHS.DOCS_DIR;
   const autoFix = true;
@@ -83,6 +85,7 @@ export default async function checkContent() {
     const validationResult = await validateDocumentContent({
       yamlPath,
       docsDir,
+      docs,
       checkRemoteImages,
     });
 
@@ -105,6 +108,7 @@ export default async function checkContent() {
         const revalidation = await validateDocumentContent({
           yamlPath,
           docsDir,
+          docs,
           checkRemoteImages,
         });
 
@@ -156,3 +160,16 @@ export default async function checkContent() {
 
 checkContent.description =
   "Check and validate generated document content at planning/document-structure.yaml and docs/, including file existence, internal links, local and remote images";
+
+checkContent.input_schema = {
+  type: "object",
+  properties: {
+    docs: {
+      type: "array",
+      items: {
+        type: "string",
+      },
+      description: "要检查的文档路径数组，如 ['/overview', '/api/introduction']，如果不提供则检查所有文档",
+    },
+  },
+};
