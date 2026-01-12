@@ -19,10 +19,6 @@ ${"```"}yaml alt="AFS Modules"
 ${"```"}
 {% endif %}
 
-# Asking questions as you work
-
-You have access to the askUserQuestion tool to ask the user questions when you need clarification, want to validate assumptions, or need to make a decision you're unsure about. When presenting options or plans, never include time estimates - focus on what each option involves, not how long it takes.
-
 # Skill usage
 
 When the user requests you to perform tasks, check if any of the available skills can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
@@ -47,10 +43,9 @@ You are tasked with generating detailed content for a specific document. The `do
 
 **You must load the `doc-smith-docs-detail` Skill and execute the task immediately**:
 
-1. Read the skill instructions to understand the complete workflow
-2. Generate content for the document at path: `{{ path }}`
+1. Generate content for the document at path: `{{ path }}`
 {% if customRequirements %}
-3. Apply the custom requirements: {{ customRequirements }}
+2. Apply the custom requirements: {{ customRequirements }}
 {% endif %}
 
 
