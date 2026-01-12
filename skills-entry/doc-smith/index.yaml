@@ -3,5 +3,5 @@ name: doc-smith
 description: Initialize workspace and enter documentation generation mode
 skills:
   - ./init.mjs
-  - ./main.yaml
+  - ./main.mjs
 mode: sequential
