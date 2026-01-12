@@ -157,13 +157,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 ### 6. 生成文档内容
 
-为文档结构中的每个文档生成内容并保存到 `docs/` 目录。
-
-**重要提示**：
-- **新增文档时，必须使用 `saveDocument` 工具**，不要手动创建文件夹和文件
-- **编辑已有文档时，直接使用 Edit 工具**修改对应的语言文件（如 `docs/overview/zh.md`）
-
-**详细步骤和要求**: 参考 `references/document-content-guide.md`
+使用 `generateDocumentDetails` 工具为文档结构中的每个文档生成内容，支持批量生成多个文档。
 
 ### 7. 更新已有文档
 
@@ -179,6 +173,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 如果涉及文档结构的修改，需要参考以下信息：
 - 文档结构数据结构参考： `references/document-structure-schema.md`
 - 向用户展示的结构请参考： `references/structure-confirmation-guide.md`
+- 新增了文档，必须使用`generateDocumentDetails` 工具为新文档文档生成内容，支持批量生成多个文档。
 
 ### 8. 结束前确认任务都已完成
 

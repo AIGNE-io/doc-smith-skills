@@ -21,8 +21,9 @@ skills:
   - ../../agents/bash-executor/index.mjs
   - ../../agents/structure-checker/index.mjs
   - ../../agents/content-checker/index.mjs
-  - ../../agents/save-document/index.mjs
+  # - ../../agents/save-document/index.mjs
   - ../../agents/update-image/index.yaml
+  - ../../skills-entry/doc-smith-docs-detail/index.yaml
 afs:
   modules:
     - module: history
