@@ -1,6 +1,8 @@
 type: "@aigne/agent-library/agent-skill-manager"
 name: generateDocumentDetail
 description: 根据文档路径和用户要求生成单个文档的详细内容
+instructions:
+  url: ./prompt.md
 
 model:
   cache_config:
@@ -68,3 +70,12 @@ afs:
           Current working directory for the agent
           - Read-write access to project files
           - Use absolute path for file operations
+    - module: local-fs
+      options:
+        agentSkills: true
+        name: doc-smith-docs-detail
+        localPath: ../../skills/doc-smith-docs-detail
+        description: |
+          Agent skill for document detail generation
+          - Read-only access to skill definition files
+          - Do NOT modify files in this directory
