@@ -21,7 +21,7 @@ NC='\033[0m' # No Color
 # 获取脚本所在目录的父目录（项目根目录）
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-SOURCE_DIR="$PROJECT_ROOT/doc-smith"
+SOURCE_DIR="$PROJECT_ROOT/skills/doc-smith"
 TARGET_DIR="$HOME/.claude/skills"
 TARGET_PATH="$TARGET_DIR/doc-smith"
 

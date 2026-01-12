@@ -2,7 +2,7 @@ type: "@aigne/agent-library/agent-skill-manager"
 name: docsmith
 task_render_mode: collapse
 instructions:
-  url: ./prompts/doc-smith.md
+  url: ./prompt.md
 
 model:
   cache_config:
@@ -15,14 +15,14 @@ history_config:
 input_key: message
 skills:
   - type: "@aigne/agent-library/ask-user-question"
-  - ./agents/publish/index.yaml
-  - ./agents/localize/index.yaml
-  - ./agents/generate-images/index.yaml
-  - ./agents/bash-executor/index.mjs
-  - ./agents/structure-checker/index.mjs
-  - ./agents/content-checker/index.mjs
-  - ./agents/save-document/index.mjs
-  - ./agents/update-image/index.yaml
+  - ../../agents/publish/index.yaml
+  - ../../agents/localize/index.yaml
+  - ../../agents/generate-images/index.yaml
+  - ../../agents/bash-executor/index.mjs
+  - ../../agents/structure-checker/index.mjs
+  - ../../agents/content-checker/index.mjs
+  - ../../agents/save-document/index.mjs
+  - ../../agents/update-image/index.yaml
 afs:
   modules:
     - module: history
@@ -42,7 +42,7 @@ afs:
       options:
         agentSkills: true
         name: doc-smith
-        localPath: ./doc-smith
+        localPath: ../../skills/doc-smith
         description: |
           Agent skill for document operations
           - Read-only access to skill definition files
