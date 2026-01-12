@@ -203,3 +203,213 @@ Intent 文档是设计阶段的产物，实施阶段会基于它创建具体的�
 
 - **Skill Intent**：`skills/doc-smith-docs-detail/ai/intent.md`
 - **功能设计**：`feature-design/` 目录下的设计文档
+
+## AIGNE 框架开发指南
+
+### Function Agent 基本结构
+
+Function Agent 是纯 JS 实现的 agent，不依赖 LLM 能力，用于执行确定性逻辑。
+
+```javascript
+// 基本结构
+export default async function agentName(input, options) {
+  const { prompts, context } = options;
+
+  // 业务逻辑...
+
+  return { success: true, data: result };
+}
+
+// 可选：描述和输入 schema
+agentName.description = "Agent 功能描述";
+agentName.input_schema = {
+  type: "object",
+  properties: {
+    param1: { type: "string", description: "参数说明" }
+  }
+};
+```
+
+### Prompts API（用户交互）
+
+通过 `options.prompts` 访问交互 API：
+
+| API | 用途 | 示例 |
+|-----|------|------|
+| `select(config)` | 单选列表 | 语言选择、模式选择 |
+| `checkbox(config)` | 多选列表 | 功能开关、多语言选择 |
+| `input(config)` | 文本输入 | URL 输入、名称输入 |
+| `search(config)` | 搜索选择 | 文件路径搜索 |
+
+**select 配置**：
+```javascript
+const result = await prompts.select({
+  message: "提示信息",
+  choices: [
+    { name: "显示名称", value: "返回值", description: "描述" }
+  ],
+  default: "默认值"
+});
+```
+
+**checkbox 配置**：
+```javascript
+const results = await prompts.checkbox({
+  message: "提示信息",
+  choices: [...],
+  validate: (input) => input.length > 0 || "至少选择一项"
+});
+```
+
+**input 配置**：
+```javascript
+const text = await prompts.input({
+  message: "提示信息",
+  default: "默认值",
+  validate: (input) => input.trim() !== "" || "不能为空"
+});
+```
+
+**search 配置**：
+```javascript
+const selected = await prompts.search({
+  message: "提示信息",
+  source: async (input) => {
+    // 根据 input 返回选项数组
+    return [{ name: "显示", value: "值", description: "描述" }];
+  }
+});
+```
+
+### Context API（上下文和调用）
+
+通过 `options.context` 访问上下文 API：
+
+| API | 用途 |
+|-----|------|
+| `context.agents` | 已注册的 agent 字典 |
+| `context.invoke(agent, params)` | 调用其他 agent |
+| `context.userContext` | 全局用户上下文（可读写） |
+
+**获取 agent**：
+```javascript
+const agent = context.agents?.["agentName"];
+if (!agent) {
+  throw new Error("Agent not found");
+}
+```
+
+**调用 agent**：
+```javascript
+const result = await context.invoke(agent, { message: "输入内容" });
+// 或直接传入参数对象
+const result = await context.invoke(agent, { param1: "value1" });
+```
+
+**全局上下文**：
+```javascript
+// 写入
+context.userContext.customField = "value";
+
+// 读取（在其他 agent 中）
+const value = context.userContext.customField;
+```
+
+### aigne.yaml 配置结构
+
+```yaml
+#!/usr/bin/env aigne
+
+model: anthropic/claude-sonnet-4-5
+
+# 注册 agents（供 context.agents 访问）
+agents:
+  - path/to/agent.yaml
+  - path/to/function-agent.mjs
+
+# CLI 命令配置
+cli:
+  agents:
+    - name: command-name      # CLI 命令名
+      alias: ["alias1"]       # 命令别名
+      url: path/to/entry.mjs  # 入口文件
+```
+
+### Agent YAML 配置
+
+```yaml
+type: "@aigne/agent-library/agent-skill-manager"
+name: agentName  # context.agents 中的键名
+instructions:
+  url: ./prompt.md
+
+input_key: message  # 输入参数键名
+
+skills:
+  - path/to/skill.yaml
+  - path/to/function.mjs
+
+afs:
+  modules:
+    - module: local-fs
+      options:
+        name: moduleName
+        localPath: ./path
+```
+
+### 常见开发模式
+
+**1. 入口 Agent 模式**
+
+入口 agent（如 init.mjs）负责初始化，然后调用主 agent：
+
+```javascript
+export default async function init(input, options) {
+  // 1. 初始化逻辑
+  // 2. 设置全局上下文
+  options.context.userContext.workspace = "/path";
+
+  // 3. 调用主 agent
+  const mainAgent = options.context.agents?.["main"];
+  if (mainAgent) {
+    await options.context.invoke(mainAgent, { message: "初始化完成" });
+  }
+
+  return { success: true };
+}
+```
+
+**2. 条件调用模式**
+
+根据条件决定是否调用其他 agent：
+
+```javascript
+export default async function wrapper(input, options) {
+  if (input.skipCondition) {
+    return input;  // 跳过，直接返回
+  }
+
+  const agent = options.context.agents?.["targetAgent"];
+  const result = await options.context.invoke(agent, input);
+  return { ...input, ...result };
+}
+```
+
+**3. 任务渲染模式**
+
+控制 agent 在 UI 中的显示方式：
+
+```javascript
+// 隐藏任务
+agentName.task_render_mode = "hide";
+
+// 折叠任务
+agentName.task_render_mode = "collapse";
+```
+
+### 参考实现
+
+- **入口 Agent**：`skills-entry/doc-smith/init.mjs`
+- **Function Agent**：`agents/content-checker/index.mjs`
+- **Prompts 使用**：参考 `aigne-doc-smith/agents/init/index.mjs`
+- **Invoke 使用**：参考 `aigne-doc-smith/agents/localize/translate-document-wrapper.mjs`

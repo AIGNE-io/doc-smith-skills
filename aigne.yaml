@@ -13,12 +13,13 @@ agents:
   - agents/generate-images/index.yaml
   - agents/update-image/index.yaml
   - agents/localize/translate-documents/translate-document.yaml
+  - skills-entry/doc-smith-docs-detail/index.yaml
 
 cli:
   agents:
     - name: doc-smith
       alias: ["create", "gen", "g"]
-      url: skills-entry/doc-smith/index.yaml
+      url: skills-entry/doc-smith/init.mjs
     - name: publish
       alias: ["pub", "p"]
       url: agents/publish/index.yaml
