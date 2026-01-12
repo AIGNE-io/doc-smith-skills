@@ -1,5 +1,5 @@
 type: team
-name: docsmith
+name: doc-smith
 description: Initialize workspace and enter documentation generation mode
 skills:
   - ./init.mjs
