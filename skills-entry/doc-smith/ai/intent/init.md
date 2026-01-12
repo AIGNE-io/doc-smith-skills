@@ -19,27 +19,29 @@ doc-smith 启动
   ↓
 检测当前目录状态
   ↓
-├─ .docsmith/ 已存在且有效 → 直接进入对话模式
-├─ 是 git 仓库（无 .docsmith/）→ 项目内启动流程
+├─ .doc-smith/ 已存在且有效 → 直接进入对话模式
+├─ 是 git 仓库（无 .doc-smith/）→ 项目内启动流程
 ├─ 是空目录 → 独立启动流程
 └─ 其他情况 → 报错提示
 ```
 
 ### 流程 A：项目内启动
 
-**触发条件**：当前目录是 git 仓库，且 `.docsmith/` 不存在
+**触发条件**：当前目录是 git 仓库，且 `.doc-smith/` 不存在
 
 **步骤**：
 1. 向用户展示语言选择列表，等待用户选择
-2. 创建 `.docsmith/` 目录
-3. 在 `.docsmith/` 中执行 `git init`
+2. 创建 `.doc-smith/` 目录
+3. 在 `.doc-smith/` 中执行 `git init`
 4. 创建目录结构（intent/、planning/、docs/）
-5. 生成 config.yaml
-6. 检测外层目录是否为 git 仓库
-   - 是 → 将 `.docsmith/` 添加为 submodule
+5. 创建 `.gitignore` 文件（忽略 source/ 目录，为后续添加其他 source 做准备）
+6. 生成 config.yaml
+7. 检测外层目录是否为 git 仓库
+   - 是 → 将 `.doc-smith/` 添加为 submodule
    - 否 → 跳过 submodule 步骤
-7. 通过 `options.context.invoke()` 调用主 agent，传入初始化 message
-8. 返回，进入对话模式
+8. 设置 `options.context.userContext.docSmithWorkspace = './.doc-smith'`
+9. 通过 `options.context.invoke()` 调用主 agent，传入初始化 message
+10. 返回，进入对话模式
 
 ### 流程 B：独立启动
 
@@ -54,136 +56,65 @@ doc-smith 启动
 6. 获取并记录 source 仓库的 HEAD commit SHA
 7. 创建目录结构（intent/、planning/、docs/）
 8. 生成 config.yaml
-9. 通过 `options.context.invoke()` 调用主 agent，传入初始化 message
-10. 返回，进入对话模式
+9. 设置 `options.context.userContext.docSmithWorkspace = '/'`
+10. 通过 `options.context.invoke()` 调用主 agent，传入初始化 message
+11. 返回，进入对话模式
 
 ### 流程 C：已初始化
 
-**触发条件**：`.docsmith/` 或 `config.yaml` 已存在
+**触发条件**：`.doc-smith/` 或 `config.yaml` 已存在
 
 **步骤**：
 1. 读取现有配置
-2. 直接通过 `options.context.invoke()` 调用主 agent
-3. 返回，进入对话模式
+2. 设置 `options.context.userContext.docSmithWorkspace`（根据检测到的模式）
+3. 直接通过 `options.context.invoke()` 调用主 agent
+4. 返回，进入对话模式
 
 ## 核心能力
 
 ### 1. 目录状态检测
 
-```javascript
-import { access, readdir } from 'node:fs/promises';
-import { constants } from 'node:fs';
-import { join } from 'node:path';
-
-// 检测是否为 git 仓库
-async function isGitRepo(dir) {
-  try {
-    await access(join(dir, '.git'), constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// 检测是否为空目录
-async function isEmptyDir(dir) {
-  const files = await readdir(dir);
-  return files.length === 0;
-}
-
-// 检测 workspace 是否已初始化
-async function isInitialized(dir) {
-  try {
-    // 检查项目内模式
-    await access(join(dir, '.docsmith', 'config.yaml'), constants.F_OK);
-    return 'project';
-  } catch {
-    try {
-      // 检查独立模式
-      await access(join(dir, 'config.yaml'), constants.F_OK);
-      return 'standalone';
-    } catch {
-      return false;
-    }
-  }
-}
-```
+- 检测当前目录是否为 git 仓库（`.git/` 目录存在）
+- 检测当前目录是否为空目录
+- 检测 workspace 是否已初始化（`.doc-smith/config.yaml` 或 `./config.yaml` 存在）
 
 ### 2. 用户交互
 
-使用 AIGNE 框架提供的 `options.prompts` API 实现交互：
-
-```javascript
-// options.prompts 提供的方法：
-// - select: 单选列表
-// - checkbox: 多选列表
-// - input: 文本输入
-// - search: 搜索选择
-
-// 语言选择（单选）
-async function selectLanguage(options) {
-  const language = await options.prompts.select({
-    message: '🌐 请选择文档语言：',
-    choices: SUPPORTED_LANGUAGES.map((lang) => ({
-      name: `${lang.name} (${lang.code})`,
-      value: lang.code,
-    })),
-    default: 'en',  // 默认英文
-  });
-  return SUPPORTED_LANGUAGES.find((l) => l.code === language);
-}
-
-// 输入 Git 仓库 URL
-async function inputRepoUrl(options) {
-  const url = await options.prompts.input({
-    message: '📦 请输入 Git 仓库地址：',
-    validate: (input) => {
-      if (!input || input.trim() === '') {
-        return '请输入有效的 Git 仓库地址';
-      }
-      // 简单验证 URL 格式
-      if (!input.includes('github.com') && !input.includes('gitlab.com') && !input.startsWith('git@')) {
-        return '请输入有效的 Git 仓库地址（支持 GitHub、GitLab 等）';
-      }
-      return true;
-    },
-  });
-  return url.trim();
-}
-```
+使用 AIGNE 框架提供的 `options.prompts` API：
+- `options.prompts.select`：语言选择（单选列表）
+- `options.prompts.input`：Git 仓库 URL 输入
 
 ### 3. 支持的语言选项
 
-```javascript
-const SUPPORTED_LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'zh', name: '简体中文' },
-  { code: 'zh-TW', name: '繁體中文' },
-  { code: 'ja', name: '日本語' },
-  { code: 'ko', name: '한국어' },
-  { code: 'es', name: 'Español' },
-  { code: 'fr', name: 'Français' },
-  { code: 'de', name: 'Deutsch' },
-  { code: 'pt', name: 'Português' },
-  { code: 'ru', name: 'Русский' },
-  { code: 'it', name: 'Italiano' },
-  { code: 'ar', name: 'العربية' },
-];
-```
+| 代码 | 语言名称 |
+|------|---------|
+| en | English |
+| zh | 简体中文 |
+| zh-TW | 繁體中文 |
+| ja | 日本語 |
+| ko | 한국어 |
+| es | Español |
+| fr | Français |
+| de | Deutsch |
+| pt | Português |
+| ru | Русский |
+| it | Italiano |
+| ar | العربية |
 
 ### 4. 目录结构创建
 
-项目内启动创建的结构：
+**项目内启动创建的结构**：
 ```
-.docsmith/
+.doc-smith/
 ├── .git/                # 独立 git 仓库
+├── .gitignore           # 忽略 source/ 目录
 ├── config.yaml          # 工作空间配置
 ├── intent/              # 意图文件目录
 ├── planning/            # 规划文件目录
 └── docs/                # 生成的文档目录
 ```
 
-独立启动创建的结构：
+**独立启动创建的结构**：
 ```
 ./                       # 当前目录
 ├── .git/
@@ -195,129 +126,37 @@ const SUPPORTED_LANGUAGES = [
 └── docs/
 ```
 
-```javascript
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+### 5. 配置文件内容
 
-async function createWorkspaceStructure(baseDir) {
-  const dirs = ['intent', 'planning', 'docs'];
-  for (const dir of dirs) {
-    await mkdir(join(baseDir, dir), { recursive: true });
-  }
-}
-```
-
-### 5. 配置文件生成
-
-```yaml
-# config.yaml
-
-# 文档输出语言
-language: "zh"
-
-# 数据源配置
-sources:
-  # 项目内启动
-  - name: "main"
-    type: local-path
-    path: "../"
-
-  # 独立启动
-  - name: "main"
-    type: git-clone
-    url: "https://github.com/user/repo.git"
-    ref: "abc123def"  # HEAD commit SHA
-    cachePath: "source"
-```
-
-```javascript
-import { stringify as yamlStringify } from 'yaml';
-
-function generateConfig(language, sourceConfig) {
-  const config = {
-    language: language.code,
-    sources: [sourceConfig],
-  };
-  return yamlStringify(config);
-}
-```
+config.yaml 包含：
+- `language`：文档输出语言
+- `sources`：数据源配置数组
+  - 项目内启动：`type: local-path`，`path: "../"`
+  - 独立启动：`type: git-clone`，`url`、`ref`（HEAD SHA）、`cachePath: "source"`
 
 ### 6. Git 操作
 
-```javascript
-import { execSync } from 'node:child_process';
+- `git init`：初始化仓库
+- `git clone`：克隆源仓库（独立模式）
+- `git rev-parse HEAD`：获取 HEAD commit SHA
+- `git submodule add`：添加 submodule（项目内模式，外层是 git 仓库时）
 
-// git init
-function gitInit(dir) {
-  execSync('git init', { cwd: dir, stdio: 'inherit' });
-}
+### 7. 全局上下文设置
 
-// git clone
-function gitClone(url, targetDir) {
-  execSync(`git clone "${url}" "${targetDir}"`, { stdio: 'inherit' });
-}
+在 `options.context.userContext` 中设置 `docSmithWorkspace` 字段：
+- 项目内启动：`./.doc-smith`
+- 独立启动：`/`
 
-// 获取 HEAD commit SHA
-function getHeadSha(dir) {
-  return execSync('git rev-parse HEAD', { cwd: dir, encoding: 'utf8' }).trim();
-}
+该字段供后续 agent 使用，用于定位 doc-smith 工作目录。
 
-// 添加 submodule
-function addSubmodule(parentDir, submodulePath) {
-  execSync(`git submodule add "./${submodulePath}"`, { cwd: parentDir, stdio: 'inherit' });
-}
-```
+### 8. 调用主 Agent
 
-### 7. 调用主 Agent 进入对话模式
-
-使用 AIGNE 框架提供的 `options.context.invoke()` API：
-
-```javascript
-export default async function init(input, options) {
-  // ... 初始化逻辑 ...
-
-  // 获取主 agent（index.yaml 中定义的）
-  // agent 名称对应 index.yaml 中的 name 字段
-  const mainAgent = options.context?.agents?.['doc-smith'];
-
-  if (!mainAgent) {
-    console.error('❌ 无法找到 doc-smith agent');
-    return { success: false, error: 'AGENT_NOT_FOUND' };
-  }
-
-  // 调用主 agent 进入对话模式
-  // invoke 会将 message 传递给 agent，agent 会根据 message 开始对话
-  const result = await options.context.invoke(mainAgent, {
-    message: `为当前项目生成 ${language.name} 语言文档`,
-  });
-
-  return {
-    success: true,
-    language: language.code,
-    mode: mode,  // 'project' | 'standalone'
-    message: '工作空间初始化完成，已进入对话模式',
-    ...result,
-  };
-}
-```
-
-**注意**：
-- `options.context.agents` 是一个字典，key 是 agent 的 name
-- `options.context.invoke(agent, params)` 调用 agent 并传递参数
-- 传入的 `message` 字段会作为用户输入传递给 agent
-- 可以通过 `options.context.userContext` 设置全局上下文，供后续 agent 使用
-
-```javascript
-// 设置全局上下文示例
-options.context.userContext.language = language.code;
-options.context.userContext.workspaceMode = mode;
-```
+通过 `options.context.invoke()` 调用 index.yaml 中定义的主 agent，传入 message 进入对话模式。
 
 ## 输入输出
 
 ### 输入
 
-Function Agent 标准输入：
 - `input`：调用参数（本场景可为空）
 - `options.context`：AIGNE 上下文对象
   - `options.context.agents`：可用的 agent 字典
@@ -325,28 +164,20 @@ Function Agent 标准输入：
   - `options.context.userContext`：用户上下文，可存储全局状态
 - `options.prompts`：AIGNE 交互 API
   - `options.prompts.select(config)`：单选列表
-  - `options.prompts.checkbox(config)`：多选列表
   - `options.prompts.input(config)`：文本输入
-  - `options.prompts.search(config)`：搜索选择
 
 ### 输出
 
-```javascript
-// 成功
-{
-  success: true,
-  language: 'zh',
-  mode: 'project' | 'standalone',
-  message: '工作空间初始化完成'
-}
+成功时返回：
+- `success: true`
+- `language`：选择的语言代码
+- `mode`：启动模式（'project' | 'standalone'）
+- `message`：操作结果描述
 
-// 失败
-{
-  success: false,
-  error: 'ERROR_CODE',
-  message: '错误描述'
-}
-```
+失败时返回：
+- `success: false`
+- `error`：错误代码
+- `message`：错误描述
 
 ## 约束条件
 
@@ -356,6 +187,7 @@ Function Agent 标准输入：
 2. **语言单选**：只支持选择一种语言
 3. **目录结构**：严格遵循定义的目录结构
 4. **配置格式**：config.yaml 遵循统一的 schema
+5. **全局上下文**：必须设置 `docSmithWorkspace` 字段
 
 ### 职责边界
 
@@ -364,6 +196,7 @@ Function Agent 标准输入：
   - 与用户交互获取必要信息
   - 创建目录结构和配置文件
   - 执行必要的 git 操作
+  - 设置全局上下文
   - 调用主 agent 进入对话模式
 
 - **不应执行**：
@@ -379,7 +212,8 @@ Function Agent 标准输入：
 2. 用户交互清晰，选项明确
 3. 目录结构和配置文件正确创建
 4. Git 操作正确执行
-5. 成功调用主 agent 进入对话模式
+5. 全局上下文正确设置
+6. 成功调用主 agent 进入对话模式
 
 ## 错误处理
 
@@ -411,36 +245,10 @@ skills-entry/doc-smith/
         └── init.md      # 本文档
 ```
 
-### 函数签名
-
-```javascript
-// init.mjs
-export default async function init(input, options) {
-  // 实现逻辑
-}
-
-init.description = 'Initialize DocSmith workspace and enter documentation generation mode';
-
-init.input_schema = {
-  type: 'object',
-  properties: {},
-};
-```
-
 ### 注册到 aigne.yaml
 
-在 `aigne.yaml` 的 cli.agents 配置中，将 init.mjs 设置为 doc-smith 的入口：
-
-```yaml
-cli:
-  agents:
-    - name: doc-smith
-      alias: ["create", "gen", "g"]
-      url: skills-entry/doc-smith/init.mjs  # 改为 init.mjs
-```
-
-或者在 index.yaml 中配置 init 为启动时执行的 agent。
+在 `aigne.yaml` 的 cli.agents 配置中，将 init.mjs 设置为 doc-smith 的入口。
 
 ---
 
-**注意**：本文档描述功能意图，具体实现为 JS 代码。
+**注意**：本文档描述功能意图，不包含具体实现代码。
