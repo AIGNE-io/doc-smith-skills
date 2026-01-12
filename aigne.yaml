@@ -19,7 +19,7 @@ cli:
   agents:
     - name: doc-smith
       alias: ["create", "gen", "g"]
-      url: skills-entry/doc-smith/init.mjs
+      url: skills-entry/doc-smith/index.yaml
     - name: publish
       alias: ["pub", "p"]
       url: agents/publish/index.yaml

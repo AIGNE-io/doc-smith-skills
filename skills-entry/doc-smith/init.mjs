@@ -325,7 +325,6 @@ export default async function init(_input, options) {
   const { prompts, context } = options;
 
   console.log("\n🚀 Welcome to Doc-Smith!");
-  console.log("   Initializing workspace...\n");
 
   // Detect directory state
   const dirState = await detectDirectoryState();
@@ -368,17 +367,13 @@ export default async function init(_input, options) {
   // Set global context for subsequent agents
   context.userContext.docSmithWorkspace = result.workspace;
 
-  // Invoke main agent to enter conversation mode
-  const mainAgent = context.agents?.["docsmith"];
-  if (mainAgent) {
-    console.log("🎯 Ready for documentation generation...\n");
+  console.log("🎯 Ready for documentation generation...\n");
 
-    const initMessage = `Workspace initialized. Language: ${result.language}. Ready for documentation generation.`;
-
-    await context.invoke(mainAgent, { message: initMessage });
-  }
-
-  return result;
+  // Return result with message for next agent in team
+  return {
+    ...result,
+    message: `Workspace initialized. Language: ${result.language}. Ready for documentation generation.`,
+  };
 }
 
 init.description = "Initialize doc-smith workspace and enter documentation generation mode";
