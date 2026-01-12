@@ -111,45 +111,44 @@ async function isInitialized(dir) {
 
 ### 2. 用户交互
 
-使用 Node.js readline 或第三方库（如 inquirer）实现交互：
+使用 AIGNE 框架提供的 `options.prompts` API 实现交互：
 
 ```javascript
-import readline from 'node:readline';
+// options.prompts 提供的方法：
+// - select: 单选列表
+// - checkbox: 多选列表
+// - input: 文本输入
+// - search: 搜索选择
 
-// 语言选择
-async function selectLanguage() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
+// 语言选择（单选）
+async function selectLanguage(options) {
+  const language = await options.prompts.select({
+    message: '🌐 请选择文档语言：',
+    choices: SUPPORTED_LANGUAGES.map((lang) => ({
+      name: `${lang.name} (${lang.code})`,
+      value: lang.code,
+    })),
+    default: 'en',  // 默认英文
   });
-
-  console.log('\n请选择文档语言：');
-  SUPPORTED_LANGUAGES.forEach((lang, index) => {
-    console.log(`  ${index + 1}. ${lang.name} (${lang.code})`);
-  });
-
-  return new Promise((resolve) => {
-    rl.question('\n请输入数字选择 [1]: ', (answer) => {
-      rl.close();
-      const index = parseInt(answer || '1', 10) - 1;
-      resolve(SUPPORTED_LANGUAGES[index] || SUPPORTED_LANGUAGES[0]);
-    });
-  });
+  return SUPPORTED_LANGUAGES.find((l) => l.code === language);
 }
 
-// 输入 URL
-async function inputRepoUrl() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
+// 输入 Git 仓库 URL
+async function inputRepoUrl(options) {
+  const url = await options.prompts.input({
+    message: '📦 请输入 Git 仓库地址：',
+    validate: (input) => {
+      if (!input || input.trim() === '') {
+        return '请输入有效的 Git 仓库地址';
+      }
+      // 简单验证 URL 格式
+      if (!input.includes('github.com') && !input.includes('gitlab.com') && !input.startsWith('git@')) {
+        return '请输入有效的 Git 仓库地址（支持 GitHub、GitLab 等）';
+      }
+      return true;
+    },
   });
-
-  return new Promise((resolve) => {
-    rl.question('请输入 Git 仓库地址: ', (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
+  return url.trim();
 }
 ```
 
@@ -278,18 +277,40 @@ export default async function init(input, options) {
   // ... 初始化逻辑 ...
 
   // 获取主 agent（index.yaml 中定义的）
+  // agent 名称对应 index.yaml 中的 name 字段
   const mainAgent = options.context?.agents?.['doc-smith'];
 
+  if (!mainAgent) {
+    console.error('❌ 无法找到 doc-smith agent');
+    return { success: false, error: 'AGENT_NOT_FOUND' };
+  }
+
   // 调用主 agent 进入对话模式
-  await options.context.invoke(mainAgent, {
+  // invoke 会将 message 传递给 agent，agent 会根据 message 开始对话
+  const result = await options.context.invoke(mainAgent, {
     message: `为当前项目生成 ${language.name} 语言文档`,
   });
 
   return {
     success: true,
+    language: language.code,
+    mode: mode,  // 'project' | 'standalone'
     message: '工作空间初始化完成，已进入对话模式',
+    ...result,
   };
 }
+```
+
+**注意**：
+- `options.context.agents` 是一个字典，key 是 agent 的 name
+- `options.context.invoke(agent, params)` 调用 agent 并传递参数
+- 传入的 `message` 字段会作为用户输入传递给 agent
+- 可以通过 `options.context.userContext` 设置全局上下文，供后续 agent 使用
+
+```javascript
+// 设置全局上下文示例
+options.context.userContext.language = language.code;
+options.context.userContext.workspaceMode = mode;
 ```
 
 ## 输入输出
@@ -302,6 +323,11 @@ Function Agent 标准输入：
   - `options.context.agents`：可用的 agent 字典
   - `options.context.invoke(agent, params)`：调用 agent 的方法
   - `options.context.userContext`：用户上下文，可存储全局状态
+- `options.prompts`：AIGNE 交互 API
+  - `options.prompts.select(config)`：单选列表
+  - `options.prompts.checkbox(config)`：多选列表
+  - `options.prompts.input(config)`：文本输入
+  - `options.prompts.search(config)`：搜索选择
 
 ### 输出
 
