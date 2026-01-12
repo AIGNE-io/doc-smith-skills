@@ -84,47 +84,46 @@ async function generateAfsModules() {
   return modules;
 }
 
+// Generate modules at module load time using top-level await
+const afsModules = await generateAfsModules();
+
 /**
- * Main agent configuration factory
+ * Main agent configuration
  */
-export default async function createMainConfig() {
-  const afsModules = await generateAfsModules();
+export default {
+  type: "@aigne/agent-library/agent-skill-manager",
+  name: "docsmith-main",
+  task_render_mode: "collapse",
+  instructions: {
+    url: "./prompt.md",
+  },
 
-  return {
-    type: "@aigne/agent-library/agent-skill-manager",
-    name: "docsmith-main",
-    task_render_mode: "collapse",
-    instructions: {
-      url: "./prompt.md",
-    },
-
-    model: {
-      cache_config: {
-        autoBreakpoints: {
-          lastMessage: true,
-        },
+  model: {
+    cache_config: {
+      autoBreakpoints: {
+        lastMessage: true,
       },
     },
+  },
 
-    history_config: {
-      enabled: true,
-    },
+  history_config: {
+    enabled: true,
+  },
 
-    input_key: "message",
-    skills: [
-      { type: "@aigne/agent-library/ask-user-question" },
-      "../../agents/publish/index.yaml",
-      "../../agents/localize/index.yaml",
-      "../../agents/generate-images/index.yaml",
-      "../../agents/bash-executor/index.mjs",
-      "../../agents/structure-checker/index.mjs",
-      "../../agents/content-checker/index.mjs",
-      // "../../agents/save-document/index.mjs",
-      "../../agents/update-image/index.yaml",
-      "../../skills-entry/doc-smith-docs-detail/batch.yaml",
-    ],
-    afs: {
-      modules: afsModules,
-    },
-  };
-}
+  input_key: "message",
+  skills: [
+    { type: "@aigne/agent-library/ask-user-question" },
+    "../../agents/publish/index.yaml",
+    "../../agents/localize/index.yaml",
+    "../../agents/generate-images/index.yaml",
+    "../../agents/bash-executor/index.mjs",
+    "../../agents/structure-checker/index.mjs",
+    "../../agents/content-checker/index.mjs",
+    // "../../agents/save-document/index.mjs",
+    "../../agents/update-image/index.yaml",
+    "../../skills-entry/doc-smith-docs-detail/batch.yaml",
+  ],
+  afs: {
+    modules: afsModules,
+  },
+};
