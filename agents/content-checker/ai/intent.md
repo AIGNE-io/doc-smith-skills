@@ -24,7 +24,8 @@ Content Checker 在文档生成流程的最后阶段执行：
 2. **错误分类**：区分致命错误、可修复错误和警告
 3. **链接验证**：检查内部文档链接的有效性
 4. **图片验证**：验证本地图片存在性和远程图片可访问性
-5. **自动修复**：支持自动修复可修复的错误（当前版本预留扩展）
+5. **选择性检查**：支持指定特定文档进行检查，或检查所有文档
+6. **自动修复**：支持自动修复可修复的错误（当前版本预留扩展）
 
 ## 输入输出
 
@@ -33,12 +34,14 @@ Content Checker 在文档生成流程的最后阶段执行：
 - 可选输入：
   - `yamlPath`: 文档结构文件路径
   - `docsDir`: 文档目录路径
+  - `docs`: 要检查的文档路径数组，如 `["/overview", "/api/introduction"]`，如果不提供则检查所有文档
   - `checkRemoteImages`: 是否检查远程图片可访问性
 
 - 自动获取：
   - 从 `PATHS` 常量自动获取默认路径 (`planning/document-structure.yaml`, `docs/`)
   - `autoFix` 默认为 `true`
   - `checkRemoteImages` 默认为 `true`
+  - `docs` 默认为 `undefined`（检查所有文档）
 
 ### 输出
 
@@ -78,9 +81,10 @@ Content Checker 在文档生成流程的最后阶段执行：
 
 - **必须执行**：
   - 读取并解析文档结构文件
-  - 验证所有文档文件和元数据的存在性和格式
+  - 验证文档文件和元数据的存在性和格式（所有文档或指定文档）
   - 检查文档内容中的链接和图片
   - 提供详细的错误报告和修复建议
+  - 当 `docs` 参数提供时，仅检查指定的文档路径
 
 - **不应执行**：
   - 不修改文档结构文件
@@ -145,6 +149,9 @@ Content Checker 在文档生成流程的最后阶段执行：
 - **作为 Function Agent 使用**：
   - 在 skill 或其他 agent 中通过 `import checkContent from './agents/content-checker/index.mjs'` 调用
   - 返回结构化的检查结果对象
+  - 支持两种调用方式：
+    - 检查所有文档：`checkContent()` 或 `checkContent({ yamlPath, docsDir })`
+    - 检查指定文档：`checkContent({ docs: ["/overview", "/api/introduction"] })`
 
 - **无需 skills-entry 配置**：
   - 作为内部工具使用，不直接暴露为 skill
