@@ -1,9 +1,9 @@
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
-import { constants } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { stringify as yamlStringify } from "yaml";
+import { pathExists, isDirectoryEmpty, isGitRepo, DOC_SMITH_DIR } from "./utils.mjs";
 
 const execAsync = promisify(exec);
 
@@ -26,41 +26,9 @@ const SUPPORTED_LANGUAGES = [
 ];
 
 /**
- * Directory structure constants
+ * Directory structure subdirectories
  */
-const DOC_SMITH_DIR = ".doc-smith";
 const DIRECTORIES = ["intent", "planning", "docs"];
-
-/**
- * Check if a path exists
- */
-async function pathExists(path) {
-  try {
-    await access(path, constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Check if directory is empty
- */
-async function isDirectoryEmpty(path) {
-  try {
-    const { stdout } = await execAsync(`ls -A "${path}" 2>/dev/null | head -1`);
-    return stdout.trim() === "";
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Check if directory is a git repository
- */
-async function isGitRepo(path = ".") {
-  return pathExists(join(path, ".git"));
-}
 
 /**
  * Execute git command
