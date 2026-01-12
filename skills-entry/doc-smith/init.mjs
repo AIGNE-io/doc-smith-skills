@@ -158,8 +158,7 @@ function generateConfig(options) {
  * Triggered when current directory is a git repo without .doc-smith/
  */
 async function initProjectMode(prompts) {
-  console.log("\n📂 Detected: Git repository without doc-smith workspace");
-  console.log("   Initializing in project mode...\n");
+  console.log("\n📂 Initializing doc-smith workspace...\n");
 
   // 1. Language selection
   const language = await selectLanguage(prompts);
@@ -199,8 +198,7 @@ async function initProjectMode(prompts) {
     }
   }
 
-  console.log(`\n✅ Project mode initialization complete!`);
-  console.log(`   Workspace: ./${DOC_SMITH_DIR}/`);
+  console.log(`\n✅ Workspace initialized successfully!`);
   console.log(`   Language: ${language}\n`);
 
   return {
@@ -217,8 +215,7 @@ async function initProjectMode(prompts) {
  * Triggered when current directory is empty
  */
 async function initStandaloneMode(prompts) {
-  console.log("\n📂 Detected: Empty directory");
-  console.log("   Initializing in standalone mode...\n");
+  console.log("\n📂 Initializing doc-smith workspace...\n");
 
   // 1. Ask for git repository URL
   const repoUrl = await prompts.input({
@@ -277,8 +274,7 @@ async function initStandaloneMode(prompts) {
   });
   await writeFile("config.yaml", configContent, "utf8");
 
-  console.log(`\n✅ Standalone mode initialization complete!`);
-  console.log(`   Source: ${repoUrl}`);
+  console.log(`\n✅ Workspace initialized successfully!`);
   console.log(`   Language: ${language}\n`);
 
   return {
@@ -297,9 +293,7 @@ async function initStandaloneMode(prompts) {
  * Triggered when config.yaml already exists
  */
 async function handleAlreadyInitialized(configPath, mode) {
-  console.log("\n✅ Doc-smith workspace already initialized");
-  console.log(`   Config: ${configPath}`);
-  console.log(`   Mode: ${mode}\n`);
+  console.log("\n✅ Workspace ready\n");
 
   // Read existing config
   const config = {};
@@ -359,11 +353,11 @@ export default async function init(_input, options) {
         success: false,
         error: "invalid_directory",
         message:
-          "❌ Invalid directory state.\n\n" +
-          "Doc-smith must be run in one of the following:\n" +
-          "1. A git repository (for project mode)\n" +
-          "2. An empty directory (for standalone mode)\n\n" +
-          "Please navigate to a valid location and try again.",
+          "❌ Cannot initialize workspace here.\n\n" +
+          "Please run doc-smith in one of the following:\n" +
+          "1. Your project's git repository\n" +
+          "2. An empty directory\n\n" +
+          "Then try again.",
       };
   }
 
@@ -377,12 +371,9 @@ export default async function init(_input, options) {
   // Invoke main agent to enter conversation mode
   const mainAgent = context.agents?.["docsmith"];
   if (mainAgent) {
-    console.log("🎯 Entering documentation generation mode...\n");
+    console.log("🎯 Ready for documentation generation...\n");
 
-    const initMessage =
-      result.mode === "project"
-        ? `Doc-smith workspace initialized in project mode. Source: parent directory. Language: ${result.language}. Ready for documentation generation.`
-        : `Doc-smith workspace initialized in standalone mode. Source: ${result.sourceUrl}. Language: ${result.language}. Ready for documentation generation.`;
+    const initMessage = `Workspace initialized. Language: ${result.language}. Ready for documentation generation.`;
 
     await context.invoke(mainAgent, { message: initMessage });
   }
