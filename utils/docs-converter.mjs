@@ -325,7 +325,10 @@ export async function copyDocumentsToTemp(sourceDir, targetDir) {
     // 处理内容
     let processedContent = content;
 
-    // 1. 替换 AFS image slots 为真实图片引用
+    // 1. 调整原始文档中的图片路径（必须在 replaceImageSlots 之前，避免处理新生成的路径）
+    processedContent = adjustImagePaths(processedContent, depth);
+
+    // 2. 替换 AFS image slots 为真实图片引用
     // 使用相对路径 relativePath 作为 docPath（需要添加前导 /）
     const docPath = relativePath ? `/${relativePath}` : `/${dirName}`;
     const contentBeforeSlotReplace = processedContent;
@@ -344,7 +347,7 @@ export async function copyDocumentsToTemp(sourceDir, targetDir) {
       stats.slotsReplaced += slotsBefore - slotsAfter;
     }
 
-    // 2. 处理 /sources/... 绝对路径图片
+    // 3. 处理 /sources/... 绝对路径图片
     if (sourcesConfig.length > 0) {
       const sourcesResult = await processSourcesImages(
         processedContent,
@@ -357,11 +360,8 @@ export async function copyDocumentsToTemp(sourceDir, targetDir) {
       stats.sourcesCopied += sourcesResult.copiedCount;
     }
 
-    // 3. 为内部链接添加 .md 后缀
+    // 4. 为内部链接添加 .md 后缀
     processedContent = addMarkdownSuffixToLinks(processedContent);
-
-    // 4. 调整图片路径
-    processedContent = adjustImagePaths(processedContent, depth);
 
     // 创建目标目录并写入文件
     await fs.ensureDir(dirname(fullTargetPath));
