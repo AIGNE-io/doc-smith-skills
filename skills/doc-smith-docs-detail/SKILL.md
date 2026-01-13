@@ -18,7 +18,7 @@ description: |
 生成单个文档的详细内容，将文档详情生成从 doc-smith 主流程中解耦。
 
 **输入**：文档路径 + 可选的自定义要求
-**输出**：文档摘要 + 校验结果（完整内容已保存到文件）
+**输出**：自然语言摘要（包含文档概述、章节结构、校验结果、保存确认）
 
 ## 工作流程
 
@@ -216,7 +216,7 @@ Rules:
 
 ### 6. 保存文档
 
-调用 `saveDocument` 工具保存文档：
+**必须调用 `saveDocument` 工具保存文档：**
 ```javascript
 saveDocument({
   path: "/api/overview",           // 文档路径
@@ -237,19 +237,30 @@ saveDocument({
 - 代码示例语法
 - AFS image slot 格式
 
-### 8. 返回摘要
+### 8. 验证保存结果
 
-返回摘要信息，**不返回完整文档内容**以节省主 agent 上下文：
-```javascript
-{
-  success: true,
-  path: "/api/overview",
-  summary: "本文档介绍了 API 的整体架构和核心概念...",
-  sections: ["快速开始", "核心概念", "API 列表", "最佳实践"],
-  imageSlots: ["api-architecture", "request-flow"],
-  validationResult: { valid: true, warnings: [] }
-}
-```
+**在结束前必须执行以下检查：**
+
+1. **确认文档已保存**：检查 `saveDocument` 工具是否成功执行
+2. **验证文件存在**：使用 `ls` 或 `Read` 工具检查 `docs/` 目录下对应的文档文件是否已创建
+3. **如果文件不存在**：重新调用 `saveDocument` 保存文档
+
+### 9. 返回摘要
+
+使用自然语言返回处理结果摘要，**不返回完整文档内容**以节省主 agent 上下文。
+
+**摘要应包含以下信息：**
+
+- 文档路径（如 `/api/overview`）
+- 文档主题概述（1-2 句话描述文档内容）
+- 主要章节列表
+- 生成的 AFS image slot ID 列表（如有）
+- 校验结果（通过/警告/错误）
+- 保存状态确认
+
+**示例摘要：**
+
+> 已成功生成并保存文档 `/api/overview`。文档介绍了 API 的整体架构和核心概念，包含"快速开始"、"核心概念"、"API 列表"、"最佳实践"四个章节。生成了 2 个技术图表 slot：api-architecture、request-flow。内容校验通过，无警告。文件已保存至 docs/api/overview.md。
 
 ## 输入参数
 
@@ -269,18 +280,6 @@ saveDocument({
   - 指导生成内容的侧重点
   - 可根据要求补充相关源文件到分析范围
 
-## 输出格式
-
-```javascript
-{
-  success: boolean,              // 操作是否成功
-  path: string,                  // 文档路径，如 "/api/overview"
-  summary: string,               // 文档摘要（200-300字）
-  sections: string[],            // 主要章节列表
-  imageSlots: string[],          // 生成的 AFS image slots ID 列表
-  validationResult: object       // checkContent 的校验结果
-}
-```
 
 ## 文档规范要求
 
@@ -319,6 +318,7 @@ saveDocument({
 3. **可读性**：结构清晰、语言流畅、示例恰当
 4. **一致性**：风格符合用户意图、格式遵循 doc-smith 规范
 5. **校验通过**：checkContent 校验无错误
+6. **保存验证**：文档已通过 saveDocument 保存，且 docs/ 目录下文件确实存在
 
 ## 错误处理
 
@@ -340,17 +340,23 @@ saveDocument({
    - checkContent 检测到格式问题
    - 导航链接不完整
 
+5. **保存验证失败**：
+   - saveDocument 执行失败
+   - 文档文件未出现在 docs/ 目录
+
 ### 处理策略
 
 1. **提前验证**：在开始生成前验证输入和配置文件
 2. **优雅降级**：信息缺失时使用合理默认值
-3. **明确报错**：返回 `{ success: false, error: "错误描述" }`
+3. **明确报错**：使用自然语言清晰描述错误原因和建议解决方案
 4. **保持一致**：确保生成的内容符合规范
 
 ## 注意事项
 
 1. **语言配置**：必须从 `config.yaml` 的 `locale` 字段读取语言代码
 2. **路径校验**：确保 path 参数在 document-structure.yaml 中存在
-3. **上下文节省**：只返回摘要，不返回完整文档内容
+3. **上下文节省**：只返回自然语言摘要，不返回完整文档内容
 4. **内容质量**：不生成空洞的占位内容，确保每个章节都有实质性内容
 5. **图表规划**：技术图表使用 AFS image slot，应用截图引用现有图片
+6. **保存文档**：必须使用 `saveDocument` 工具保存文档
+7. **验证保存**：结束前必须验证文档已保存到 `docs/` 目录，确认文件存在后才能返回成功状态
