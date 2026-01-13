@@ -42,6 +42,9 @@ export default async function publishDocs(
   const docsAbsolutePath = PATHS.DOCS_DIR;
   // Relative path for mediaFolder (relative to cwd for publish-docs library)
   const docsRelativePath = relative(process.cwd(), PATHS.DOCS_DIR) || "./docs";
+  // Relative path for tmp directory
+  const tmpDirRelative = relative(process.cwd(), PATHS.TMP_DIR) || ".tmp";
+  const docsDir = join(tmpDirRelative, "docs");
   let message;
   let shouldWithBranding = withBrandingOption || false;
 
@@ -54,8 +57,6 @@ export default async function publishDocs(
 
     // move work dir to tmp-dir
     await ensureTmpDir();
-
-    const docsDir = join(PATHS.TMP_DIR, "docs");
     await fs.rm(docsDir, { recursive: true, force: true });
     await fs.mkdir(docsDir, {
       recursive: true,
@@ -315,7 +316,6 @@ export default async function publishDocs(
 
     // clean up tmp work dir in case of error
     try {
-      const docsDir = join(PATHS.TMP_DIR, "docs");
       await fs.rm(docsDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
