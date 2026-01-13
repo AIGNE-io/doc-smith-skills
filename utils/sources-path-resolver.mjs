@@ -13,13 +13,22 @@ export function isSourcesAbsolutePath(imagePath) {
 /**
  * 解析 /sources/... 绝对路径，提取相对路径部分
  * @param {string} absolutePath - 绝对路径，格式: /sources/<relativePath>
- * @returns {string | null} - 相对路径，解析失败返回 null
+ * @returns {string | null} - 相对路径，解析失败或路径不安全返回 null
  */
 export function parseSourcesPath(absolutePath) {
   // /sources/assets/screenshot.png → assets/screenshot.png
   const match = absolutePath.match(/^\/sources\/(.+)$/);
   if (!match) return null;
-  return match[1];
+
+  const relativePath = match[1];
+
+  // 安全检查：拒绝包含路径遍历序列的路径
+  // 防止通过 /sources/../../../etc/passwd 等路径访问 sources 目录之外的文件
+  if (relativePath.includes("..")) {
+    return null;
+  }
+
+  return relativePath;
 }
 
 /**
@@ -66,33 +75,3 @@ export async function resolveSourcesPath(absolutePath, sourcesConfig, workspaceB
   return null;
 }
 
-/**
- * 同步版本：根据配置解析路径（不检查文件存在性，返回第一个 source 的路径）
- * 用于需要同步处理的场景
- *
- * @param {string} absolutePath - 虚拟绝对路径
- * @param {Array} sourcesConfig - sources 配置数组
- * @param {string} workspaceBase - workspace 物理根目录
- * @returns {{physicalPath: string, sourceName: string} | null}
- */
-export function resolveSourcesPathSync(absolutePath, sourcesConfig, workspaceBase) {
-  const relativePath = parseSourcesPath(absolutePath);
-  if (!relativePath) return null;
-
-  // 返回第一个 source 的路径（不检查存在性）
-  for (const source of sourcesConfig) {
-    let physicalPath;
-
-    if (source.type === "local-path") {
-      physicalPath = resolve(workspaceBase, source.path, relativePath);
-    } else if (source.type === "git-clone") {
-      physicalPath = resolve(workspaceBase, "sources", source.name, relativePath);
-    } else {
-      continue;
-    }
-
-    return { physicalPath, sourceName: source.name };
-  }
-
-  return null;
-}

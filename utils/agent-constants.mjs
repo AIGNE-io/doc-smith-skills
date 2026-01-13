@@ -1,27 +1,8 @@
-import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
+import { detectWorkspaceModeSync } from "./workspace.mjs";
 
-/**
- * 检测 workspace 基础路径
- * 根据 config.yaml 位置自动判断 workspace 模式
- */
-function detectWorkspaceBase() {
-  const cwd = process.cwd();
-
-  // 检测 config.yaml 位置，确定 workspace 模式
-  const projectConfigPath = join(cwd, ".aigne/doc-smith/config.yaml");
-
-  if (existsSync(projectConfigPath)) {
-    // project 模式：workspace 在 .aigne/doc-smith/
-    return join(cwd, ".aigne/doc-smith");
-  }
-
-  // standalone 模式或未初始化：workspace 就是当前目录
-  return cwd;
-}
-
-// 计算 workspace 基础路径
-const WORKSPACE_BASE = detectWorkspaceBase();
+// 使用统一的 workspace 检测逻辑
+const { workspaceBase: WORKSPACE_BASE } = detectWorkspaceModeSync();
 
 /**
  * 路径常量定义

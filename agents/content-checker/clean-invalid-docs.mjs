@@ -95,13 +95,16 @@ function extractLanguageFromFilename(filename) {
  * @param {Object} options - 清理选项
  * @param {string} options.yamlPath - 文档结构文件路径
  * @param {string} options.docsDir - 文档目录路径
+ * @param {boolean} options.dryRun - 是否为预览模式（只报告不删除）
  * @returns {Promise<Object>} - 清理结果
  */
 export async function cleanInvalidDocs({
   yamlPath = PATHS.DOCUMENT_STRUCTURE,
   docsDir = PATHS.DOCS_DIR,
+  dryRun = false,
 } = {}) {
   const result = {
+    dryRun,
     deletedFolders: [],
     deletedFiles: [],
     errors: [],
@@ -123,18 +126,23 @@ export async function cleanInvalidDocs({
     // 3. 找出无效的文档文件夹（存在于文件系统但不在 document-structure.yaml 中）
     const invalidFolders = existingFolders.filter((folder) => !validPaths.has(folder));
 
-    // 4. 删除无效的文档文件夹
+    // 4. 删除无效的文档文件夹（或在 dry-run 模式下只记录）
     for (const folder of invalidFolders) {
       const folderPath = path.join(docsDir, folder);
-      try {
-        await rm(folderPath, { recursive: true });
+      if (dryRun) {
+        // dry-run 模式：只记录，不删除
         result.deletedFolders.push(folder);
-      } catch (error) {
-        result.errors.push({
-          type: "DELETE_FOLDER_ERROR",
-          path: folder,
-          message: error.message,
-        });
+      } else {
+        try {
+          await rm(folderPath, { recursive: true });
+          result.deletedFolders.push(folder);
+        } catch (error) {
+          result.errors.push({
+            type: "DELETE_FOLDER_ERROR",
+            path: folder,
+            message: error.message,
+          });
+        }
       }
     }
 
@@ -163,15 +171,20 @@ export async function cleanInvalidDocs({
           // 检查语言是否在有效列表中
           if (!validLanguages.has(lang)) {
             const filePath = path.join(folderPath, file);
-            try {
-              await rm(filePath);
+            if (dryRun) {
+              // dry-run 模式：只记录，不删除
               result.deletedFiles.push(`${folder}/${file}`);
-            } catch (error) {
-              result.errors.push({
-                type: "DELETE_FILE_ERROR",
-                path: `${folder}/${file}`,
-                message: error.message,
-              });
+            } else {
+              try {
+                await rm(filePath);
+                result.deletedFiles.push(`${folder}/${file}`);
+              } catch (error) {
+                result.errors.push({
+                  type: "DELETE_FILE_ERROR",
+                  path: `${folder}/${file}`,
+                  message: error.message,
+                });
+              }
             }
           }
         }
@@ -199,26 +212,28 @@ export async function cleanInvalidDocs({
  * @returns {string} - 格式化的输出
  */
 export function formatCleanResult(result) {
-  const { deletedFolders, deletedFiles, errors } = result;
+  const { dryRun, deletedFolders, deletedFiles, errors } = result;
 
   if (deletedFolders.length === 0 && deletedFiles.length === 0 && errors.length === 0) {
     return "";
   }
 
   let output = "";
+  const actionVerb = dryRun ? "将删除" : "删除";
+  const modeIndicator = dryRun ? " [预览模式]" : "";
 
   if (deletedFolders.length > 0 || deletedFiles.length > 0) {
-    output += "Layer 0: 无效文档清理\n";
+    output += `Layer 0: 无效文档清理${modeIndicator}\n`;
 
     if (deletedFolders.length > 0) {
-      output += `  删除无效文档文件夹: ${deletedFolders.length}\n`;
+      output += `  ${actionVerb}无效文档文件夹: ${deletedFolders.length}\n`;
       for (const folder of deletedFolders) {
         output += `    - ${folder}/\n`;
       }
     }
 
     if (deletedFiles.length > 0) {
-      output += `  删除无效语言文件: ${deletedFiles.length}\n`;
+      output += `  ${actionVerb}无效语言文件: ${deletedFiles.length}\n`;
       for (const file of deletedFiles) {
         output += `    - ${file}\n`;
       }
