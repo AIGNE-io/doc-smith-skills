@@ -2,7 +2,7 @@
 
 ## 功能概述
 
-Doc-Smith 主入口 Agent，在启动时自动检测并初始化工作空间，然后进入文档生成对话模式。整个流程通过单一 index.mjs 文件实现，导出一个 JS 配置对象。
+Doc-Smith 主入口 Agent，在启动时自动检测并初始化工作空间，然后进入文档生成对话模式。整个流程通过单一 index.mjs 文件实现，导出一个 JS 配置对象。启动阶段不做任何用户询问，所有交互在对话流程中处理。
 
 ## 功能意图
 
@@ -19,9 +19,9 @@ doc-smith 启动
   ↓
 检测当前目录状态
   ↓
-├─ .doc-smith/ 或 config.yaml 已存在 → 读取配置，生成 AFS modules
-├─ 是 git 仓库（无 .doc-smith/）→ 执行项目内初始化，生成 AFS modules
-├─ 是空目录 → 执行独立初始化，生成 AFS modules
+├─ config.yaml 已存在 → 读取配置，生成 AFS modules
+├─ 是 git 仓库（无 config.yaml）→ 执行项目内初始化，生成 AFS modules
+├─ 是空目录或非 git 目录 → 执行独立初始化，生成 AFS modules
 └─ 其他情况 → 报错退出
   ↓
 导出配置对象（含动态生成的 AFS modules）
@@ -31,72 +31,71 @@ doc-smith 启动
 
 ### 流程 A：项目内启动
 
-**触发条件**：当前目录是 git 仓库，且 `.doc-smith/` 不存在
+**触发条件**：当前目录是 git 仓库，且 `.aigne/doc-smith/config.yaml` 不存在
 
 **步骤**：
-1. 创建 `.doc-smith/` 目录
-2. 在 `.doc-smith/` 中执行 `git init`
+1. 创建 `.aigne/doc-smith/` 目录
+2. 在 `.aigne/doc-smith/` 中执行 `git init`
 3. 创建目录结构（intent/、planning/、docs/）
-4. 创建 `.gitignore` 文件（忽略 source/ 目录）
-5. 生成 config.yaml（sources 配置为 local-path 类型）
-6. 检测外层目录是否为 git 仓库，是则将 `.doc-smith/` 添加为 submodule
+4. 创建 `.gitignore` 文件（忽略 sources/ 目录）
+5. 生成 config.yaml（mode: project，sources 配置为 local-path 类型）
+6. 检测外层目录是否为 git 仓库，是则将 `.aigne/doc-smith/` 添加为 submodule
 7. 生成 AFS modules 配置
 
 ### 流程 B：独立启动
 
-**触发条件**：当前目录是空目录
+**触发条件**：当前目录是空目录或非 git 目录
 
 **步骤**：
-1. 向用户询问 git 仓库地址
-2. 执行 `git init` 初始化当前目录
-3. 创建 `.gitignore`，添加 `source/` 到忽略列表
-4. 执行 `git clone` 将用户提供的仓库克隆到 `source/` 目录
-5. 获取并记录 source 仓库的 HEAD commit SHA
-6. 创建目录结构（intent/、planning/、docs/）
-7. 生成 config.yaml（sources 配置为 git-clone 类型）
-8. 生成 AFS modules 配置
+1. 执行 `git init` 初始化当前目录
+2. 创建 `.gitignore`，添加 `sources/` 到忽略列表
+3. 创建目录结构（intent/、planning/、docs/、sources/）
+4. 生成 config.yaml（mode: standalone，sources 配置为空数组，后续对话中添加）
+5. 生成 AFS modules 配置
+
+**注意**：独立启动时不询问仓库地址，源仓库的添加在后续对话流程中处理。
 
 ### 流程 C：已初始化
 
-**触发条件**：`.doc-smith/config.yaml` 或 `./config.yaml` 已存在
+**触发条件**：`config.yaml` 已存在（通过检测 `.aigne/doc-smith/config.yaml` 或 `./config.yaml`）
 
 **步骤**：
 1. 读取现有配置
-2. 根据配置模式生成 AFS modules 配置
+2. 根据 config.yaml 中的 mode 字段生成 AFS modules 配置
 
 ## 核心能力
 
 ### 1. 目录状态检测
 
-- 检测 workspace 是否已初始化（`.doc-smith/config.yaml` 或 `./config.yaml` 存在）
+- 检测 workspace 是否已初始化（`.aigne/doc-smith/config.yaml` 或 `./config.yaml` 存在）
 - 检测当前目录是否为 git 仓库（`.git/` 目录存在）
 - 检测当前目录是否为空目录
 
 ### 2. 用户交互
 
-仅在独立启动模式下需要用户输入：
-- `options.prompts.input`：Git 仓库 URL 输入
+启动阶段不做任何用户询问。所有配置（如源仓库地址、语言等）在对话流程中处理。
 
 ### 3. 目录结构创建
 
 **项目内启动创建的结构**：
 ```
-.doc-smith/
-├── .git/                # 独立 git 仓库
-├── .gitignore           # 忽略 source/ 目录
-├── config.yaml          # 工作空间配置
-├── intent/              # 意图文件目录
-├── planning/            # 规划文件目录
-└── docs/                # 生成的文档目录
+.aigne/
+└── doc-smith/
+    ├── .git/                # 独立 git 仓库
+    ├── .gitignore           # 忽略 sources/ 目录
+    ├── config.yaml          # 工作空间配置
+    ├── intent/              # 意图文件目录
+    ├── planning/            # 规划文件目录
+    └── docs/                # 生成的文档目录
 ```
 
 **独立启动创建的结构**：
 ```
-./                       # 当前目录
+./                           # 当前目录
 ├── .git/
-├── .gitignore           # 包含 source/
-├── config.yaml          # 工作空间配置
-├── source/              # 克隆的源仓库（被 gitignore）
+├── .gitignore               # 包含 sources/
+├── config.yaml              # 工作空间配置
+├── sources/                 # 源仓库目录（后续添加）
 ├── intent/
 ├── planning/
 └── docs/
@@ -105,30 +104,48 @@ doc-smith 启动
 ### 4. 配置文件内容
 
 config.yaml 包含：
+- `mode`：工作模式标识
+  - `project`：项目内启动
+  - `standalone`：独立启动
 - `sources`：数据源配置数组
-  - 项目内启动：`type: local-path`，`path: "../"`
-  - 独立启动：`type: git-clone`，`url`、`ref`（HEAD SHA）、`cachePath: "source"`
+  - 项目内启动：`[{ type: "local-path", path: "../../" }]`
+  - 独立启动：`[]`（空数组，后续对话中添加）
+
+**config.yaml 示例（项目内模式）**：
+```yaml
+mode: project
+sources:
+  - type: local-path
+    path: "../../"
+```
+
+**config.yaml 示例（独立模式）**：
+```yaml
+mode: standalone
+sources: []
+```
 
 ### 5. 动态 AFS Modules 生成
 
-根据工作空间模式动态生成 AFS modules：
+根据工作空间模式动态生成 AFS modules，两种模式保持一致的 AFS 结构：
 
 **项目内模式**：
-- workspace：`${CWD}/.doc-smith`
-- source：根据 config.yaml 中 local-path 类型的 sources 动态添加
+- workspace：`${CWD}/.aigne/doc-smith`（工作空间目录）
+- sources：`${CWD}`（源代码目录，即产品仓库根目录）
 
 **独立模式**：
-- workspace：`${CWD}`
+- workspace：`${CWD}`（工作空间目录）
+- sources：`${CWD}/sources`（源代码目录）
 
 **始终包含**：
 - history：历史记录存储
 - doc-smith skill：技能文件目录
 
+这样两种模式对内部执行是一致的，都有 workspace 和 sources 两个 AFS 模块。
+
 ### 6. Git 操作
 
 - `git init`：初始化仓库
-- `git clone`：克隆源仓库（独立模式）
-- `git rev-parse HEAD`：获取 HEAD commit SHA
 - `git submodule add`：添加 submodule（项目内模式）
 
 ## 输入输出
@@ -136,7 +153,7 @@ config.yaml 包含：
 ### 输入
 
 - 模块加载时自动执行初始化检测
-- 独立模式下通过 `options.prompts.input` 获取仓库 URL
+- 启动阶段不接受用户输入
 
 ### 输出
 
@@ -155,7 +172,9 @@ config.yaml 包含：
 2. **导出 JS 对象**：默认导出必须是配置对象，不能是函数
 3. **top-level await**：使用 top-level await 在模块加载时执行异步初始化
 4. **目录结构**：严格遵循定义的目录结构
-5. **配置格式**：config.yaml 遵循统一的 schema
+5. **配置格式**：config.yaml 遵循统一的 schema，必须包含 mode 字段
+6. **无启动询问**：启动阶段不做任何用户询问
+7. **AFS 一致性**：两种模式都提供 workspace 和 sources 两个 AFS 模块
 
 ### 职责边界
 
@@ -166,6 +185,8 @@ config.yaml 包含：
   - 动态生成 AFS modules 配置
 
 - **不应执行**：
+  - 不在启动阶段询问用户
+  - 不在启动阶段克隆仓库
   - 不生成文档内容（由对话模式处理）
   - 不创建远程仓库
   - 不推送到远程
@@ -177,24 +198,21 @@ config.yaml 包含：
 1. 正确检测目录状态并选择对应流程
 2. 目录结构和配置文件正确创建
 3. Git 操作正确执行
-4. AFS modules 根据模式正确生成
+4. AFS modules 根据模式正确生成（workspace + sources）
 5. 成功导出配置对象进入对话模式
+6. 启动过程无用户交互
 
 ## 错误处理
 
 ### 常见错误
 
-1. **目录状态不明确**：既不是 git 仓库也不是空目录
-2. **git clone 失败**：URL 无效或网络问题
-3. **权限问题**：无法创建目录或文件
-4. **git 命令不可用**：系统未安装 git
+1. **权限问题**：无法创建目录或文件
+2. **git 命令不可用**：系统未安装 git
 
 ### 处理策略
 
-1. **目录状态不明确**：输出错误信息，提示用户在 git 仓库或空目录中运行
-2. **clone 失败**：输出错误信息，提示检查 URL 和网络
-3. **权限问题**：输出错误信息，提示检查目录权限
-4. **git 不可用**：输出错误信息，提示安装 git
+1. **权限问题**：输出错误信息，提示检查目录权限
+2. **git 不可用**：输出错误信息，提示安装 git
 
 ## 实现方式
 

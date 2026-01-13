@@ -4,7 +4,7 @@ model: anthropic/claude-sonnet-4-5
 image_model:
   model: google/gemini-3-pro-image-preview
 agents:
-  - skills-entry/doc-smith/index.yaml
+  - skills-entry/doc-smith/index.mjs
   - agents/publish/index.yaml
   # - agents/preload-i18n.mjs
   - agents/structure-checker/index.mjs
@@ -19,7 +19,7 @@ cli:
   agents:
     - name: doc-smith
       alias: ["create", "gen", "g"]
-      url: skills-entry/doc-smith/index.yaml
+      url: skills-entry/doc-smith/index.mjs
     - name: publish
       alias: ["pub", "p"]
       url: agents/publish/index.yaml

@@ -1,7 +1,0 @@
-type: team
-name: doc-smith
-description: Initialize workspace and enter documentation generation mode
-skills:
-  - ./init.mjs
-  - ./main.mjs
-mode: sequential
