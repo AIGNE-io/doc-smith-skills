@@ -60,9 +60,8 @@ export function getMimeType(filePath) {
  * @returns {Promise<void>}
  */
 export async function ensureTmpDir() {
-  const tmpDir = join(process.cwd(), PATHS.DOC_SMITH_DIR, PATHS.TMP_DIR);
-  if (!existsSync(tmpDir)) {
-    mkdirSync(tmpDir, { recursive: true });
+  if (!existsSync(PATHS.TMP_DIR)) {
+    mkdirSync(PATHS.TMP_DIR, { recursive: true });
   }
 }
 

@@ -49,10 +49,9 @@ export default async function translateMeta({ config }, options) {
   }
 
   // Ensure cache directory exists
-  const cacheDir = join(process.cwd(), PATHS.CACHE);
-  await fs.ensureDir(cacheDir);
+  await fs.ensureDir(PATHS.CACHE);
 
-  const translationCacheFilePath = join(cacheDir, "translation-cache.yaml");
+  const translationCacheFilePath = join(PATHS.CACHE, "translation-cache.yaml");
   await fs.ensureFile(translationCacheFilePath);
   const translationCache = await fs.readFile(translationCacheFilePath, "utf-8");
   const parsedTranslationCache = yamlParse(translationCache || "{}");

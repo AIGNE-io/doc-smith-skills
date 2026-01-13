@@ -52,7 +52,7 @@ export default async function publishDocs(
     // move work dir to tmp-dir
     await ensureTmpDir();
 
-    const docsDir = join(PATHS.DOC_SMITH_DIR, PATHS.TMP_DIR, PATHS.DOCS_DIR);
+    const docsDir = join(PATHS.TMP_DIR, "docs");
     await fs.rm(docsDir, { recursive: true, force: true });
     await fs.mkdir(docsDir, {
       recursive: true,
@@ -224,7 +224,7 @@ export default async function publishDocs(
     process.env.DOC_ROOT_DIR = docsDir;
 
     const sidebarPath = join(docsDir, "_sidebar.md");
-    const publishCacheFilePath = join(PATHS.DOC_SMITH_DIR, PATHS.CACHE, "upload-cache.yaml");
+    const publishCacheFilePath = join(PATHS.CACHE, "upload-cache.yaml");
 
     // Get project info from config
     const projectInfo = {
@@ -312,7 +312,7 @@ export default async function publishDocs(
 
     // clean up tmp work dir in case of error
     try {
-      const docsDir = join(PATHS.DOC_SMITH_DIR, PATHS.TMP_DIR, PATHS.DOCS_DIR);
+      const docsDir = join(PATHS.TMP_DIR, "docs");
       await fs.rm(docsDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
