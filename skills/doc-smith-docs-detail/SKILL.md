@@ -103,6 +103,8 @@ find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.g
 - **导航元素**：
   - 文档开头：前置条件（prerequisites）、父主题（parent topic）
   - 文档结尾：相关主题（related topics）、下一步（next steps）、子文档（child documents）
+  - 只能链接生成的其他文档，不能链接到工作目录中的 markdown 文件，文档发布后会导致无法访问。
+  - 导航链接可直接使用文件结构中文档的 `path`
 
 #### 主体内容
 - **结构化章节**：逻辑清晰的信息层次
