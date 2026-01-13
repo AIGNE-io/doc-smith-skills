@@ -216,7 +216,8 @@ Rules:
 
 ### 6. 保存文档
 
-**必须调用 `saveDocument` 工具保存文档：**
+不要使用 `afs_write` 直接保存文档。 
+**必须调用 `saveDocument` 工具保存文档，工具中有额外的保存逻辑：**
 ```javascript
 saveDocument({
   path: "/api/overview",           // 文档路径

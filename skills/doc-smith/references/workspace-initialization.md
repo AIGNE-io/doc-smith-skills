@@ -180,7 +180,7 @@ sources:
 2. 验证 URL 格式
 3. 询问分支名（默认 main）
 4. 从 URL 提取项目名
-5. 克隆到 `/sources/<项目名>/`
+5. 克隆到 `sources/<项目名>/`
 6. 获取当前 HEAD 的 commit hash
 7. 更新 config.yaml 的 sources 数组
 
@@ -196,7 +196,7 @@ sources:
 
 **执行命令**：
 ```bash
-git clone -b <branch> <url> /sources/<project-name>
+git clone -b <branch> <url> sources/<project-name>
 cd /sources/<project-name>
 git rev-parse HEAD  # 获取 commit hash
 ```
@@ -218,13 +218,13 @@ sources:
 
 **步骤**：
 1. 读取 sources 配置中的 url、branch、commit
-2. 克隆仓库到 `/sources/<name>/`
+2. 克隆仓库到 `sources/<name>/`
 3. 切换到记录的 commit
 4. 提示用户恢复完成
 
 **执行命令**：
 ```bash
-git clone -b <branch> <url> /sources/<name>
+git clone -b <branch> <url> sources/<name>
 cd /sources/<name>
 git checkout <commit>  # 切换到精确版本
 ```
@@ -255,7 +255,7 @@ git checkout <commit>  # 切换到精确版本
 
 **执行命令**：
 ```bash
-cd /sources/<name>
+cd sources/<name>
 git fetch origin
 git pull origin <branch>
 git rev-parse HEAD  # 获取新的 commit hash
@@ -346,10 +346,8 @@ DocSmith 需要 Git 来管理数据源。
 
 ## 七、关键约束
 
-1. **执行层视角统一**：无论实际启动方式如何，执行层始终看到 `/workspace` 和 `/sources` 两个目录
-2. **Git 依赖**：数据源管理依赖 Git
-3. **版本精确记录**：git-clone 类型必须记录 branch 和 commit，确保可恢复
-4. **配置优先**：sources 配置存在时不重复询问 URL，仅在目录缺失时恢复
+1. **版本精确记录**：git-clone 类型必须记录 branch 和 commit，确保可恢复
+2. **配置优先**：sources 配置存在时不重复询问 URL，仅在目录缺失时恢复
 
 ---
 
