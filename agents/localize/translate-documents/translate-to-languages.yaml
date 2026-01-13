@@ -6,5 +6,5 @@ skills:
   - url: ../translate-images/translate-doc-images.yaml # 检测并翻译文档中的图片
 iterate_on: targetLanguages
 concurrency: 1
-mode: sequential
+mode: parallel
 include_input_in_output: true

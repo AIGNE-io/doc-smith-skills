@@ -9,11 +9,12 @@ import { PATHS, ERROR_CODES } from "../../../utils/agent-constants.mjs";
  * @param {Object} input - 输入参数
  * @param {string} input.path - 文档路径
  * @param {string} input.sourceLanguage - 源语言代码
- * @param {string} input.targetLanguage - 目标语言
+ * @param {string} input.language - 目标语言
  * @returns {Promise<Object>} - 扫描结果
  */
 export default async function scanDocImages(input) {
-  const { path: docPath, sourceLanguage, targetLanguage } = input;
+  const { path: docPath, sourceLanguage, language } = input;
+  const targetLanguage = language;
 
   try {
     // 1. 构建源文档文件路径
@@ -100,7 +101,7 @@ scanDocImages.description =
 // 定义输入 schema
 scanDocImages.input_schema = {
   type: "object",
-  required: ["path", "sourceLanguage", "targetLanguage"],
+  required: ["path", "sourceLanguage", "language"],
   properties: {
     path: {
       type: "string",
@@ -110,7 +111,7 @@ scanDocImages.input_schema = {
       type: "string",
       description: "源语言代码",
     },
-    targetLanguage: {
+    language: {
       type: "string",
       description: "目标语言代码",
     },
