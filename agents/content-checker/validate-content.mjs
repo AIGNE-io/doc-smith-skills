@@ -459,11 +459,33 @@ class DocumentContentValidator {
         continue;
       }
 
-      // 识别内部文档链接（.md 结尾）
-      if (linkUrl.endsWith(".md")) {
-        await this.validateInternalLink(linkUrl, doc, linkText, langFile);
+      // 忽略资源文件链接
+      if (this.isResourceFile(linkUrl)) {
+        continue;
       }
+
+      // 所有其他链接都视为内部文档链接
+      await this.validateInternalLink(linkUrl, doc, linkText, langFile);
     }
+  }
+
+  /**
+   * 检查链接是否指向资源文件（非文档）
+   */
+  isResourceFile(url) {
+    // 移除查询参数和锚点
+    const cleanUrl = url.split("?")[0].split("#")[0].toLowerCase();
+    // 资源文件扩展名
+    const resourceExtensions = [
+      ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp",
+      ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+      ".zip", ".tar", ".gz", ".rar", ".7z",
+      ".mp3", ".mp4", ".wav", ".avi", ".mov", ".webm",
+      ".json", ".xml", ".csv", ".txt",
+      ".js", ".ts", ".css", ".scss", ".less",
+      ".py", ".rb", ".go", ".rs", ".java", ".c", ".cpp", ".h",
+    ];
+    return resourceExtensions.some(ext => cleanUrl.endsWith(ext));
   }
 
   /**
@@ -472,15 +494,26 @@ class DocumentContentValidator {
   async validateInternalLink(linkUrl, doc, linkText, langFile) {
     let targetPath;
 
-    // 链接预处理：移除语言文件名
+    // 链接预处理：移除锚点、语言文件名和 .md 后缀
     const cleanLinkUrl = linkUrl
+      .split("#")[0] // 移除锚点
       .replace(/\/[a-z]{2}(-[A-Z]{2})?\.md$/, "") // 移除 /zh.md 等
       .replace(/\.md$/, ""); // 移除 .md
 
+    // 如果链接只是锚点（如 #section），cleanLinkUrl 会是空字符串，跳过检查
+    if (!cleanLinkUrl) {
+      return;
+    }
+
     if (cleanLinkUrl.startsWith("/")) {
+      // 绝对路径
       targetPath = cleanLinkUrl;
     } else {
-      const docDir = path.dirname(doc.path);
+      // 相对路径：基于文档的"所在目录"
+      // 文档 /getting-started/claude-code 的所在目录是 /getting-started
+      // 例如：文档 /getting-started/claude-code，链接 ../getting-started -> /getting-started
+      // 例如：文档 /getting-started，链接 ./claude-code -> /getting-started/claude-code
+      const docDir = path.dirname(doc.path); // /getting-started/claude-code -> /getting-started
       const upLevels = (cleanLinkUrl.match(/\.\.\//g) || []).length;
       const currentDepth = docDir === "/" ? 0 : docDir.split("/").filter((p) => p).length;
 
@@ -493,11 +526,12 @@ class DocumentContentValidator {
           link: linkUrl,
           linkText,
           message: `内部链接路径超出根目录: [${linkText}](${linkUrl})`,
-          suggestion: `链接向上 ${upLevels} 级，但当前文档只在第 ${currentDepth} 层`,
+          suggestion: `链接向上 ${upLevels} 级，但当前文档所在目录只在第 ${currentDepth} 层`,
         });
         return;
       }
 
+      // 将文档所在目录和相对链接合并
       targetPath = path.posix.normalize(path.posix.join(docDir, cleanLinkUrl));
       if (!targetPath.startsWith("/")) {
         targetPath = `/${targetPath}`;
