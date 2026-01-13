@@ -201,10 +201,11 @@ async function replaceImageSlots(
 
     if (imagePath) {
       // 计算相对路径前缀
-      // depth 1: ../assets/{key}/images/{lang}.jpg  (从 tmp-docs/overview.md 访问 assets/)
+      // 目标文档至少在 targetDir 根目录下，需要至少 1 个 ../ 来访问与 targetDir 平级的 assets/
+      // depth 0/1: ../assets/{key}/images/{lang}.jpg  (从 tmp-docs/overview.md 访问 assets/)
       // depth 2: ../../assets/{key}/images/{lang}.jpg  (从 tmp-docs/api/auth.md 访问 assets/)
-      // depth N: N 个 ../
-      const pathPrefix = "../".repeat(depth);
+      // depth N: N 个 ../ (最少 1 个)
+      const pathPrefix = "../".repeat(Math.max(depth, 1));
       const imageRef = `${pathPrefix}assets/${imagePath}`;
 
       // 替换 slot 为图片引用
@@ -270,9 +271,9 @@ async function processSourcesImages(content, depth, targetDir, sourcesConfig, wo
     }
 
     // 计算相对路径
-    // depth 1: ../sources/path/to/image.png
+    // depth 0/1: ../sources/path/to/image.png
     // depth 2: ../../sources/path/to/image.png
-    const pathPrefix = "../".repeat(depth);
+    const pathPrefix = "../".repeat(Math.max(depth, 1));
     const newImagePath = `${pathPrefix}sources/${relativePath}`;
 
     // 替换内容
