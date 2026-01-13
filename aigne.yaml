@@ -16,6 +16,7 @@ agents:
   - skills-entry/doc-smith-docs-detail/index.yaml
 
 cli:
+  chat: skills-entry/doc-smith/index.mjs
   agents:
     - name: doc-smith
       alias: ["create", "gen", "g"]

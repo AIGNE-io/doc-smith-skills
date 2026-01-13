@@ -19,7 +19,6 @@ async function detectAndInitialize() {
   // Check if already initialized
   const existing = await detectWorkspaceMode();
   if (existing) {
-    console.log("\n✅ Workspace ready\n");
     return existing;
   }
 
@@ -120,7 +119,7 @@ async function generateAfsModules(workspace) {
 }
 
 // Initialize workspace and generate config at module load time
-console.log("\n🚀 Welcome to Doc-Smith!");
+console.log("\n🚀 Welcome to DocSmith!");
 
 const workspace = await detectAndInitialize();
 const afsModules = await generateAfsModules(workspace);
