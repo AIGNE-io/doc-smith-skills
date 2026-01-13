@@ -59,7 +59,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 ## 执行阶段(识别是新生成还是更新文档，参考不同的模板)
 
 生成新文档参考模板:
-- [ ] 阶段 0: Workspace 检测与初始化
+- [ ] 阶段 0: Workspace 检查，确保 config.yaml 和 sources 数据完整
 - [ ] 阶段 1: 分析数据源
 - [ ] 阶段 2: 推断用户意图，并向用户确认
 - [ ] 阶段 3: 规划文档结构
@@ -73,7 +73,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 
 更新文档参考模板:
-- [ ] 阶段 0: Workspace 检测与初始化（如果尚未初始化）
+- [ ] 阶段 0: Workspace 检查，确保 config.yaml 和 sources 数据完整
 - [ ] 阶段 1: 分析更新需求（识别 changeset 文件、PATCH 标记或自然语言请求）
 - [ ] 阶段 2: 检查是否需要修改文档结构，如需要则更新 document-structure.yaml 并校验
 - [ ] 阶段 3: 应用文档内容更新
@@ -99,11 +99,12 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 3. **做出重要决策时**：记录到"关键决策"部分
 4. **遇到错误时**：记录到"遇到的错误"部分，包括错误描述和解决方案
 
-### 0. Workspace 检测与初始化
+### 0. Workspace 检测
 
-**执行任何操作前，首先检测并初始化 workspace。**
+**执行任何操作前，首先检测 workspace。**
 
-**详细流程参考**: `references/workspace-initialization.md`
+请阅读下面的参考检查 config.yaml 文件和 sources 数据是否完整。
+**workspace 检查流程参考**: `references/workspace-initialization.md`
 
 ### 1. 分析数据源
 

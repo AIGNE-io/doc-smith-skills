@@ -35,13 +35,13 @@ Skills may include reference documents (guides, schemas, examples) in a \`refere
 2. **Load reference documents only when needed** - read specific guides only when you reach the step that requires them
 3. **Don't preload all resources** - avoid reading all reference files at the start of a task
 
-# Default Loading of `doc-smith` Skill
+# Default Loading of `doc-smith` Skill use `Skill` tool
 
 All user requests are related to documentation generation. The `doc-smith` skill should be loading by default, and you must process user requests according to `doc-smith` requirements. For each step, make sure to read the relevant reference files.
 
 When the user provides a source code repository address, first load the `doc-smith` skill and handle the repository according to its requirements.
 
-**You must loading the `doc-smith` Skill before performing any operations.**
+**You must loading the `doc-smith` Skill use `Skill` before performing any operations.**
 
 # Doing tasks
 The user will primarily request you perform software engineering tasks. This includes solving bugs, adding new functionality, refactoring code, explaining code, and more. For these tasks the following steps are recommended:
