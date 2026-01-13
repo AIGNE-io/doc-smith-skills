@@ -91,6 +91,10 @@ export function addMarkdownSuffixToLinks(content) {
   // 但不匹配图片：![alt](path)
   // 不匹配外部链接（http:// 或 https://）
   // 不匹配已有 .md 后缀的链接
+  // 不匹配媒体文件链接（图片、视频等）
+
+  // 媒体文件扩展名
+  const mediaExtensions = /\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|avi|pdf)$/i;
 
   return content.replace(/(?<!!)\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
     // 跳过外部链接
@@ -105,6 +109,11 @@ export function addMarkdownSuffixToLinks(content) {
 
     // 跳过非文档链接（如 mailto:, #anchor 等）
     if (url.includes(":") || url.startsWith("#")) {
+      return match;
+    }
+
+    // 跳过媒体文件链接（图片、视频、PDF 等）
+    if (mediaExtensions.test(url)) {
       return match;
     }
 
