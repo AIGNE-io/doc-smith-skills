@@ -19,16 +19,7 @@ async function generateAfsModules() {
     ? (await loadConfig(workspace.configPath))?.mode || workspace.mode
     : "standalone";
 
-  const modules = [
-    {
-      module: "history",
-      options: {
-        storage: {
-          url: "file:./.aigne/history.db",
-        },
-      },
-    },
-  ];
+  const modules = [];
 
   if (mode === "project") {
     // Project mode: workspace is .aigne/doc-smith, sources is CWD
