@@ -63,7 +63,7 @@ config.yaml                      → 语言配置（locale）
 
 #### 4.2 查找所有媒体文件
 
-执行以下命令查找工作区中的所有媒体文件：
+执行以下命令查找 `sources` 中的所有媒体文件：
 
 ```bash
 find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" -o -name "*.mp4" -o -name "*.webp" \)
@@ -82,7 +82,7 @@ find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.g
 ```
 
 **层级对照表：**
-- 文档在 `docs/overview/` → 2层（文件夹 + 语言文件） → `../../`
+- 文档在 `docs/overview/` → 2层（文件夹 + 语言文件） → `../../../`
 - 文档在 `docs/api/authentication/` → 3层 → `../../../`
 - 规律：文件夹层级 + 1（语言文件在文件夹内）
 

@@ -13,7 +13,7 @@ agents:
   - agents/generate-images/index.yaml
   - agents/update-image/index.yaml
   - agents/localize/translate-documents/translate-document.yaml
-  - skills-entry/doc-smith-docs-detail/index.yaml
+  - skills-entry/doc-smith-docs-detail/index.mjs
 
 cli:
   chat: skills-entry/doc-smith/index.mjs

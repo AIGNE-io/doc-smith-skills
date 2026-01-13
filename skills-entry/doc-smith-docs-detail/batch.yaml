@@ -11,7 +11,7 @@ skills:
   - type: team
     name: processAllDocuments
     skills:
-      - url: ./index.yaml
+      - url: ./index.mjs
     iterate_on: documents
     concurrency: 5                    # 并发生成 5 个文档
 

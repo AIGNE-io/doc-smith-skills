@@ -205,7 +205,8 @@ agent 会从 workspace 约定目录自动读取：
 在 `skills-entry/doc-smith-docs-detail/` 创建 agent 配置文件：
 
 ```yaml
-# skills-entry/doc-smith-docs-detail/index.yaml
+# skills-entry/doc-smith-docs-detail/index.mjs
+# 导出 JavaScript 配置对象
 type: "@aigne/agent-library/agent-skill-manager"
 name: generateDocumentDetail
 description: 根据文档路径和用户要求生成文档详细内容
@@ -261,7 +262,7 @@ output_schema:
 ```yaml
 # skills-entry/doc-smith/index.yaml
 skills:
-  - url: ../doc-smith-docs-detail/index.yaml
+  - url: ../doc-smith-docs-detail/index.mjs
   # ... 其他 skills
 ```
 
