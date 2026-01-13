@@ -1,257 +1,297 @@
 # Workspace 初始化流程
 
-**用途**: 本文档定义 DocSmith workspace 的检测和初始化流程
+**用途**: 本文档定义 DocSmith workspace 的验证和数据源管理流程
 
 ---
 
-## 一、检测当前目录状态
+## 一、执行层目录结构
 
-### 使用 Bash 工具检查
-```bash
-ls -la
+执行层始终看到统一的目录结构：
+
+```
+modules/
+  /workspace                    # doc-smith 工作空间
+    ├── config.yaml            # 配置文件
+    ├── intent/                # 意图文件
+    ├── planning/              # 规划文件
+    └── docs/                  # 生成的文档
+  /sources                     # 数据源目录
 ```
 
-### 判断逻辑
-
-#### 情况 1: 已初始化 ✅
-**特征**: 存在以下文件/目录
-- `config.yaml`
-- `intent/`
-- `planning/`
-- `docs/`
-- `sources/`
-
-**操作**: 跳过初始化,直接进入后续流程
-
-#### 情况 2: 空目录 ⚙️
-**特征**: 目录为空或仅包含隐藏文件
-
-**操作**: 执行初始化流程 (见第二节)
-
-#### 情况 3: 非空且未初始化 ⚠️
-**特征**: 目录包含文件，且不是隐藏文件,但不是已初始化的 workspace
-
-**提醒用户创建目录，停止执行，继续执行将产生错误的结果**
-
-**操作**: 提示用户并停止
-```
-⚠️ 当前目录不是空目录,无法初始化为 workspace。
-Doc Smith 需要在独立的 workspace 目录中工作,以避免污染源仓库，请在空文件夹中再次执行 DocSmith。
-```
+**目录说明**：
+- `/workspace`：DocSmith 的工作空间，存放配置和生成的文档
+- `/sources`：数据源目录，存放源代码仓库
 
 ---
 
-## 二、执行初始化流程
+## 二、Config.yaml Schema
 
-**前提**: 仅在空目录时执行
+config.yaml 位于 `/workspace/config.yaml`，包含以下字段：
 
-### 2.1 收集必要信息
+```yaml
+# Workspace metadata
+workspaceVersion: "1.0"
+createdAt: "2025-01-13T10:00:00Z"
 
-#### 信息 1: 输出语言 (必须)
-- 如果用户在请求中已指定语言 (如 "生成中文文档") → 直接使用，语言代码参考下方列表中的代码
-- 否则询问用户:
-  ```
-  请选择文档输出语言:
-  1. English (en)
-  2. 简体中文 (zh)
-  3. 繁體中文 (zh-TW)
-  4. 日本語 (ja)
-  5. 한국어 (ko)
-  6. Español (es)
-  7. Français (fr)
-  8. Deutsch (de)
-  9. Português (pt)
-  10. Русский (ru)
-  11. Italiano (it)
-  12. العربية (ar)
-  13. 其他 (请输入语言代码)
-  ```
+# Project information
+projectName: "my-project"
+projectDesc: "项目描述"
+locale: "zh"
 
-#### 信息 2: 源仓库 URL (必须)
-询问用户:
+# Documentation settings (for publish)
+projectLogo: ""
+translateLanguages: []
+
+# 数据源配置（数组）
+sources:
+  # local-path 类型
+  - name: "main"
+    type: local-path
+    path: "../../"              # 相对于 workspace 的路径
+
+  # git-clone 类型
+  - name: "aigne-framework"
+    type: git-clone
+    url: "https://github.com/ArcBlock/aigne-framework.git"
+    branch: "main"                    # 分支名（用于恢复）
+    commit: "a1b2c3d4e5f6789..."      # 完整的 commit hash
+    clonedAt: "2025-01-13T10:00:00Z"  # 克隆/更新时间
+```
+
+### 字段说明
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `workspaceVersion` | string | 固定为 "1.0" |
+| `createdAt` | string | 创建时间，ISO 8601 格式 |
+| `projectName` | string | 项目名称 |
+| `projectDesc` | string | 项目描述 |
+| `locale` | string | 输出语言代码 |
+| `projectLogo` | string | 项目 Logo 路径 |
+| `translateLanguages` | array | 翻译目标语言列表 |
+| `sources` | array | 数据源配置数组 |
+
+### Sources 配置
+
+**local-path 类型**：
+| 字段 | 说明 |
+|------|------|
+| `name` | 数据源名称 |
+| `type` | 固定为 `local-path` |
+| `path` | 相对于 workspace 的路径 |
+
+**git-clone 类型**：
+| 字段 | 说明 |
+|------|------|
+| `name` | 数据源名称 |
+| `type` | 固定为 `git-clone` |
+| `url` | 仓库 URL |
+| `branch` | 分支名，用于在新环境中恢复 |
+| `commit` | 完整 commit hash，记录精确版本 |
+| `clonedAt` | 克隆/更新时间 |
+
+---
+
+## 三、收集必要信息
+
+在对话开始时，如果用户未明确提供，需要询问：
+
+### 3.1 输出语言
+
+**检查条件**：config.yaml 中 `locale` 为空
+
+**处理逻辑**：
+- 如果用户在请求中已指定语言（如"生成中文文档"）→ 直接使用
+- 否则询问用户选择
+
+**询问用户**：
+```
+请选择文档输出语言:
+1. English (en)
+2. 简体中文 (zh)
+3. 繁體中文 (zh-TW)
+4. 日本語 (ja)
+5. 한국어 (ko)
+6. Español (es)
+7. Français (fr)
+8. Deutsch (de)
+9. Português (pt)
+10. Русский (ru)
+11. Italiano (it)
+12. العربية (ar)
+13. 其他 (请输入语言代码)
+```
+
+**后续操作**：更新 config.yaml 中的 `locale` 字段
+
+---
+
+## 四、验证 Workspace
+
+### 4.1 配置完整性检查
+
+使用 Read 工具读取 `/workspace/config.yaml`，验证必要字段：
+
+**必须存在的字段**：
+- `workspaceVersion`
+- `projectName`
+- `projectDesc`
+- `locale`（可为空，后续询问）
+- `sources`（可为空数组，后续添加）
+
+**如果字段缺失**：
+- 提示用户：`config.yaml 缺少必要字段: <字段名>`
+- 询问是否重新初始化
+
+### 4.2 数据源有效性检查
+
+对 sources 数组中的每个数据源进行检查：
+
+**local-path 类型**：
+- 只要 sources 下不为空，即认为数据源存在
+- 不存在则报错
+
+**git-clone 类型**：
+- 检查 `/sources/<name>/` 目录是否存在
+- 不存在则执行恢复流程（见第五节）
+- 可选：验证当前 commit 是否与配置一致，不一致则警告
+
+---
+
+## 五、数据源管理
+
+### 5.1 数据源检查流程
+
+```
+读取 config.yaml 中的 sources 配置
+  ↓
+├─ sources 为空或不存在 → 询问用户提供仓库 URL（5.2）
+└─ sources 存在 → 检查 /sources/ 目录
+    ├─ 目录存在 → 跳过，继续后续流程
+    └─ 目录不存在 → 执行恢复流程（5.3）
+```
+
+### 5.2 添加数据源
+
+**触发条件**：sources 配置为空或不存在
+
+**步骤**：
+1. 询问用户提供仓库 URL
+2. 验证 URL 格式
+3. 询问分支名（默认 main）
+4. 从 URL 提取项目名
+5. 克隆到 `/sources/<项目名>/`
+6. 获取当前 HEAD 的 commit hash
+7. 更新 config.yaml 的 sources 数组
+
+**询问用户**：
 ```
 请提供源代码仓库的 Git URL
 示例: https://github.com/user/repo.git
 ```
 
-**验证 URL 格式**:
+**验证 URL 格式**：
 - 检查是否包含 `.git` 或符合 git URL 格式
-- 如果格式不对,重新询问
+- 如果格式不对，重新询问
 
-#### 信息 3: 项目名称 (可选,可从 URL 推断)
-- 从 URL 提取项目名 (如: `https://github.com/user/my-project.git` → `my-project`)
-- 或询问用户: "项目名称是什么? (用于显示,可留空)"
-
----
-
-### 2.2 创建目录结构
-
-使用 Bash 工具执行:
+**执行命令**：
 ```bash
-# 1. 初始化 Git (如果当前目录未初始化)
-git init
-
-# 2. 创建目录结构
-mkdir -p intent planning docs cache sources
-
-# 3. 创建 .gitignore
-cat > .gitignore << 'EOF'
-# Workspace gitignore
-.tmp/
-node_modules/
-EOF
+git clone -b <branch> <url> /sources/<project-name>
+cd /sources/<project-name>
+git rev-parse HEAD  # 获取 commit hash
 ```
 
----
-
-### 2.3 添加源仓库为 Submodule
-
-**从 URL 提取项目名**:
-```bash
-# 示例: https://github.com/user/my-project.git → my-project
-# 提取逻辑: 取最后一个 / 之后,.git 之前的部分
-```
-
-**添加 submodule**:
-```bash
-git submodule add <源仓库URL> sources/<项目名>
-git submodule update --init --recursive
-```
-
-**如果添加失败**:
-- 提示用户检查 URL 是否正确
-- 提示用户检查是否有 git 访问权限
-- 询问是否继续 (不添加 submodule,仅创建目录结构)
-
----
-
-### 2.4 生成 config.yaml
-
-**使用 Write 工具创建 `config.yaml`**:
+**更新 config.yaml**：
 ```yaml
-# Workspace metadata
-workspaceVersion: "1.0"
-createdAt: "<当前时间戳 ISO 8601 格式>"
-
-# Project information
-projectName: "<从URL推断或用户输入的项目名>"
-projectDesc: "<从仓库信息中分析>"
-locale: "<用户选择的语言代码>"
-
-# Source repository (as git submodule)
-source:
-  type: "git-submodule"
-  path: "sources/<项目名>"
-  url: "<源仓库URL>"
-  branch: "main"
-
-# Documentation settings (for publish)
-projectLogo: "" 
-translateLanguages: []
+sources:
+  - name: "<project-name>"
+    type: git-clone
+    url: "<url>"
+    branch: "<branch>"
+    commit: "<commit-hash>"
+    clonedAt: "<current-timestamp>"
 ```
 
-**字段说明**:
-- `workspaceVersion`: 固定为 "1.0"
-- `createdAt`: 使用当前时间,格式如 "2025-12-30T10:00:00Z"
-- `projectName`: 从 URL 推断或用户输入
-- `projectDesc`: 从仓库信息中分析生成
-- `locale`: 用户选择的语言代码 (zh/en/ja...)
-- `source.path`: submodule 路径
-- `source.url`: 源仓库 URL
-- `source.branch`: 默认 "main",可后续修改
+### 5.3 恢复数据源
 
----
+**触发条件**：sources 配置存在，但 `/sources/<name>/` 目录不存在
 
-### 2.5 初次 Git 提交
+**步骤**：
+1. 读取 sources 配置中的 url、branch、commit
+2. 克隆仓库到 `/sources/<name>/`
+3. 切换到记录的 commit
+4. 提示用户恢复完成
 
+**执行命令**：
 ```bash
-git add .
-git commit -m "docsmith: initialize workspace"
+git clone -b <branch> <url> /sources/<name>
+cd /sources/<name>
+git checkout <commit>  # 切换到精确版本
 ```
 
-**如果提交失败**:
-- 检查 git 配置 (user.name, user.email)
-- 提示用户: "请先配置 git: git config user.name 'Your Name'"
-- 询问是否跳过提交 (仅创建文件,不提交)
-
----
-
-### 2.6 展示初始化结果
-
-输出以下信息:
+**输出提示**：
 ```
-✓ Workspace 初始化完成
-
-目录结构:
-  config.yaml              - Workspace 配置
-  sources/<项目名>/        - 源代码 (git submodule)
-  intent/                  - 用户意图 (待生成)
-  planning/                - 文档结构规划 (待生成)
-  docs/                    - 生成的文档 (待生成)
-  cache/                   - 缓存目录数据
-
-输出语言: <语言>
-源仓库: <URL>
-
-下一步将分析源代码并生成文档...
+✓ 数据源已恢复: <name>
+  分支: <branch>
+  版本: <commit>
 ```
 
----
+### 5.4 更新数据源
 
-## 三、验证已初始化的 Workspace
+**触发条件**：用户请求更新，或询问用户确认
 
-**适用场景**: 当检测到 workspace 已初始化时
-
-### 3.1 读取并验证 config.yaml
-
-使用 Read 工具读取 `config.yaml`,验证必要字段:
-- `workspaceVersion`: 必须存在
-- `projectName`: 必须存在
-- `projectDesc`: 必须存在
-- `locale`: 必须存在
-- `source.url`: 必须存在
-- `source.path`: 必须存在
-
-**如果字段缺失**:
-- 提示用户: "config.yaml 缺少必要字段: <字段名>"
-- 询问是否重新初始化
-
-### 3.2 更新 Submodule (可选)
-
-**询问用户**:
+**询问用户**：
 ```
-是否更新源仓库到最新版本? (Y/n)
+是否更新数据源到最新版本? (Y/n)
 ```
 
-**如果用户选择 Yes**:
+**步骤**：
+1. 读取 config.yaml 获取 sources 配置
+2. 对每个 git-clone 类型的数据源：
+   - 进入 `/sources/<name>/` 目录
+   - 执行 git fetch 和 pull
+   - 获取新的 commit hash
+   - 更新 config.yaml 中的 commit 和 clonedAt（branch 保持不变）
+
+**执行命令**：
 ```bash
-git submodule update --remote sources/<项目名>
+cd /sources/<name>
+git fetch origin
+git pull origin <branch>
+git rev-parse HEAD  # 获取新的 commit hash
 ```
 
-**如果用户选择 No**:
-- 跳过更新,使用当前版本
+**输出提示**：
+```
+✓ 数据源已更新: <name>
+  分支: <branch>
+  新版本: <new-commit>
+  旧版本: <old-commit>
+```
 
 ---
 
-## 四、错误处理
+## 六、错误处理
 
 ### 错误 1: Git 未安装
+
 **症状**: `git` 命令不存在
 
 **提示**:
 ```
 错误: 未检测到 Git
 
-DocSmith 需要 Git 来管理 workspace 和源仓库。
+DocSmith 需要 Git 来管理数据源。
 请先安装 Git: https://git-scm.com/downloads
 ```
 
-### 错误 2: Submodule 添加失败
-**症状**: `git submodule add` 失败
+### 错误 2: 数据源克隆失败
+
+**症状**: `git clone` 失败
 
 **提示**:
 ```
-错误: 无法添加源仓库为 submodule
+错误: 无法克隆数据源
 
 可能原因:
 1. URL 不正确或无法访问
@@ -263,58 +303,76 @@ DocSmith 需要 Git 来管理 workspace 和源仓库。
 2. 检查是否有访问权限 (SSH key 或 token)
 ```
 
-### 错误 3: 目录权限问题
-**症状**: 无法创建目录或文件
+### 错误 3: 数据源恢复失败
+
+**症状**: 恢复时 `git checkout <commit>` 失败
 
 **提示**:
 ```
-错误: 没有目录写入权限
+错误: 无法恢复到指定版本
 
-请检查当前目录的权限设置,确保有读写权限。
+可能原因:
+1. commit hash 不存在（仓库历史被重写）
+2. 网络问题导致未能获取完整历史
+
+建议:
+1. 尝试更新数据源到最新版本
+2. 检查 config.yaml 中的 commit 是否正确
 ```
 
 ### 错误 4: config.yaml 格式错误
+
 **症状**: YAML 解析失败
 
 **提示**:
 ```
 错误: config.yaml 格式不正确
 
-请检查 YAML 语法,或删除 config.yaml 重新初始化。
+请检查 YAML 语法，或删除 config.yaml 重新初始化。
+```
+
+### 错误 5: 目录权限问题
+
+**症状**: 无法创建目录或文件
+
+**提示**:
+```
+错误: 没有目录写入权限
+
+请检查当前目录的权限设置，确保有读写权限。
 ```
 
 ---
 
-## 五、关键约束
+## 七、关键约束
 
-1. **空目录要求**: 初始化必须在空目录或已初始化的 workspace 进行
-2. **Git 依赖**: 必须安装
-3. **独立目录**: Workspace 必须是独立目录,不能在源仓库内
-4. **Submodule**: 源仓库作为 git submodule 管理,不污染 workspace
+1. **执行层视角统一**：无论实际启动方式如何，执行层始终看到 `/workspace` 和 `/sources` 两个目录
+2. **Git 依赖**：数据源管理依赖 Git
+3. **版本精确记录**：git-clone 类型必须记录 branch 和 commit，确保可恢复
+4. **配置优先**：sources 配置存在时不重复询问 URL，仅在目录缺失时恢复
 
 ---
 
-## 六、完整流程示意图
+## 八、完整流程示意图
 
 ```
-开始
+对话开始
   ↓
-检测当前目录
+读取 config.yaml
   ↓
-├─ 已初始化? → 验证配置 → 继续
-├─ 空目录? → 执行初始化 → 继续
-└─ 非空未初始化? → 提示用户 → 停止
-
-初始化流程:
-  收集信息 (语言, 源仓库URL)
-    ↓
-  创建目录结构
-    ↓
-  添加 submodule
-    ↓
-  生成 config.yaml
-    ↓
-  Git commit
-    ↓
-  展示结果
+检查 locale
+  ├─ 为空 → 询问语言 → 更新 config.yaml
+  └─ 已设置 → 继续
+  ↓
+检查 sources 配置
+  ├─ 为空 → 询问 URL → 克隆仓库 → 更新 config.yaml
+  └─ 存在 → 检查 /sources/ 目录
+      ├─ 存在 → 继续
+      └─ 不存在 → 恢复数据源
+  ↓
+询问是否更新数据源 (可选)
+  ├─ 是 → 执行更新
+  └─ 否 → 跳过
+  ↓
+进入文档生成流程
 ```
