@@ -29,7 +29,7 @@ export default async function publishDocs(
     projectName,
     projectDesc,
     projectLogo,
-    outputDir = "./planning",
+    outputDir = PATHS.PLANNING_DIR,
     "with-branding": withBrandingOption,
     config,
     translatedMetadata,
@@ -38,7 +38,7 @@ export default async function publishDocs(
 ) {
   // Note: Document validation is now done in check.mjs which throws errors on failure
 
-  const rawDocsDir = "./docs";
+  const rawDocsDir = PATHS.DOCS_DIR;
   let message;
   let shouldWithBranding = withBrandingOption || false;
 
@@ -312,8 +312,8 @@ export default async function publishDocs(
 
     // clean up tmp work dir in case of error
     try {
-      const docsDir = join(PATHS.TMP_DIR, "docs");
-      await fs.rm(docsDir, { recursive: true, force: true });
+      // const docsDir = join(PATHS.TMP_DIR, "docs");
+      // await fs.rm(docsDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
     }

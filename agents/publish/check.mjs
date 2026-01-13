@@ -9,13 +9,13 @@ import { getProjectInfo } from "../../utils/project.mjs";
 /**
  * Check configuration and documents before publishing
  * @param {Object} params
- * @param {string} params.fileName - Config file name
+ * @param {string} params.fileName - Config file name (relative to workspace)
  * @returns {Promise<Object>} - Result object with valid flag and message
  */
-export default async function check({ fileName = PATHS.CONFIG } = {}, _options) {
+export default async function check({ fileName = "config.yaml" } = {}, _options) {
   // 1. Check configuration
-  const configPath = "./";
-  const filePath = join(configPath, fileName);
+  // Use PATHS.WORKSPACE_BASE to support both project and standalone modes
+  const filePath = join(PATHS.WORKSPACE_BASE, fileName);
   const configContent = await readFile(filePath, "utf8").catch(() => null);
 
   if (!configContent || configContent.trim() === "") {

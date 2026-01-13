@@ -182,7 +182,7 @@ async function replaceImageSlots(
   locale,
   mainLocale,
   depth,
-  assetsDir = "./assets",
+  assetsDir = PATHS.ASSETS_DIR,
 ) {
   // 解析所有 slots
   const slots = parseSlots(content, docPath);
@@ -334,7 +334,7 @@ export async function copyDocumentsToTemp(sourceDir, targetDir) {
       locale,
       mainLocale,
       depth,
-      "./assets",
+      PATHS.ASSETS_DIR,
     );
     // 统计替换的 slot 数量
     if (contentBeforeSlotReplace !== processedContent) {

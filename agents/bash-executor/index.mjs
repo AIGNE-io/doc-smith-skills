@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import { PATHS } from "../../utils/agent-constants.mjs";
 
 /**
  * 虚拟 Bash 执行器 - Git 专用
  * 支持的命令类型:
- * - Git 操作: init, config, status, log, diff, branch, show, add, commit, fetch, pull, submodule
+ * - Git 操作: init, clone, config, status, log, diff, branch, show, add, commit, fetch, pull, submodule
  *
  * 安全限制:
  * - 仅支持 git 命令,不支持其他 shell 命令
  * - 所有命令必须来自预定义的安全枚举
+ * - 命令在 WORKSPACE_BASE 目录执行(自动适配 project 和 standalone 模式)
  */
 
 // 支持的命令枚举
@@ -17,6 +19,7 @@ const ALLOWED_COMMANDS = {
   git: {
     // 初始化和克隆
     init: true,
+    clone: true,
 
     // 配置命令
     config: true,
@@ -132,7 +135,9 @@ function executeCommand(command, args = []) {
       }
 
       // 使用 spawnSync 可以同时捕获 stdout 和 stderr
+      // 在 WORKSPACE_BASE 目录执行，支持 project 和 standalone 两种模式
       const result = spawnSync(command, args, {
+        cwd: PATHS.WORKSPACE_BASE,
         encoding: "utf-8",
         maxBuffer: 10 * 1024 * 1024, // 10MB
         timeout: 600000, // 600秒超时(10分钟),克隆大型仓库可能需要更长时间
@@ -250,7 +255,7 @@ export default function executeSafeShellCommands({ commands }) {
 
 // 添加描述信息,帮助 LLM 理解何时调用此 agent
 executeSafeShellCommands.description =
-  "安全执行 Git 命令,支持的子命令包括: init/config/status/log/diff/branch/show/add/commit/fetch/pull/submodule。" +
+  "安全执行 Git 命令,支持的子命令包括: init/clone/config/status/log/diff/branch/show/add/commit/fetch/pull/submodule。" +
   "适用于需要批量执行多个有顺序依赖的 git 操作,如果某个命令失败会立即停止执行后续命令。";
 
 // 定义输入 schema
@@ -273,7 +278,7 @@ executeSafeShellCommands.input_schema = {
           args: {
             type: "array",
             description:
-              "Git 子命令和参数列表,第一个参数必须是支持的子命令(init/clone/config/status/log/diff/branch/show/add/commit/fetch/pull/submodule)",
+              "Git 子命令和参数列表,第一个参数必须是支持的子命令(init/clone/config/status/log/diff/branch/show/add/commit/fetch/pull/submodule)。命令将在 workspace 目录执行",
             items: {
               type: "string",
             },
