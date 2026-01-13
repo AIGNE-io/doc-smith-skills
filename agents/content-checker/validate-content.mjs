@@ -4,6 +4,8 @@ import { parse as yamlParse } from "yaml";
 import path from "node:path";
 import { collectDocumentPaths } from "../../utils/document-paths.mjs";
 import { PATHS } from "../../utils/agent-constants.mjs";
+import { isSourcesAbsolutePath, resolveSourcesPath } from "../../utils/sources-path-resolver.mjs";
+import { loadConfigFromFile } from "../../utils/config.mjs";
 
 /**
  * 文档内容校验器类
@@ -32,6 +34,18 @@ class DocumentContentValidator {
     this.documents = [];
     this.documentPaths = new Set();
     this.remoteImageCache = new Map();
+    this.sourcesConfig = null; // 缓存 sources 配置
+  }
+
+  /**
+   * 加载 sources 配置（懒加载）
+   */
+  async loadSourcesConfig() {
+    if (this.sourcesConfig === null) {
+      const config = await loadConfigFromFile();
+      this.sourcesConfig = config?.sources || [];
+    }
+    return this.sourcesConfig;
   }
 
   /**
@@ -544,26 +558,53 @@ class DocumentContentValidator {
    * 验证本地图片
    */
   async validateLocalImage(imageUrl, doc, altText, langFile) {
-    // 计算当前文档的完整路径（包含语言文件）
-    const fullDocPath = path.join(doc.filePath, langFile);
-    const docDir = path.dirname(path.join(this.docsDir, fullDocPath));
-    const imagePath = path.resolve(docDir, imageUrl);
+    let imagePath;
 
-    try {
-      await access(imagePath, constants.F_OK);
+    // 检查是否为 /sources/... 绝对路径
+    if (isSourcesAbsolutePath(imageUrl)) {
+      await this.loadSourcesConfig();
+      const resolved = await resolveSourcesPath(imageUrl, this.sourcesConfig, PATHS.WORKSPACE_BASE);
 
-      // 验证相对路径层级
-      const expectedRelativePath = this.calculateExpectedRelativePath(fullDocPath, imagePath);
-      if (expectedRelativePath && imageUrl !== expectedRelativePath) {
-        this.errors.warnings.push({
-          type: "IMAGE_PATH_LEVEL",
+      if (!resolved) {
+        this.stats.missingImages++;
+        this.errors.fatal.push({
+          type: "INVALID_SOURCES_PATH",
           path: doc.path,
           langFile,
           imageUrl,
-          expectedPath: expectedRelativePath,
-          message: `图片路径层级可能不正确: ${imageUrl}`,
-          suggestion: `建议使用: ${expectedRelativePath}`,
+          altText,
+          message: `无法在任何 source 中找到图片: ${imageUrl}`,
+          suggestion: `检查 sources 目录下是否存在该图片文件`,
         });
+        return;
+      }
+      imagePath = resolved.physicalPath;
+    } else {
+      // 原有的相对路径处理逻辑
+      const fullDocPath = path.join(doc.filePath, langFile);
+      const docDir = path.dirname(path.join(this.docsDir, fullDocPath));
+      imagePath = path.resolve(docDir, imageUrl);
+    }
+
+    // 检查文件是否存在
+    try {
+      await access(imagePath, constants.F_OK);
+
+      // 仅对相对路径进行层级验证（绝对路径不需要）
+      if (!isSourcesAbsolutePath(imageUrl)) {
+        const fullDocPath = path.join(doc.filePath, langFile);
+        const expectedRelativePath = this.calculateExpectedRelativePath(fullDocPath, imagePath);
+        if (expectedRelativePath && imageUrl !== expectedRelativePath) {
+          this.errors.warnings.push({
+            type: "IMAGE_PATH_LEVEL",
+            path: doc.path,
+            langFile,
+            imageUrl,
+            expectedPath: expectedRelativePath,
+            message: `图片路径层级可能不正确: ${imageUrl}`,
+            suggestion: `建议使用: ${expectedRelativePath}`,
+          });
+        }
       }
     } catch (_error) {
       this.stats.missingImages++;

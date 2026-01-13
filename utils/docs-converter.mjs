@@ -4,6 +4,8 @@ import { parse as yamlParse } from "yaml";
 import { parseSlots } from "./image-slots.mjs";
 import { findImageWithFallback } from "./image-utils.mjs";
 import { PATHS } from "./agent-constants.mjs";
+import { isSourcesAbsolutePath, parseSourcesPath, resolveSourcesPath } from "./sources-path-resolver.mjs";
+import { loadConfigFromFile } from "./config.mjs";
 
 /**
  * 扫描文档目录，识别所有包含 .meta.yaml 的文档目录
@@ -216,6 +218,71 @@ async function replaceImageSlots(
 }
 
 /**
+ * 处理文档中的 /sources/... 绝对路径图片
+ * @param {string} content - 文档内容
+ * @param {number} depth - 文档深度（用于计算相对路径）
+ * @param {string} targetDir - 目标目录（临时目录）
+ * @param {Array} sourcesConfig - config.yaml 中的 sources 配置
+ * @param {string} workspaceBase - workspace 基础路径
+ * @returns {Promise<{content: string, copiedCount: number}>} - 处理后的内容和复制的图片数量
+ */
+async function processSourcesImages(content, depth, targetDir, sourcesConfig, workspaceBase) {
+  const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  let result = content;
+  const processedImages = new Set();
+  let copiedCount = 0;
+
+  // 收集所有匹配项（避免在迭代时修改字符串）
+  const matches = [...content.matchAll(imageRegex)];
+
+  for (const match of matches) {
+    const [fullMatch, alt, imagePath] = match;
+
+    if (!isSourcesAbsolutePath(imagePath)) {
+      continue;
+    }
+
+    // 解析路径，获取相对路径部分
+    const relativePath = parseSourcesPath(imagePath);
+    if (!relativePath) {
+      console.warn(`⚠️  Invalid sources path format: ${imagePath}`);
+      continue;
+    }
+
+    // 获取物理路径（自动在各个 source 中查找）
+    const resolved = await resolveSourcesPath(imagePath, sourcesConfig, workspaceBase);
+    if (!resolved) {
+      console.warn(`⚠️  Cannot find image in any source: ${imagePath}`);
+      continue;
+    }
+
+    const { physicalPath } = resolved;
+
+    // 复制到临时目录的 sources 子目录
+    // 保持与执行层相同的路径结构: targetDir/../sources/<relativePath>
+    const targetImagePath = join(dirname(targetDir), "sources", relativePath);
+
+    if (!processedImages.has(targetImagePath)) {
+      await fs.ensureDir(dirname(targetImagePath));
+      await fs.copy(physicalPath, targetImagePath);
+      processedImages.add(targetImagePath);
+      copiedCount++;
+    }
+
+    // 计算相对路径
+    // depth 1: ../sources/path/to/image.png
+    // depth 2: ../../sources/path/to/image.png
+    const pathPrefix = "../".repeat(depth);
+    const newImagePath = `${pathPrefix}sources/${relativePath}`;
+
+    // 替换内容
+    result = result.replace(fullMatch, `![${alt}](${newImagePath})`);
+  }
+
+  return { content: result, copiedCount };
+}
+
+/**
  * 复制文档到临时目录并进行转换
  * @param {string} sourceDir - 源文档目录
  * @param {string} targetDir - 目标目录
@@ -233,12 +300,17 @@ export async function copyDocumentsToTemp(sourceDir, targetDir) {
   // 读取主语言（用于图片回退）
   const mainLocale = await loadMainLocale();
 
+  // 加载 sources 配置（用于处理 /sources/... 绝对路径）
+  const config = await loadConfigFromFile();
+  const sourcesConfig = config?.sources || [];
+
   const stats = {
     total: documents.length,
     converted: 0,
     depth1: 0,
     depth2Plus: 0,
     slotsReplaced: 0,
+    sourcesCopied: 0,
   };
 
   // 处理每个文档
@@ -271,10 +343,23 @@ export async function copyDocumentsToTemp(sourceDir, targetDir) {
       stats.slotsReplaced += slotsBefore - slotsAfter;
     }
 
-    // 2. 为内部链接添加 .md 后缀
+    // 2. 处理 /sources/... 绝对路径图片
+    if (sourcesConfig.length > 0) {
+      const sourcesResult = await processSourcesImages(
+        processedContent,
+        depth,
+        targetDir,
+        sourcesConfig,
+        PATHS.WORKSPACE_BASE,
+      );
+      processedContent = sourcesResult.content;
+      stats.sourcesCopied += sourcesResult.copiedCount;
+    }
+
+    // 3. 为内部链接添加 .md 后缀
     processedContent = addMarkdownSuffixToLinks(processedContent);
 
-    // 3. 调整图片路径
+    // 4. 调整图片路径
     processedContent = adjustImagePaths(processedContent, depth);
 
     // 创建目标目录并写入文件

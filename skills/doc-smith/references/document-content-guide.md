@@ -74,26 +74,25 @@ find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.g
 - `./assets/run/screenshot2.png`
 - `./images/architecture.png`
 
-#### 3. 相对路径计算规则
+#### 3. 图片路径格式
 
-**核心公式：**
+**sources 中的图片使用绝对路径**：
+
+对于数据源中的图片，使用 `/sources/` 开头的绝对路径格式：
+
 ```
-图片相对路径 = (向上到根目录的 ../) + 图片路径（去掉开头的 ./）
+/sources/<path-to-image>
 ```
 
-**层级对照表：**
-- 文档在 `docs/overview/` → 2层（文件夹 + 语言文件） → `../../`
-- 文档在 `docs/api/authentication/` → 3层 → `../../../`
-- 规律：文件夹层级 + 1（语言文件在文件夹内）
+**示例**：
+- 图片路径：`modules/sources/assets/run/screenshot.png`
+- 文档中引用：`![截图](/sources/assets/run/screenshot.png)`
 
-**示例：**
-- 文档：`docs/getting-started/zh.md`（2层）
-- 图片：在 workspace 的 `sources/my-project/assets/run/screenshot.png`
-- 结果：`../../sources/my-project/assets/run/screenshot.png`
-
-**常见错误：**
-- ❌ 层级数数错（`docs/` 用了 `../../` 而非 `../`）
-- ❌ 忘记计算子目录（`docs/api/` 用了 1层而非 2层）
+**注意**：
+- 直接使用在 sources 目录下看到的路径
+- 不需要计算相对路径层级，统一使用绝对路径
+- 路径区分大小写
+- 检查和发布阶段会自动解析并处理图片路径
 
 ### 生成文档时的图片处理
 
@@ -141,9 +140,8 @@ find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.g
 
 1. 只能从前置准备的查找结果中匹配图片
 2. 根据文件名判断用途（如 login.png、dashboard.png、settings.png）
-3. 使用层级对照表计算相对路径
-4. 引用图片：`![截图说明](../../assets/screenshot.png)`
-5. 如果仓库未提供相关截图，可以不展示
+3. 使用绝对路径格式引用：`![截图说明](/sources/assets/screenshot.png)`
+4. 如果仓库未提供相关截图，可以不展示
 
 **对于技术图表（A 类）：**
 
@@ -200,7 +198,7 @@ Rules:
 
 **应用截图检查：**
 - [ ] 是否有可用的应用截图可以引用？
-- [ ] 引用路径是否按层级对照表正确计算？
+- [ ] 引用路径是否使用正确的绝对路径格式？
 
 **数量检查：**
 - [ ] 技术文档是否至少包含 1 个技术图表？
