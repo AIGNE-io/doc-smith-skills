@@ -242,32 +242,33 @@ git commit -m "docsmith: xxxx(合适的标题)"
 完成后：
 
 ```
-workspace/                         # 独立 workspace 目录
-├── assets/                        # 生成的文档
-│   └── project-architecture/      # afs image slot 中的 key
-│       └── .meta.yaml             # 元信息 (kind/source/default)
-│       └── images/
-│          └── zh.png              # 语言版本文件
-├── config.yaml                    # workspace 配置文件
-├── sources/                       # 源仓库 (git submodule)
-│   └── my-project/
-├── intent/
-│   └── user-intent.md             # 用户意图描述
-├── planning/
-│   └── document-structure.yaml    # 文档结构计划
-├── docs/                          # 生成的文档
-│   ├── overview/
-│   │   ├── .meta.yaml             # 元信息 (kind/source/default)
-│   │   └── zh.md                  # 语言版本文件
-│   ├── getting-started/
-│   │   ├── .meta.yaml
-│   │   └── zh.md
-│   └── api/
-│       └── authentication/
-│           ├── .meta.yaml
-│           └── zh.md
-└── cache/                         # 缓存数据
-    └── task_plan.md               # 任务规划文件 (跟踪执行进度)
+modules/
+├── workspace/                     # doc-smith 工作空间
+│   ├── config.yaml                # workspace 配置文件
+│   ├── intent/
+│   │   └── user-intent.md         # 用户意图描述
+│   ├── planning/
+│   │   └── document-structure.yaml # 文档结构计划
+│   ├── docs/                      # 生成的文档
+│   │   ├── overview/
+│   │   │   ├── .meta.yaml         # 元信息 (kind/source/default)
+│   │   │   └── zh.md              # 语言版本文件
+│   │   ├── getting-started/
+│   │   │   ├── .meta.yaml
+│   │   │   └── zh.md
+│   │   └── api/
+│   │       └── authentication/
+│   │           ├── .meta.yaml
+│   │           └── zh.md
+│   ├── assets/                    # 生成的图片资源
+│   │   └── project-architecture/  # afs image slot 中的 key
+│   │       ├── .meta.yaml         # 元信息 (kind/source/default)
+│   │       └── images/
+│   │           └── zh.png         # 语言版本文件
+│   └── cache/                     # 缓存数据
+│       └── task_plan.md           # 任务规划文件 (跟踪执行进度)
+└── sources/                       # 数据源目录
+    └── my-project/                # 克隆的源仓库
 ```
 
 ## 关键原则
