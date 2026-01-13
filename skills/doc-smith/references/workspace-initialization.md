@@ -101,7 +101,7 @@ sources:
 **检查条件**：config.yaml 中 `locale` 为空
 
 **处理逻辑**：
-- 如果用户在请求中已指定语言（如"生成中文文档"）→ 直接使用
+- 如果用户在请求中已指定语言（如"生成中文文档"）→ 直接使用，并保存到 config.yaml 中的 locale 字段
 - 否则询问用户选择
 
 **询问用户**：
@@ -134,9 +134,9 @@ sources:
 
 **必须存在的字段**：
 - `workspaceVersion`
-- `projectName`
-- `projectDesc`
-- `locale`（可为空，后续询问）
+- `projectName`(为空需要分析项目信息，生成并保存)
+- `projectDesc` (为空需要分析项目信息，生成并保存)
+- `locale` (为空需要向用户询问并保存)
 - `sources`（可为空数组，后续添加）
 
 **如果字段缺失**：

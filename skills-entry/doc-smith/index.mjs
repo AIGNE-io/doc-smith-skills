@@ -124,7 +124,17 @@ console.log("\n🚀 Welcome to DocSmith!");
 const workspace = await detectAndInitialize();
 const afsModules = await generateAfsModules(workspace);
 
-console.log("🎯 Ready for documentation generation...\n");
+// Print workspace info
+console.log(`Project: ${process.cwd()}`);
+if (workspace.mode === "project") {
+  console.log(`DocSmith workspace: ${DOC_SMITH_DIR}`);
+  console.log(`Docs output: ${DOC_SMITH_DIR}/docs`);
+} else {
+  console.log(`DocSmith workspace: .`);
+  console.log(`Docs output: ./docs`);
+}
+
+console.log("\n🎯 Ready for documentation generation...\n");
 
 /**
  * Main agent configuration
@@ -142,6 +152,12 @@ export default {
       autoBreakpoints: {
         lastMessage: true,
       },
+    },
+  },
+
+  session: {
+    compact: {
+      max_tokens: 150000,
     },
   },
 

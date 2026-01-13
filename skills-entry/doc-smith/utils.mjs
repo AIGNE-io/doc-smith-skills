@@ -132,7 +132,7 @@ export async function createGitignore(path, content) {
  * Creates .aigne/doc-smith/ directory structure
  */
 export async function initProjectMode() {
-  console.log("\n📂 Initializing doc-smith workspace (project mode)...\n");
+  console.log("\n📂 Initializing doc-smith workspace...\n");
 
   // Create .aigne/doc-smith directory
   await mkdir(DOC_SMITH_DIR, { recursive: true });
@@ -181,7 +181,7 @@ export async function initProjectMode() {
  * Creates workspace in current directory
  */
 export async function initStandaloneMode() {
-  console.log("\n📂 Initializing doc-smith workspace (standalone mode)...\n");
+  console.log("\n📂 Initializing doc-smith workspace...\n");
 
   // Initialize git in current directory
   await gitExec("init");

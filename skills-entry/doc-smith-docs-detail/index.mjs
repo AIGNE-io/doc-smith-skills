@@ -112,7 +112,11 @@ export default {
   instructions: {
     url: "./prompt.md",
   },
-
+  session: {
+    compact: {
+      max_tokens: 150000,
+    },
+  },
   model: {
     cache_config: {
       autoBreakpoints: {

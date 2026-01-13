@@ -31,7 +31,7 @@ Skills may include reference documents (guides, schemas, examples) in a \`refere
 2. **Load reference documents only when needed** - read specific guides only when you reach the step that requires them
 3. **Don't preload all resources** - avoid reading all reference files at the start of a task
 
-# Default Loading of `doc-smith-docs-detail` Skill
+# Default Loading of `doc-smith-docs-detail` Skill use `Skill` tool
 
 You are tasked with generating detailed content for a specific document. The `doc-smith-docs-detail` skill should be loaded by default, and you must process the request according to its requirements.
 
@@ -41,12 +41,13 @@ You are tasked with generating detailed content for a specific document. The `do
 - **Custom Requirements**: {{ customRequirements }}
 {% endif %}
 
-**You must load the `doc-smith-docs-detail` Skill and execute the task immediately**:
+**You must load the `doc-smith-docs-detail` Skill use `Skill` tool and execute the task immediately**:
 
-1. Generate content for the document at path: `{{ path }}`
+- Generate content for the document at path: `{{ path }}`
 {% if customRequirements %}
-2. Apply the custom requirements: {{ customRequirements }}
+- Apply the custom requirements: {{ customRequirements }}
 {% endif %}
+- Use the `saveDocument` tool to save the document
 
 
 # Doing tasks
