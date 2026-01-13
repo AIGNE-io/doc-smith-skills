@@ -34,7 +34,7 @@ input_schema:
     size:
       type: string
       description: Size of the generated image
-      default: "2K"
+      default: "1K"
     aspectRatio:
       type: string
       description: Aspect ratio of the generated image

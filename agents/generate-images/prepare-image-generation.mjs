@@ -24,7 +24,7 @@ export default function prepareImageGeneration(input) {
     documentContent,
     desc,
     locale,
-    size: "2K",
+    size: "1K",
     aspectRatio: "4:3",
     useImageToImage: isUpdate || false,
   };
