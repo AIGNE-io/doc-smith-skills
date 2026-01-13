@@ -159,11 +159,27 @@ export async function initProjectMode() {
   });
   await writeFile(join(DOC_SMITH_DIR, "config.yaml"), configContent, "utf8");
 
+  // Create initial commit in doc-smith repo (required for submodule)
+  await gitExec("add .", DOC_SMITH_DIR);
+  const commitResult = await gitExec(
+    'commit -m "Initial commit: doc-smith workspace"',
+    DOC_SMITH_DIR
+  );
+  if (commitResult.success) {
+    console.log(`✅ Created initial commit in ${DOC_SMITH_DIR}`);
+  }
+
   // Add as submodule if outer is git repo
-  if (await isGitRepo(".")) {
-    const result = await gitExec(`submodule add ./${DOC_SMITH_DIR} ${DOC_SMITH_DIR}`);
+  const outerIsGitRepo = await isGitRepo(".");
+
+  if (outerIsGitRepo) {
+    const submoduleCmd = `submodule add ./${DOC_SMITH_DIR} ${DOC_SMITH_DIR}`;
+    const result = await gitExec(submoduleCmd);
+
     if (result.success) {
       console.log(`✅ Added ${DOC_SMITH_DIR} as git submodule`);
+    } else {
+      console.log(`⚠️ Failed to add submodule: ${result.error}`);
     }
   }
 
