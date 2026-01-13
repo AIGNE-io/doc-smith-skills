@@ -63,7 +63,7 @@ input_schema:
     size:
       type: string
       description: 生成图片的尺寸
-      default: "1K"
+      default: "2K"
   required:
     - existingImage
     - sourceLanguage

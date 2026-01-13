@@ -97,7 +97,7 @@ export default async function checkImageTranslation(input) {
     if (needsTranslation) {
       // 获取图片的宽高比（从 meta 或默认）
       const aspectRatio = meta.generation?.aspectRatio || "4:3";
-      const size = meta.generation?.size || "1K";
+      const size = meta.generation?.size || "2K";
 
       translationTasks.push({
         key,

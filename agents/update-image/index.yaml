@@ -20,7 +20,7 @@ skills:
         {
           "id": slotId,
           "documentContent": content,
-          "size": "1K",
+          "size": "2K",
           "useImageToImage": true,
           "documents": [{
             "path": doc,
