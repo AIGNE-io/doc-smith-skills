@@ -1,6 +1,6 @@
 {
   "name": "@aigne/doc-smith",
-  "version": "0.9.8-alpha.13",
+  "version": "0.9.8-alpha.14",
   "description": "AI-driven documentation generation tool built on the AIGNE Framework",
   "publishConfig": {
     "access": "public"
