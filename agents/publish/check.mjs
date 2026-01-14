@@ -26,16 +26,32 @@ export default async function check({ fileName = "config.yaml" } = {}, _options)
 
   const config = await loadConfigFromFile();
 
-  // 2. Check and populate projectLogo if not exists
-  if (!config.projectLogo || config.projectLogo.trim() === "") {
+  // 2. Check and populate project metadata if not exists
+  const missingFields = [];
+  if (!config.projectName || config.projectName.trim() === "") missingFields.push("projectName");
+  if (!config.projectDesc || config.projectDesc.trim() === "") missingFields.push("projectDesc");
+  if (!config.projectLogo || config.projectLogo.trim() === "") missingFields.push("projectLogo");
+
+  if (missingFields.length > 0) {
     try {
       const projectInfo = await getProjectInfo();
-      if (projectInfo.icon && projectInfo.icon.trim() !== "") {
+
+      if (missingFields.includes("projectName") && projectInfo.name && projectInfo.name.trim() !== "") {
+        await saveValueToConfig("projectName", projectInfo.name, "Project name");
+        config.projectName = projectInfo.name;
+      }
+
+      if (missingFields.includes("projectDesc") && projectInfo.description && projectInfo.description.trim() !== "") {
+        await saveValueToConfig("projectDesc", projectInfo.description, "Project description");
+        config.projectDesc = projectInfo.description;
+      }
+
+      if (missingFields.includes("projectLogo") && projectInfo.icon && projectInfo.icon.trim() !== "") {
         await saveValueToConfig("projectLogo", projectInfo.icon, "Project logo or icon");
         config.projectLogo = projectInfo.icon;
       }
     } catch (error) {
-      console.warn("Failed to get project icon:", error.message);
+      console.warn("Failed to get project info:", error.message);
     }
   }
 
