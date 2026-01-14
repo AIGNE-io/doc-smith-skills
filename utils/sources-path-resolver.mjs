@@ -74,4 +74,3 @@ export async function resolveSourcesPath(absolutePath, sourcesConfig, workspaceB
 
   return null;
 }
-

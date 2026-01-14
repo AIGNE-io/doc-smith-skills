@@ -40,9 +40,8 @@ export function parseSlots(content, docPath) {
   const slotRegex = SLOT_REGEX;
 
   const slots = [];
-  let match;
 
-  while ((match = slotRegex.exec(content)) !== null) {
+  for (const match of content.matchAll(slotRegex)) {
     const id = match[1];
     const userKey = match[2]; // 可能是 undefined
     const desc = match[3];

@@ -36,17 +36,29 @@ export default async function check({ fileName = "config.yaml" } = {}, _options)
     try {
       const projectInfo = await getProjectInfo();
 
-      if (missingFields.includes("projectName") && projectInfo.name && projectInfo.name.trim() !== "") {
+      if (
+        missingFields.includes("projectName") &&
+        projectInfo.name &&
+        projectInfo.name.trim() !== ""
+      ) {
         await saveValueToConfig("projectName", projectInfo.name, "Project name");
         config.projectName = projectInfo.name;
       }
 
-      if (missingFields.includes("projectDesc") && projectInfo.description && projectInfo.description.trim() !== "") {
+      if (
+        missingFields.includes("projectDesc") &&
+        projectInfo.description &&
+        projectInfo.description.trim() !== ""
+      ) {
         await saveValueToConfig("projectDesc", projectInfo.description, "Project description");
         config.projectDesc = projectInfo.description;
       }
 
-      if (missingFields.includes("projectLogo") && projectInfo.icon && projectInfo.icon.trim() !== "") {
+      if (
+        missingFields.includes("projectLogo") &&
+        projectInfo.icon &&
+        projectInfo.icon.trim() !== ""
+      ) {
         await saveValueToConfig("projectLogo", projectInfo.icon, "Project logo or icon");
         config.projectLogo = projectInfo.icon;
       }

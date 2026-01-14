@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import fs from "node:fs/promises";
 import { constants } from "node:fs";
-import path from "node:path";
 import { parse, stringify as yamlStringify } from "yaml";
 import { PATHS, ERROR_CODES } from "./agent-constants.mjs";
 

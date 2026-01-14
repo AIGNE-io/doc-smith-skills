@@ -184,7 +184,8 @@ checkContent.input_schema = {
       items: {
         type: "string",
       },
-      description: "要检查的文档路径数组，如 ['/overview', '/api/introduction']，如果不提供则检查所有文档",
+      description:
+        "要检查的文档路径数组，如 ['/overview', '/api/introduction']，如果不提供则检查所有文档",
     },
   },
 };

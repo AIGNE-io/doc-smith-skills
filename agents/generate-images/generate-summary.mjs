@@ -31,7 +31,7 @@ export default function generateSummary(input) {
 
   // 统计成功和失败的任务
   const results = processAllSlots || [];
-  const successTasks = results.filter((r) => r && r.success);
+  const successTasks = results.filter((r) => r?.success);
   const failedTasks = results.filter((r) => r && !r.success);
 
   const successCount = successTasks.length;

@@ -196,7 +196,10 @@ export async function initProjectMode() {
 
   // 在 doc-smith repo 中创建初始提交（submodule 需要）
   await gitExec("add .", DOC_SMITH_DIR);
-  const commitResult = await gitExec('commit -m "Initial commit: doc-smith workspace"', DOC_SMITH_DIR);
+  const commitResult = await gitExec(
+    'commit -m "Initial commit: doc-smith workspace"',
+    DOC_SMITH_DIR,
+  );
   if (commitResult.success) {
     console.log(`✅ Created initial commit in ${DOC_SMITH_DIR}`);
   }

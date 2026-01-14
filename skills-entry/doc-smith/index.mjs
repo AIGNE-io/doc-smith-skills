@@ -1,8 +1,4 @@
-import {
-  detectAndInitialize,
-  DOC_SMITH_DIR,
-  WORKSPACE_MODES,
-} from "../../utils/workspace.mjs";
+import { detectAndInitialize, DOC_SMITH_DIR, WORKSPACE_MODES } from "../../utils/workspace.mjs";
 import { generateDocSmithAfsModules } from "../../utils/afs-factory.mjs";
 
 // Initialize workspace and generate config at module load time

@@ -4,7 +4,11 @@ import { parse as yamlParse } from "yaml";
 import { parseSlots } from "./image-slots.mjs";
 import { findImageWithFallback } from "./image-utils.mjs";
 import { PATHS } from "./agent-constants.mjs";
-import { isSourcesAbsolutePath, parseSourcesPath, resolveSourcesPath } from "./sources-path-resolver.mjs";
+import {
+  isSourcesAbsolutePath,
+  parseSourcesPath,
+  resolveSourcesPath,
+} from "./sources-path-resolver.mjs";
 import { loadConfigFromFile } from "./config.mjs";
 
 /**

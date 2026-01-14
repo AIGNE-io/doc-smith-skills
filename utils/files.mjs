@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import { join } from "node:path";
 import { PATHS } from "./agent-constants.mjs";
 
 // Shared extension → MIME type mapping table

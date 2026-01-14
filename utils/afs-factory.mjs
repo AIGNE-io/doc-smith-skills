@@ -1,4 +1,10 @@
-import { detectWorkspaceMode, loadConfig, DOC_SMITH_DIR, SOURCES_DIR, WORKSPACE_MODES } from "./workspace.mjs";
+import {
+  detectWorkspaceMode,
+  loadConfig,
+  DOC_SMITH_DIR,
+  SOURCES_DIR,
+  WORKSPACE_MODES,
+} from "./workspace.mjs";
 
 // AIGNE framework placeholder for current working directory
 const CWD = "$" + "{CWD}";

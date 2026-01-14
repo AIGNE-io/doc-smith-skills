@@ -51,7 +51,7 @@ export default async function translateDocumentToLanguage(input, options) {
         const meta = yamlParse(metaContent);
 
         // 检查是否已有该语言的翻译记录
-        if (meta.translations && meta.translations[targetLanguage]) {
+        if (meta.translations?.[targetLanguage]) {
           const translationInfo = meta.translations[targetLanguage];
 
           // 如果 hash 相同，跳过翻译
