@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { access, readFile, mkdir, writeFile } from "node:fs/promises";
+import { access, readFile, mkdir, writeFile, appendFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
@@ -25,6 +25,17 @@ export const SOURCES_DIR = "sources";
 export const WORKSPACE_SUBDIRS = ["intent", "planning", "docs"];
 
 /**
+ * doc-smith workspace 的 .gitignore 内容
+ */
+export const GITIGNORE_CONTENT = `\
+# Ignore sources directory
+sources/
+
+# Ignore temporary files
+tmp/
+`;
+
+/**
  * 检查路径是否存在
  * @param {string} path - 路径
  * @returns {Promise<boolean>}
@@ -48,12 +59,13 @@ export function pathExistsSync(path) {
 }
 
 /**
- * 检查目录是否是 git 仓库
- * @param {string} path - 目录路径
+ * 检查是否在 git 仓库内（支持子目录）
+ * @param {string} cwd - 工作目录
  * @returns {Promise<boolean>}
  */
-export async function isGitRepo(path = ".") {
-  return pathExists(join(path, ".git"));
+export async function isGitRepo(cwd = ".") {
+  const result = await gitExec("rev-parse --is-inside-work-tree", cwd);
+  return result.success && result.output === "true";
 }
 
 /**
@@ -68,6 +80,49 @@ export async function gitExec(command, cwd = ".") {
     return { success: true, output: stdout.trim() };
   } catch (error) {
     return { success: false, error: error.message };
+  }
+}
+
+/**
+ * 获取 git 仓库根目录
+ * @param {string} cwd - 起始目录
+ * @returns {Promise<string | null>}
+ */
+export async function getGitRoot(cwd = ".") {
+  const result = await gitExec("rev-parse --show-toplevel", cwd);
+  if (result.success) {
+    return result.output;
+  }
+  return null;
+}
+
+/**
+ * 向 .gitignore 添加忽略规则（如果不存在）
+ * @param {string} gitRoot - git 仓库根目录
+ * @param {string} pattern - 要忽略的模式
+ * @returns {Promise<boolean>} 是否添加成功
+ */
+export async function addToGitignore(gitRoot, pattern) {
+  const gitignorePath = join(gitRoot, ".gitignore");
+
+  try {
+    // 检查 .gitignore 是否存在
+    if (await pathExists(gitignorePath)) {
+      // 读取现有内容，检查是否已包含该模式
+      const content = await readFile(gitignorePath, "utf8");
+      if (content.includes(pattern)) {
+        return true; // 已存在，无需添加
+      }
+      // 追加到文件末尾（确保换行）
+      const prefix = content.endsWith("\n") ? "" : "\n";
+      await appendFile(gitignorePath, `${prefix}${pattern}\n`, "utf8");
+    } else {
+      // 创建新的 .gitignore
+      await writeFile(gitignorePath, `${pattern}\n`, "utf8");
+    }
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -179,8 +234,7 @@ export async function initProjectMode() {
   await createDirectoryStructure(DOC_SMITH_DIR);
 
   // 创建 .gitignore
-  const gitignoreContent = "# Ignore sources directory\nsources/\n";
-  await writeFile(join(DOC_SMITH_DIR, ".gitignore"), gitignoreContent, "utf8");
+  await writeFile(join(DOC_SMITH_DIR, ".gitignore"), GITIGNORE_CONTENT, "utf8");
 
   // 生成 config.yaml
   const configContent = generateConfig({
@@ -194,7 +248,7 @@ export async function initProjectMode() {
   });
   await writeFile(join(DOC_SMITH_DIR, "config.yaml"), configContent, "utf8");
 
-  // 在 doc-smith repo 中创建初始提交（submodule 需要）
+  // 在 doc-smith repo 中创建初始提交
   await gitExec("add .", DOC_SMITH_DIR);
   const commitResult = await gitExec(
     'commit -m "Initial commit: doc-smith workspace"',
@@ -204,17 +258,20 @@ export async function initProjectMode() {
     console.log(`✅ Created initial commit in ${DOC_SMITH_DIR}`);
   }
 
-  // 如果外层是 git 仓库，添加为 submodule
-  const outerIsGitRepo = await isGitRepo(".");
+  // 如果外层是 git 仓库，在其 .gitignore 中添加忽略规则
+  const gitRoot = await getGitRoot(".");
 
-  if (outerIsGitRepo) {
-    const submoduleCmd = `submodule add ./${DOC_SMITH_DIR} ${DOC_SMITH_DIR}`;
-    const result = await gitExec(submoduleCmd);
+  if (gitRoot) {
+    // 计算相对于 git 根目录的忽略路径
+    const cwd = process.cwd();
+    const relativePath = cwd.startsWith(gitRoot)
+      ? cwd.slice(gitRoot.length + 1) // 去掉 gitRoot 和 /
+      : "";
+    const ignorePattern = relativePath ? `${relativePath}/${DOC_SMITH_DIR}/` : `${DOC_SMITH_DIR}/`;
 
-    if (result.success) {
-      console.log(`✅ Added ${DOC_SMITH_DIR} as git submodule`);
-    } else {
-      console.log(`⚠️ Failed to add submodule: ${result.error}`);
+    const added = await addToGitignore(gitRoot, ignorePattern);
+    if (added) {
+      console.log(`✅ Added ${ignorePattern} to .gitignore`);
     }
   }
 
@@ -239,8 +296,7 @@ export async function initStandaloneMode() {
   await gitExec("init");
 
   // 创建 .gitignore
-  const gitignoreContent = "# Ignore sources directory\nsources/\n";
-  await writeFile(".gitignore", gitignoreContent, "utf8");
+  await writeFile(".gitignore", GITIGNORE_CONTENT, "utf8");
 
   // 创建目录结构（包括 sources/）
   await createDirectoryStructure(".", true);
