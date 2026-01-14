@@ -59,7 +59,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 ## 执行阶段(识别是新生成还是更新文档，参考不同的模板)
 
 生成新文档参考模板:
-- [ ] 阶段 0: Workspace 检测与初始化
+- [ ] 阶段 0: Workspace 检查，阅读参考文件，确保 config.yaml 和 sources 数据完整
 - [ ] 阶段 1: 分析数据源
 - [ ] 阶段 2: 推断用户意图，并向用户确认
 - [ ] 阶段 3: 规划文档结构
@@ -73,7 +73,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 
 更新文档参考模板:
-- [ ] 阶段 0: Workspace 检测与初始化（如果尚未初始化）
+- [ ] 阶段 0: Workspace 检查，阅读参考文件，确保 config.yaml 和 sources 数据完整
 - [ ] 阶段 1: 分析更新需求（识别 changeset 文件、PATCH 标记或自然语言请求）
 - [ ] 阶段 2: 检查是否需要修改文档结构，如需要则更新 document-structure.yaml 并校验
 - [ ] 阶段 3: 应用文档内容更新
@@ -99,11 +99,12 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 3. **做出重要决策时**：记录到"关键决策"部分
 4. **遇到错误时**：记录到"遇到的错误"部分，包括错误描述和解决方案
 
-### 0. Workspace 检测与初始化
+### 0. Workspace 检测
 
-**执行任何操作前，首先检测并初始化 workspace。**
+**执行任何操作前，首先检测 workspace。**
 
-**详细流程参考**: `references/workspace-initialization.md`
+请阅读下面的参考检查 config.yaml 文件和 sources 数据是否完整。
+**workspace 检查流程参考**: `references/workspace-initialization.md`
 
 ### 1. 分析数据源
 
@@ -157,13 +158,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 ### 6. 生成文档内容
 
-为文档结构中的每个文档生成内容并保存到 `docs/` 目录。
-
-**重要提示**：
-- **新增文档时，必须使用 `saveDocument` 工具**，不要手动创建文件夹和文件
-- **编辑已有文档时，直接使用 Edit 工具**修改对应的语言文件（如 `docs/overview/zh.md`）
-
-**详细步骤和要求**: 参考 `references/document-content-guide.md`
+使用 `generateDocumentDetails` 工具为文档结构中的每个文档生成内容，支持批量生成多个文档。
 
 ### 7. 更新已有文档
 
@@ -179,6 +174,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 如果涉及文档结构的修改，需要参考以下信息：
 - 文档结构数据结构参考： `references/document-structure-schema.md`
 - 向用户展示的结构请参考： `references/structure-confirmation-guide.md`
+- 新增了文档，必须使用`generateDocumentDetails` 工具为新文档文档生成内容，支持批量生成多个文档。
 
 ### 8. 结束前确认任务都已完成
 
@@ -247,32 +243,33 @@ git commit -m "docsmith: xxxx(合适的标题)"
 完成后：
 
 ```
-workspace/                         # 独立 workspace 目录
-├── assets/                        # 生成的文档
-│   └── project-architecture/      # afs image slot 中的 key
-│       └── .meta.yaml             # 元信息 (kind/source/default)
-│       └── images/
-│          └── zh.png              # 语言版本文件
-├── config.yaml                    # workspace 配置文件
-├── sources/                       # 源仓库 (git submodule)
-│   └── my-project/
-├── intent/
-│   └── user-intent.md             # 用户意图描述
-├── planning/
-│   └── document-structure.yaml    # 文档结构计划
-├── docs/                          # 生成的文档
-│   ├── overview/
-│   │   ├── .meta.yaml             # 元信息 (kind/source/default)
-│   │   └── zh.md                  # 语言版本文件
-│   ├── getting-started/
-│   │   ├── .meta.yaml
-│   │   └── zh.md
-│   └── api/
-│       └── authentication/
-│           ├── .meta.yaml
-│           └── zh.md
-└── cache/                         # 缓存数据
-    └── task_plan.md               # 任务规划文件 (跟踪执行进度)
+modules/
+├── workspace/                     # doc-smith 工作空间
+│   ├── config.yaml                # workspace 配置文件
+│   ├── intent/
+│   │   └── user-intent.md         # 用户意图描述
+│   ├── planning/
+│   │   └── document-structure.yaml # 文档结构计划
+│   ├── docs/                      # 生成的文档
+│   │   ├── overview/
+│   │   │   ├── .meta.yaml         # 元信息 (kind/source/default)
+│   │   │   └── zh.md              # 语言版本文件
+│   │   ├── getting-started/
+│   │   │   ├── .meta.yaml
+│   │   │   └── zh.md
+│   │   └── api/
+│   │       └── authentication/
+│   │           ├── .meta.yaml
+│   │           └── zh.md
+│   ├── assets/                    # 生成的图片资源
+│   │   └── project-architecture/  # afs image slot 中的 key
+│   │       ├── .meta.yaml         # 元信息 (kind/source/default)
+│   │       └── images/
+│   │           └── zh.png         # 语言版本文件
+│   └── cache/                     # 缓存数据
+│       └── task_plan.md           # 任务规划文件 (跟踪执行进度)
+└── sources/                       # 数据源目录
+    └── my-project/                # 克隆的源仓库
 ```
 
 ## 关键原则

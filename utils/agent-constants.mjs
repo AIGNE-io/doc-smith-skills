@@ -1,36 +1,40 @@
+import { resolve } from "node:path";
+import { detectWorkspaceModeSync } from "./workspace.mjs";
+
+// 使用统一的 workspace 检测逻辑
+const { workspaceBase: WORKSPACE_BASE } = detectWorkspaceModeSync();
+
 /**
  * 路径常量定义
- * 集中管理项目中使用的文件路径
+ * 所有路径都是基于 workspace 的绝对路径
  */
-
-// 文档相关路径
 export const PATHS = {
-  // 项目根目录
-  DOC_SMITH_DIR: "./",
+  // Workspace 根目录
+  WORKSPACE_BASE,
 
   // 临时目录
-  TMP_DIR: ".tmp",
+  TMP_DIR: resolve(WORKSPACE_BASE, ".tmp"),
 
   // 缓存目录
-  CACHE: "cache",
+  CACHE: resolve(WORKSPACE_BASE, "cache"),
 
   // 文档结构文件
-  DOCUMENT_STRUCTURE: "planning/document-structure.yaml",
+  DOCUMENT_STRUCTURE: resolve(WORKSPACE_BASE, "planning/document-structure.yaml"),
 
   // 文档目录
-  DOCS_DIR: "docs",
+  DOCS_DIR: resolve(WORKSPACE_BASE, "docs"),
 
   // 资源目录（图片等）
-  ASSETS_DIR: "assets",
+  ASSETS_DIR: resolve(WORKSPACE_BASE, "assets"),
 
   // 配置文件
-  CONFIG: "config.yaml",
+  CONFIG: resolve(WORKSPACE_BASE, "config.yaml"),
 
   // 术语表
-  GLOSSARY: "intent/GLOSSARY.md",
+  GLOSSARY: resolve(WORKSPACE_BASE, "intent/GLOSSARY.md"),
 
   // 规划目录
-  PLANNING_DIR: "planning",
+  PLANNING_DIR: resolve(WORKSPACE_BASE, "planning"),
 };
 
 /**

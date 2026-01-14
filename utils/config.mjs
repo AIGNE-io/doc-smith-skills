@@ -10,14 +10,12 @@ import { PATHS, ERROR_CODES } from "./agent-constants.mjs";
  * @returns {Promise<Object|null>} - The config object or null if file doesn't exist
  */
 export async function loadConfigFromFile() {
-  const configPath = path.join(process.cwd(), "config.yaml");
-
   try {
-    if (!existsSync(configPath)) {
+    if (!existsSync(PATHS.CONFIG)) {
       return null;
     }
 
-    const configContent = await fs.readFile(configPath, "utf8");
+    const configContent = await fs.readFile(PATHS.CONFIG, "utf8");
     return parse(configContent);
   } catch (error) {
     console.warn("Failed to read config file:", error.message);
@@ -141,16 +139,15 @@ export async function saveValueToConfig(key, value, comment) {
   }
 
   try {
-    const docSmithDir = path.join(process.cwd());
-    if (!existsSync(docSmithDir)) {
-      mkdirSync(docSmithDir, { recursive: true });
+    const workspaceDir = PATHS.WORKSPACE_BASE;
+    if (!existsSync(workspaceDir)) {
+      mkdirSync(workspaceDir, { recursive: true });
     }
 
-    const configPath = path.join(docSmithDir, "config.yaml");
     let fileContent = "";
 
-    if (existsSync(configPath)) {
-      fileContent = await fs.readFile(configPath, "utf8");
+    if (existsSync(PATHS.CONFIG)) {
+      fileContent = await fs.readFile(PATHS.CONFIG, "utf8");
     }
 
     let updatedContent;
@@ -160,7 +157,7 @@ export async function saveValueToConfig(key, value, comment) {
       updatedContent = handleStringValueUpdate(key, value, comment, fileContent);
     }
 
-    await fs.writeFile(configPath, updatedContent);
+    await fs.writeFile(PATHS.CONFIG, updatedContent);
   } catch (error) {
     console.warn(`Failed to save ${key} to config.yaml:`, error.message);
   }

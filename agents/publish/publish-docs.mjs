@@ -1,4 +1,4 @@
-import { basename, join } from "node:path";
+import { basename, join, relative } from "node:path";
 import { publishDocs as publishDocsFn } from "@aigne/publish-docs";
 import { BrokerClient } from "@blocklet/payment-broker-client/node";
 import chalk from "chalk";
@@ -29,7 +29,7 @@ export default async function publishDocs(
     projectName,
     projectDesc,
     projectLogo,
-    outputDir = "./planning",
+    outputDir = PATHS.PLANNING_DIR,
     "with-branding": withBrandingOption,
     config,
     translatedMetadata,
@@ -38,7 +38,13 @@ export default async function publishDocs(
 ) {
   // Note: Document validation is now done in check.mjs which throws errors on failure
 
-  const rawDocsDir = "./docs";
+  // Absolute path for file operations (reading docs)
+  const docsAbsolutePath = PATHS.DOCS_DIR;
+  // Relative path for mediaFolder (relative to cwd for publish-docs library)
+  const docsRelativePath = relative(process.cwd(), PATHS.DOCS_DIR) || "./docs";
+  // Relative path for tmp directory
+  const tmpDirRelative = relative(process.cwd(), PATHS.TMP_DIR) || ".tmp";
+  const docsDir = join(tmpDirRelative, "docs");
   let message;
   let shouldWithBranding = withBrandingOption || false;
 
@@ -51,15 +57,13 @@ export default async function publishDocs(
 
     // move work dir to tmp-dir
     await ensureTmpDir();
-
-    const docsDir = join(PATHS.DOC_SMITH_DIR, PATHS.TMP_DIR, PATHS.DOCS_DIR);
     await fs.rm(docsDir, { recursive: true, force: true });
     await fs.mkdir(docsDir, {
       recursive: true,
     });
 
     // Convert documents from new directory format to publish format
-    await copyDocumentsToTemp(rawDocsDir, docsDir);
+    await copyDocumentsToTemp(docsAbsolutePath, docsDir);
 
     // Generate _sidebar.md in tmp directory
     const sidebar = generateSidebar(documentStructure || []);
@@ -224,7 +228,7 @@ export default async function publishDocs(
     process.env.DOC_ROOT_DIR = docsDir;
 
     const sidebarPath = join(docsDir, "_sidebar.md");
-    const publishCacheFilePath = join(PATHS.DOC_SMITH_DIR, PATHS.CACHE, "upload-cache.yaml");
+    const publishCacheFilePath = join(PATHS.CACHE, "upload-cache.yaml");
 
     // Get project info from config
     const projectInfo = {
@@ -271,7 +275,7 @@ export default async function publishDocs(
       boardName: projectInfo.name,
       boardDesc: projectInfo.description,
       boardCover: projectInfo.icon,
-      mediaFolder: rawDocsDir,
+      mediaFolder: docsRelativePath,
       cacheFilePath: publishCacheFilePath,
       boardMeta,
     });
@@ -312,7 +316,6 @@ export default async function publishDocs(
 
     // clean up tmp work dir in case of error
     try {
-      const docsDir = join(PATHS.DOC_SMITH_DIR, PATHS.TMP_DIR, PATHS.DOCS_DIR);
       await fs.rm(docsDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors

@@ -4,14 +4,17 @@ import { parse as yamlParse } from "yaml";
 import path from "node:path";
 import { collectDocumentPaths } from "../../utils/document-paths.mjs";
 import { PATHS } from "../../utils/agent-constants.mjs";
+import { isSourcesAbsolutePath, resolveSourcesPath } from "../../utils/sources-path-resolver.mjs";
+import { loadConfigFromFile } from "../../utils/config.mjs";
 
 /**
  * 文档内容校验器类
  */
 class DocumentContentValidator {
-  constructor(yamlPath = PATHS.DOCUMENT_STRUCTURE, docsDir = PATHS.DOCS_DIR) {
+  constructor(yamlPath = PATHS.DOCUMENT_STRUCTURE, docsDir = PATHS.DOCS_DIR, docs = undefined) {
     this.yamlPath = yamlPath;
     this.docsDir = docsDir;
+    this.docsFilter = docs ? new Set(docs) : null;
     this.errors = {
       fatal: [],
       fixable: [],
@@ -31,6 +34,18 @@ class DocumentContentValidator {
     this.documents = [];
     this.documentPaths = new Set();
     this.remoteImageCache = new Map();
+    this.sourcesConfig = null; // 缓存 sources 配置
+  }
+
+  /**
+   * 加载 sources 配置（懒加载）
+   */
+  async loadSourcesConfig() {
+    if (this.sourcesConfig === null) {
+      const config = await loadConfigFromFile();
+      this.sourcesConfig = config?.sources || [];
+    }
+    return this.sourcesConfig;
   }
 
   /**
@@ -74,6 +89,13 @@ class DocumentContentValidator {
 
       // 转换为内部格式
       for (const doc of docsWithMeta) {
+        // 如果指定了 docs 过滤器，则只添加匹配的文档
+        if (this.docsFilter && !this.docsFilter.has(doc.displayPath)) {
+          // 仍需添加到 documentPaths 用于链接验证
+          this.documentPaths.add(doc.displayPath);
+          continue;
+        }
+
         this.documents.push({
           path: doc.displayPath,
           filePath: doc.path,
@@ -437,11 +459,33 @@ class DocumentContentValidator {
         continue;
       }
 
-      // 识别内部文档链接（.md 结尾）
-      if (linkUrl.endsWith(".md")) {
-        await this.validateInternalLink(linkUrl, doc, linkText, langFile);
+      // 忽略资源文件链接
+      if (this.isResourceFile(linkUrl)) {
+        continue;
       }
+
+      // 所有其他链接都视为内部文档链接
+      await this.validateInternalLink(linkUrl, doc, linkText, langFile);
     }
+  }
+
+  /**
+   * 检查链接是否指向资源文件（非文档）
+   */
+  isResourceFile(url) {
+    // 移除查询参数和锚点
+    const cleanUrl = url.split("?")[0].split("#")[0].toLowerCase();
+    // 资源文件扩展名
+    const resourceExtensions = [
+      ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp",
+      ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+      ".zip", ".tar", ".gz", ".rar", ".7z",
+      ".mp3", ".mp4", ".wav", ".avi", ".mov", ".webm",
+      ".json", ".xml", ".csv", ".txt",
+      ".js", ".ts", ".css", ".scss", ".less",
+      ".py", ".rb", ".go", ".rs", ".java", ".c", ".cpp", ".h",
+    ];
+    return resourceExtensions.some(ext => cleanUrl.endsWith(ext));
   }
 
   /**
@@ -450,15 +494,26 @@ class DocumentContentValidator {
   async validateInternalLink(linkUrl, doc, linkText, langFile) {
     let targetPath;
 
-    // 链接预处理：移除语言文件名
+    // 链接预处理：移除锚点、语言文件名和 .md 后缀
     const cleanLinkUrl = linkUrl
+      .split("#")[0] // 移除锚点
       .replace(/\/[a-z]{2}(-[A-Z]{2})?\.md$/, "") // 移除 /zh.md 等
       .replace(/\.md$/, ""); // 移除 .md
 
+    // 如果链接只是锚点（如 #section），cleanLinkUrl 会是空字符串，跳过检查
+    if (!cleanLinkUrl) {
+      return;
+    }
+
     if (cleanLinkUrl.startsWith("/")) {
+      // 绝对路径
       targetPath = cleanLinkUrl;
     } else {
-      const docDir = path.dirname(doc.path);
+      // 相对路径：基于文档的"所在目录"
+      // 文档 /getting-started/claude-code 的所在目录是 /getting-started
+      // 例如：文档 /getting-started/claude-code，链接 ../getting-started -> /getting-started
+      // 例如：文档 /getting-started，链接 ./claude-code -> /getting-started/claude-code
+      const docDir = path.dirname(doc.path); // /getting-started/claude-code -> /getting-started
       const upLevels = (cleanLinkUrl.match(/\.\.\//g) || []).length;
       const currentDepth = docDir === "/" ? 0 : docDir.split("/").filter((p) => p).length;
 
@@ -471,11 +526,12 @@ class DocumentContentValidator {
           link: linkUrl,
           linkText,
           message: `内部链接路径超出根目录: [${linkText}](${linkUrl})`,
-          suggestion: `链接向上 ${upLevels} 级，但当前文档只在第 ${currentDepth} 层`,
+          suggestion: `链接向上 ${upLevels} 级，但当前文档所在目录只在第 ${currentDepth} 层`,
         });
         return;
       }
 
+      // 将文档所在目录和相对链接合并
       targetPath = path.posix.normalize(path.posix.join(docDir, cleanLinkUrl));
       if (!targetPath.startsWith("/")) {
         targetPath = `/${targetPath}`;
@@ -536,26 +592,53 @@ class DocumentContentValidator {
    * 验证本地图片
    */
   async validateLocalImage(imageUrl, doc, altText, langFile) {
-    // 计算当前文档的完整路径（包含语言文件）
-    const fullDocPath = path.join(doc.filePath, langFile);
-    const docDir = path.dirname(path.join(this.docsDir, fullDocPath));
-    const imagePath = path.resolve(docDir, imageUrl);
+    let imagePath;
 
-    try {
-      await access(imagePath, constants.F_OK);
+    // 检查是否为 /sources/... 绝对路径
+    if (isSourcesAbsolutePath(imageUrl)) {
+      await this.loadSourcesConfig();
+      const resolved = await resolveSourcesPath(imageUrl, this.sourcesConfig, PATHS.WORKSPACE_BASE);
 
-      // 验证相对路径层级
-      const expectedRelativePath = this.calculateExpectedRelativePath(fullDocPath, imagePath);
-      if (expectedRelativePath && imageUrl !== expectedRelativePath) {
-        this.errors.warnings.push({
-          type: "IMAGE_PATH_LEVEL",
+      if (!resolved) {
+        this.stats.missingImages++;
+        this.errors.fatal.push({
+          type: "INVALID_SOURCES_PATH",
           path: doc.path,
           langFile,
           imageUrl,
-          expectedPath: expectedRelativePath,
-          message: `图片路径层级可能不正确: ${imageUrl}`,
-          suggestion: `建议使用: ${expectedRelativePath}`,
+          altText,
+          message: `无法在任何 source 中找到图片: ${imageUrl}`,
+          suggestion: `检查 sources 目录下是否存在该图片文件`,
         });
+        return;
+      }
+      imagePath = resolved.physicalPath;
+    } else {
+      // 原有的相对路径处理逻辑
+      const fullDocPath = path.join(doc.filePath, langFile);
+      const docDir = path.dirname(path.join(this.docsDir, fullDocPath));
+      imagePath = path.resolve(docDir, imageUrl);
+    }
+
+    // 检查文件是否存在
+    try {
+      await access(imagePath, constants.F_OK);
+
+      // 仅对相对路径进行层级验证（绝对路径不需要）
+      if (!isSourcesAbsolutePath(imageUrl)) {
+        const fullDocPath = path.join(doc.filePath, langFile);
+        const expectedRelativePath = this.calculateExpectedRelativePath(fullDocPath, imagePath);
+        if (expectedRelativePath && imageUrl !== expectedRelativePath) {
+          this.errors.warnings.push({
+            type: "IMAGE_PATH_LEVEL",
+            path: doc.path,
+            langFile,
+            imageUrl,
+            expectedPath: expectedRelativePath,
+            message: `图片路径层级可能不正确: ${imageUrl}`,
+            suggestion: `建议使用: ${expectedRelativePath}`,
+          });
+        }
       }
     } catch (_error) {
       this.stats.missingImages++;
@@ -754,16 +837,18 @@ function formatOutput(result) {
  * @param {Object} params
  * @param {string} params.yamlPath - 文档结构 YAML 文件路径
  * @param {string} params.docsDir - 文档目录路径
+ * @param {string[]} params.docs - 要检查的文档路径数组，如 ['/overview', '/api/introduction']，如果不提供则检查所有文档
  * @param {boolean} params.checkRemoteImages - 是否检查远程图片
  * @returns {Promise<Object>} - 校验结果
  */
 export default async function validateDocumentContent({
   yamlPath = PATHS.DOCUMENT_STRUCTURE,
   docsDir = PATHS.DOCS_DIR,
+  docs = undefined,
   checkRemoteImages = true,
 } = {}) {
   try {
-    const validator = new DocumentContentValidator(yamlPath, docsDir);
+    const validator = new DocumentContentValidator(yamlPath, docsDir, docs);
     const result = await validator.validate(checkRemoteImages);
 
     const formattedOutput = formatOutput(result);
