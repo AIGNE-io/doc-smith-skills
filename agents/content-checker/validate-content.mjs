@@ -3,7 +3,7 @@ import { constants } from "node:fs";
 import { parse as yamlParse } from "yaml";
 import path from "node:path";
 import { collectDocumentPaths } from "../../utils/document-paths.mjs";
-import { PATHS } from "../../utils/agent-constants.mjs";
+import { PATHS, ERROR_CODES } from "../../utils/agent-constants.mjs";
 import { isSourcesAbsolutePath, resolveSourcesPath } from "../../utils/sources-path-resolver.mjs";
 import { loadConfigFromFile } from "../../utils/config.mjs";
 
@@ -34,18 +34,33 @@ class DocumentContentValidator {
     this.documents = [];
     this.documentPaths = new Set();
     this.remoteImageCache = new Map();
-    this.sourcesConfig = null; // 缓存 sources 配置
+    this.workspaceConfig = null; // 缓存 workspace 配置
+  }
+
+  /**
+   * 加载 workspace 配置（懒加载）
+   */
+  async loadWorkspaceConfig() {
+    if (this.workspaceConfig === null) {
+      this.workspaceConfig = (await loadConfigFromFile()) || {};
+    }
+    return this.workspaceConfig;
   }
 
   /**
    * 加载 sources 配置（懒加载）
    */
   async loadSourcesConfig() {
-    if (this.sourcesConfig === null) {
-      const config = await loadConfigFromFile();
-      this.sourcesConfig = config?.sources || [];
-    }
-    return this.sourcesConfig;
+    const config = await this.loadWorkspaceConfig();
+    return config.sources || [];
+  }
+
+  /**
+   * 加载 translateLanguages 配置（懒加载）
+   */
+  async loadTranslateLanguages() {
+    const config = await this.loadWorkspaceConfig();
+    return config.translateLanguages || [];
   }
 
   /**
@@ -204,6 +219,22 @@ class DocumentContentValidator {
           suggestion: "修改为 kind: doc",
         });
       }
+
+      // source 与项目 locale 一致性校验
+      if (meta.source) {
+        const config = await this.loadWorkspaceConfig();
+        const projectLocale = config?.locale;
+        if (projectLocale && meta.source !== projectLocale) {
+          this.errors.fatal.push({
+            type: ERROR_CODES.SOURCE_LOCALE_MISMATCH,
+            path: doc.path,
+            source: meta.source,
+            locale: projectLocale,
+            message: `文档 source (${meta.source}) 与项目 locale (${projectLocale}) 不一致: ${doc.path}`,
+            suggestion: `修改文档的 source 为 "${projectLocale}"，或重新生成该文档的主语言版本`,
+          });
+        }
+      }
     } catch (error) {
       this.errors.fatal.push({
         type: "INVALID_META",
@@ -263,6 +294,26 @@ class DocumentContentValidator {
               message: `源语言文件缺失: ${sourceFile}`,
               suggestion: `生成 ${sourceFile} 或修改 .meta.yaml 中的 source 字段`,
             });
+          }
+        }
+
+        // 检查 translateLanguages 中配置的目标语言文件是否存在
+        const translateLanguages = await this.loadTranslateLanguages();
+        if (translateLanguages.length > 0) {
+          for (const lang of translateLanguages) {
+            // 跳过源语言（源语言不需要作为翻译目标）
+            if (lang === meta.source) continue;
+
+            const langFile = `${lang}.md`;
+            if (!langFiles.includes(langFile)) {
+              this.errors.fatal.push({
+                type: ERROR_CODES.MISSING_TRANSLATE_LANGUAGE,
+                path: doc.path,
+                lang,
+                message: `翻译语言文件缺失: ${langFile}`,
+                suggestion: `请翻译文档到 ${lang} 语言，或从 config.yaml 的 translateLanguages 中移除 ${lang}`,
+              });
+            }
           }
         }
       } catch (_error) {
@@ -530,11 +581,36 @@ class DocumentContentValidator {
   async validateInternalLink(linkUrl, doc, linkText, langFile) {
     let targetPath;
 
-    // 链接预处理：移除锚点、语言文件名和 .md 后缀
-    const cleanLinkUrl = linkUrl
-      .split("#")[0] // 移除锚点
-      .replace(/\/[a-z]{2}(-[A-Z]{2})?\.md$/, "") // 移除 /zh.md 等
-      .replace(/\.md$/, ""); // 移除 .md
+    // 移除锚点部分用于格式检查
+    const urlWithoutAnchor = linkUrl.split("#")[0];
+
+    // 检查链接格式是否正确：内部链接不应包含 .md 后缀
+    const langSuffixPattern = /\/[a-z]{2}(-[A-Z]{2})?\.md$/; // 匹配 /en.md, /zh.md, /en-US.md
+    const mdSuffixPattern = /\.md$/;
+
+    if (mdSuffixPattern.test(urlWithoutAnchor)) {
+      // 链接包含 .md 后缀，这是格式错误
+      // 如果是语言后缀模式，去掉整个 /xx.md 部分；否则只去掉 .md
+      const isLangSuffix = langSuffixPattern.test(urlWithoutAnchor);
+      const suggestedLink = isLangSuffix
+        ? urlWithoutAnchor.replace(langSuffixPattern, "")
+        : urlWithoutAnchor.replace(mdSuffixPattern, "");
+
+      this.stats.brokenLinks++;
+      this.errors.fatal.push({
+        type: ERROR_CODES.INVALID_LINK_FORMAT,
+        path: doc.path,
+        langFile,
+        link: linkUrl,
+        linkText,
+        message: `内部链接格式错误: [${linkText}](${linkUrl})`,
+        suggestion: `链接不应包含 .md 后缀，建议改为: ${suggestedLink}`,
+      });
+      return;
+    }
+
+    // 链接格式正确，继续验证目标是否存在
+    const cleanLinkUrl = urlWithoutAnchor;
 
     // 如果链接只是锚点（如 #section），cleanLinkUrl 会是空字符串，跳过检查
     if (!cleanLinkUrl) {
@@ -632,8 +708,8 @@ class DocumentContentValidator {
 
     // 检查是否为 /sources/... 绝对路径
     if (isSourcesAbsolutePath(imageUrl)) {
-      await this.loadSourcesConfig();
-      const resolved = await resolveSourcesPath(imageUrl, this.sourcesConfig, PATHS.WORKSPACE_BASE);
+      const sourcesConfig = await this.loadSourcesConfig();
+      const resolved = await resolveSourcesPath(imageUrl, sourcesConfig, PATHS.WORKSPACE_BASE);
 
       if (!resolved) {
         this.stats.missingImages++;

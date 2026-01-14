@@ -15,7 +15,7 @@ import { PATHS } from "../../utils/agent-constants.mjs";
 import { deploy } from "../../utils/deploy.mjs";
 import { loadConfigFromFile, saveValueToConfig } from "../../utils/config.mjs";
 import { ensureTmpDir } from "../../utils/files.mjs";
-import { getGithubRepoUrl } from "../../utils/git.mjs";
+import { getGithubRepoUrl, isValidGithubUrl } from "../../utils/git.mjs";
 import updateBranding from "../../utils/branding.mjs";
 import { generateSidebar, loadDocumentStructure } from "../../utils/docs.mjs";
 import { copyDocumentsToTemp } from "../../utils/docs-converter.mjs";
@@ -245,9 +245,18 @@ export default async function publishDocs(
     }
 
     // Construct boardMeta object
+    // In standalone mode, get GitHub URL from git-clone type source in sources array
+    // In project mode, use current git repo URL (even if git-clone sources exist as supplements)
+    let githubRepoUrl = getGithubRepoUrl();
+    if (config?.mode === "standalone") {
+      const gitCloneSource = config?.sources?.find((s) => s.type === "git-clone");
+      const configUrl = gitCloneSource?.url;
+      // Only use config URL if it's a valid GitHub URL
+      githubRepoUrl = isValidGithubUrl(configUrl) ? configUrl : "";
+    }
     const boardMeta = {
       category: config?.documentPurpose || [],
-      githubRepoUrl: getGithubRepoUrl(),
+      githubRepoUrl,
       commitSha: config?.lastGitHead || "",
       languages: [
         ...(config?.locale ? [config.locale] : []),

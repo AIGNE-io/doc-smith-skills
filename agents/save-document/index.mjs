@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { stringify as yamlStringify } from "yaml";
 import path from "node:path";
 import {
@@ -7,6 +8,7 @@ import {
   isValidDocumentPath,
 } from "../../utils/document-paths.mjs";
 import { PATHS, ERROR_CODES, FILE_TYPES, DOC_META_DEFAULTS } from "../../utils/agent-constants.mjs";
+import { loadLocale } from "../../utils/config.mjs";
 
 /**
  * 创建文档文件夹和文件
@@ -124,10 +126,38 @@ export default async function saveDocument({ path: rawPath, content, options = {
       };
     }
 
-    // 7. 创建文件夹和文件
+    // 7. 检查新建文档时 language 必须等于项目 locale
+    const docFolder = path.join(PATHS.DOCS_DIR, filePath);
+    const metaPath = path.join(docFolder, FILE_TYPES.META);
+    const isNewDocument = !existsSync(metaPath);
+
+    if (isNewDocument) {
+      let projectLocale;
+      try {
+        projectLocale = await loadLocale();
+      } catch (_error) {
+        return {
+          success: false,
+          error: ERROR_CODES.MISSING_CONFIG_FILE,
+          message: "无法读取项目配置文件",
+          suggestion: "请确保 config.yaml 存在且包含 locale 字段",
+        };
+      }
+
+      if (language !== projectLocale) {
+        return {
+          success: false,
+          error: ERROR_CODES.INVALID_LANGUAGE,
+          message: `新建文档时必须使用项目主语言: ${projectLocale}，当前传入: ${language}`,
+          suggestion: `请将 language 参数改为 "${projectLocale}"（项目 locale），首先生成主语言版本`,
+        };
+      }
+    }
+
+    // 8. 创建文件夹和文件
     const files = await createDocumentFiles(filePath, language, content);
 
-    // 8. 返回成功响应
+    // 9. 返回成功响应
     return {
       success: true,
       path: displayPath,
@@ -154,7 +184,7 @@ saveDocument.description =
   `保存文档到 ${PATHS.DOCS_DIR} 目录，自动创建文件夹结构、元信息文件和语言版本文件。` +
   "【重要限制】此工具仅用于新增文档时调用。编辑已有文档时，请直接使用 Edit 工具修改对应的语言文件。" +
   `使用前必须确保 ${PATHS.DOCUMENT_STRUCTURE} 已存在且包含目标文档路径。` +
-  `language 参数必须从 ${PATHS.CONFIG} 的 locale 字段读取并传入。`;
+  `【强制要求】新建文档时 language 必须等于项目 locale（config.yaml 中的 locale 字段），系统会自动验证。`;
 
 // 定义输入 schema
 saveDocument.input_schema = {

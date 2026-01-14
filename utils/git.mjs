@@ -1,6 +1,17 @@
 import { execSync } from "node:child_process";
 
 /**
+ * Validate if a URL is a valid GitHub repository URL
+ * @param {string} url - The URL to validate
+ * @returns {boolean} - True if valid GitHub URL
+ */
+export function isValidGithubUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  // Match both HTTPS and SSH GitHub URLs
+  return /^(https:\/\/github\.com\/|git@github\.com:)[^/]+\/[^/]+/.test(url);
+}
+
+/**
  * Get GitHub repository URL
  * @returns {string} - GitHub repository URL or empty string
  */
