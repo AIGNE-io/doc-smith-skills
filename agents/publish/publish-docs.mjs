@@ -25,10 +25,6 @@ const BASE_URL = process.env.DOC_SMITH_BASE_URL || CLOUD_SERVICE_URL_PROD;
 export default async function publishDocs(
   {
     appUrl,
-    boardId,
-    projectName,
-    projectDesc,
-    projectLogo,
     outputDir = PATHS.PLANNING_DIR,
     "with-branding": withBrandingOption,
     config,
@@ -36,6 +32,7 @@ export default async function publishDocs(
   },
   options,
 ) {
+  const { projectName, projectDesc, projectLogo, boardId } = config;
   // Note: Document validation is now done in check.mjs which throws errors on failure
 
   // Absolute path for file operations (reading docs)
@@ -72,11 +69,7 @@ export default async function publishDocs(
 
     // ----------------- main publish process flow -----------------------------
     // Check if DOC_DISCUSS_KIT_URL is set in environment variables
-    const useEnvAppUrl = !!(
-      process.env.DOC_SMITH_PUBLISH_URL ||
-      process.env.DOC_DISCUSS_KIT_URL ||
-      appUrl
-    );
+    const useEnvAppUrl = !!(process.env.DOC_SMITH_PUBLISH_URL || process.env.DOC_DISCUSS_KIT_URL);
 
     // Use config from parameters or load from file as fallback
     if (!config) {
