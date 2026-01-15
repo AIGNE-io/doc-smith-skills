@@ -152,7 +152,8 @@ export async function getAccessToken(appUrl, ltToken = "", locale = "en") {
 
     // Save the access token to config file
     await saveTokenToConfigFile(targetHostname, { DOC_DISCUSS_KIT_ACCESS_TOKEN: accessToken });
-  } catch {
+  } catch (error) {
+    console.error(error.message);
     throw new Error(
       `${chalk.yellow("⚠️ Failed to obtain access token. This may be due to network issues or authorization timeout.")}\n\n` +
         `${chalk.bold("💡 Solution:")}\n` +
