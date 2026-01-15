@@ -32,7 +32,6 @@ export default async function publishDocs(
   },
   options,
 ) {
-  const { projectName, projectDesc, projectLogo, boardId } = config;
   // Note: Document validation is now done in check.mjs which throws errors on failure
 
   // Absolute path for file operations (reading docs)
@@ -75,6 +74,7 @@ export default async function publishDocs(
     if (!config) {
       config = await loadConfigFromFile();
     }
+    const { projectName, projectDesc, projectLogo, boardId } = config || {};
     appUrl =
       process.env.DOC_SMITH_PUBLISH_URL ||
       process.env.DOC_DISCUSS_KIT_URL ||
