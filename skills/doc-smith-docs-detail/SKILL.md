@@ -59,23 +59,6 @@ config.yaml                      → 语言配置（locale）
 - 包含多个代码示例和配置说明
 - 覆盖边界情况和最佳实践
 
-**示例：**
-
-```yaml
-# document-structure.yaml 示例
-- path: /features
-  title: 核心功能
-  children:                    # ← 有 children，是概览文档
-    - path: /features/auth
-      title: 认证授权          # ← 无 children，是详细文档
-    - path: /features/api
-      title: API 网关          # ← 无 children，是详细文档
-```
-
-对于 `/features`（概览文档）：
-- ❌ 错误：详细展开认证授权的实现细节（会与 /features/auth 重复）
-- ✅ 正确：用 2-4 段介绍认证授权的核心价值，然后链接到 /features/auth
-
 ### 2. 分析源代码
 
 根据文档的 `sourcePaths` 读取和分析源代码文件：
@@ -165,27 +148,6 @@ find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.g
 - 概览文档：每个示例不超过 10 行
 - 详细文档：每个示例不超过 25 行
 - 如需完整代码，链接到源文件或单独的示例文档
-
-**错误示例（不应出现）：**
-```typescript
-// ❌ 内部实现代码 - 用户不需要知道这些
-class CredentialRotation {
-  private selectCredential(credentials: Credential[]): Credential {
-    const totalWeight = credentials.reduce((sum, c) => sum + c.weight, 0);
-    // ... 内部算法实现
-  }
-}
-```
-
-**正确示例（应该包含）：**
-```bash
-# ✅ API 使用示例 - 用户需要知道如何调用
-POST /api/credentials
-{
-  "name": "Production Key",
-  "weight": 100
-}
-```
 
 #### 文档定位
 - 根据 1.1 节判断的文档层级类型决定内容详略
@@ -320,10 +282,6 @@ saveDocument({
 - 校验结果（通过/警告/错误）
 - 保存状态确认
 
-**示例摘要：**
-
-> 已成功生成并保存文档 `/api/overview`。文档介绍了 API 的整体架构和核心概念，包含"快速开始"、"核心概念"、"API 列表"、"最佳实践"四个章节。生成了 2 个技术图表 slot：api-architecture、request-flow。内容校验通过，无警告。文件已保存至 docs/api/overview.md。
-
 ## 输入参数
 
 ### path（必需）
@@ -343,21 +301,7 @@ saveDocument({
   - 可根据要求补充相关源文件到分析范围
 
 
-## 文档规范要求
-
-### 必须遵循的规范
-
-1. **文档格式**：Markdown，遵循 doc-smith 章节组织规范
-2. **图片处理**：
-   - 技术图表 → 生成 AFS image slot
-   - 应用截图 → 引用现有图片（使用相对路径）
-3. **代码示例**：
-   - 使用正确的语言标识符（```javascript、```python 等）
-   - 确保代码可运行
-   - 提供完整上下文和说明
-4. **内部链接**：使用相对路径指向 Markdown 文件
-
-### 职责边界
+## 职责边界
 
 **必须执行**：
 - ✅ 读取 workspace 约定目录中的配置信息
@@ -396,37 +340,6 @@ saveDocument({
 
 **过短文档的处理：**
 - 详细文档少于 200 行，可能缺少必要的示例或说明
-
-## 错误处理
-
-### 常见错误场景
-
-1. **输入错误**：
-   - 缺少 path 参数
-   - document-structure.yaml 中找不到对应文档
-
-2. **配置读取失败**：
-   - workspace 配置文件不存在或格式错误
-   - locale 字段缺失
-
-3. **源代码分析失败**：
-   - 源文件不存在
-   - 文件格式无法解析
-
-4. **内容校验失败**：
-   - checkContent 检测到格式问题
-   - 导航链接不完整
-
-5. **保存验证失败**：
-   - saveDocument 执行失败
-   - 文档文件未出现在 docs/ 目录
-
-### 处理策略
-
-1. **提前验证**：在开始生成前验证输入和配置文件
-2. **优雅降级**：信息缺失时使用合理默认值
-3. **明确报错**：使用自然语言清晰描述错误原因和建议解决方案
-4. **保持一致**：确保生成的内容符合规范
 
 ## 注意事项
 
