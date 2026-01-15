@@ -40,8 +40,7 @@ doc-smith 启动
 4. 创建 `.gitignore` 文件（忽略 sources/ 目录）
 5. 获取项目 git 信息（远程仓库 URL、当前分支、当前 commit）
 6. 生成 config.yaml（mode: project，sources 配置为 local-path 类型，同时记录 git 信息）
-7. 在外层 git 仓库的 .gitignore 中添加 `.aigne/doc-smith/`
-8. 生成 AFS modules 配置
+7. 生成 AFS modules 配置
 
 ### 流程 B：独立启动
 

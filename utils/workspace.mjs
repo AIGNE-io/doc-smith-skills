@@ -308,23 +308,6 @@ export async function initProjectMode() {
     console.log(`✅ Created initial commit in ${DOC_SMITH_DIR}`);
   }
 
-  // 如果外层是 git 仓库，在其 .gitignore 中添加忽略规则
-  const gitRoot = await getGitRoot(".");
-
-  if (gitRoot) {
-    // 计算相对于 git 根目录的忽略路径
-    const cwd = process.cwd();
-    const relativePath = cwd.startsWith(gitRoot)
-      ? cwd.slice(gitRoot.length + 1) // 去掉 gitRoot 和 /
-      : "";
-    const ignorePattern = relativePath ? `${relativePath}/${DOC_SMITH_DIR}/` : `${DOC_SMITH_DIR}/`;
-
-    const added = await addToGitignore(gitRoot, ignorePattern);
-    if (added) {
-      console.log(`✅ Added ${ignorePattern} to .gitignore`);
-    }
-  }
-
   console.log("✅ Workspace initialized successfully!\n");
 
   return {
