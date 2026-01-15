@@ -119,10 +119,9 @@ mode: project
 sources:
   - type: local-path
     path: "../../"                           # 相对路径（用于 AFS 挂载）
-    git:                                     # git 信息（记录生成文档时的仓库状态）
-      url: "git@github.com:user/project.git" # 远程仓库 URL（origin）
-      branch: "main"                         # 当前分支
-      commit: "a1b2c3d"                      # 当前 commit hash（短格式）
+    url: "git@github.com:user/project.git"   # 远程仓库 URL（origin）
+    branch: "main"                           # 当前分支
+    commit: "a1b2c3d"                        # 当前 commit hash（短格式）
 ```
 
 **config.yaml 示例（独立模式）**：
@@ -131,13 +130,12 @@ mode: standalone
 sources: []
 ```
 
-**字段说明**：
+**字段说明**（与 git-clone 格式一致）：
 - `type`：数据源类型（`local-path`、`git-clone` 等）
-- `path`：本地相对路径，用于 AFS 挂载
-- `git`：Git 仓库信息（记录生成文档时的仓库状态）
-  - `url`：远程仓库 URL（优先获取 origin，无远程时为空）
-  - `branch`：当前分支名
-  - `commit`：当前 commit hash（短格式，7 位）
+- `path`：本地相对路径，用于 AFS 挂载（local-path 专用）
+- `url`：远程仓库 URL（优先获取 origin，无远程时为空）
+- `branch`：当前分支名
+- `commit`：当前 commit hash（短格式，7 位）
 
 ### 5. 动态 AFS Modules 生成
 
