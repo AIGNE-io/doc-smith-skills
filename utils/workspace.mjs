@@ -32,7 +32,9 @@ export const GITIGNORE_CONTENT = `\
 sources/
 
 # Ignore temporary files
-tmp/
+.tmp/
+.temp/
+temp/
 `;
 
 /**
