@@ -158,7 +158,7 @@ export async function getAccessToken(appUrl, ltToken = "", locale = "en") {
       `${chalk.yellow("⚠️ Failed to obtain access token. This may be due to network issues or authorization timeout.")}\n\n` +
         `${chalk.bold("💡 Solution:")}\n` +
         `  • Step 1: Ensure your network can access the service URL: ${chalk.cyan(targetOrigin)}\n` +
-        `  • Step 2: Run ${chalk.cyan("aigne doc publish")} again\n` +
+        `  • Step 2: Re-run the document publishing process\n` +
         `  • Step 3: If prompted, select ${chalk.cyan("Resume previous website setup")} to continue from where you left off\n\n`,
     );
   }
@@ -242,7 +242,7 @@ export async function getOfficialAccessToken(baseUrl, openPage = true, locale = 
       `${chalk.yellow("⚠️ Failed to obtain official access token. This may be due to network issues or authorization timeout.")}\n\n` +
         `${chalk.bold("💡 Solution:")}\n` +
         `  • Step 1: Ensure your network can access the official service URL: ${chalk.cyan(targetOrigin)}\n` +
-        `  • Step 2: Run ${chalk.cyan("aigne doc publish")} again\n\n`,
+        `  • Step 2: Re-run the document publishing process\n`,
     );
   }
 

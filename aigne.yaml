@@ -14,6 +14,10 @@ agents:
   - agents/update-image/index.yaml
   - agents/localize/translate-documents/translate-document.yaml
   - skills-entry/doc-smith-docs-detail/index.mjs
+  - agents/clear/index.yaml
+  - agents/clear/choose-contents.mjs
+  - agents/clear/clear-auth-tokens.mjs
+  - agents/clear/clear-deployment-config.mjs
 
 cli:
   chat: skills-entry/doc-smith/index.mjs
@@ -24,3 +28,5 @@ cli:
     - name: publish
       alias: ["pub", "p"]
       url: agents/publish/index.yaml
+    - name: clear
+      url: agents/clear/index.yaml

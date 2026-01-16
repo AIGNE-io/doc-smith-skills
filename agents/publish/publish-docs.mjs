@@ -25,10 +25,6 @@ const BASE_URL = process.env.DOC_SMITH_BASE_URL || CLOUD_SERVICE_URL_PROD;
 export default async function publishDocs(
   {
     appUrl,
-    boardId,
-    projectName,
-    projectDesc,
-    projectLogo,
     outputDir = PATHS.PLANNING_DIR,
     "with-branding": withBrandingOption,
     config,
@@ -72,16 +68,13 @@ export default async function publishDocs(
 
     // ----------------- main publish process flow -----------------------------
     // Check if DOC_DISCUSS_KIT_URL is set in environment variables
-    const useEnvAppUrl = !!(
-      process.env.DOC_SMITH_PUBLISH_URL ||
-      process.env.DOC_DISCUSS_KIT_URL ||
-      appUrl
-    );
+    const useEnvAppUrl = !!(process.env.DOC_SMITH_PUBLISH_URL || process.env.DOC_DISCUSS_KIT_URL);
 
     // Use config from parameters or load from file as fallback
     if (!config) {
       config = await loadConfigFromFile();
     }
+    const { projectName, projectDesc, projectLogo, boardId } = config || {};
     appUrl =
       process.env.DOC_SMITH_PUBLISH_URL ||
       process.env.DOC_DISCUSS_KIT_URL ||
@@ -319,13 +312,13 @@ export default async function publishDocs(
     }
 
     // clean up tmp work dir
-    await fs.rm(docsDir, { recursive: true, force: true });
+    await fs.rm(tmpDirRelative, { recursive: true, force: true });
   } catch (error) {
     message = `❌ Sorry, I encountered an error while publishing your documentation: \n\n${error.message}`;
 
     // clean up tmp work dir in case of error
     try {
-      await fs.rm(docsDir, { recursive: true, force: true });
+      await fs.rm(tmpDirRelative, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
     }

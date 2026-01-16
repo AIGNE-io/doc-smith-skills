@@ -32,7 +32,9 @@ export const GITIGNORE_CONTENT = `\
 sources/
 
 # Ignore temporary files
-tmp/
+.tmp/
+.temp/
+temp/
 `;
 
 /**
@@ -81,6 +83,46 @@ export async function gitExec(command, cwd = ".") {
   } catch (error) {
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * 获取 git 仓库信息（url、branch、commit）
+ * @param {string} cwd - 工作目录
+ * @returns {Promise<{ url: string, branch: string, commit: string }>}
+ */
+export async function getGitInfo(cwd = ".") {
+  // 获取远程仓库 URL（优先 origin）
+  let url = "";
+  const urlResult = await gitExec("remote get-url origin", cwd);
+  if (urlResult.success) {
+    url = urlResult.output;
+  } else {
+    // 尝试获取第一个可用的远程仓库
+    const remotesResult = await gitExec("remote", cwd);
+    if (remotesResult.success && remotesResult.output) {
+      const firstRemote = remotesResult.output.split("\n")[0];
+      const fallbackResult = await gitExec(`remote get-url ${firstRemote}`, cwd);
+      if (fallbackResult.success) {
+        url = fallbackResult.output;
+      }
+    }
+  }
+
+  // 获取当前分支名
+  let branch = "";
+  const branchResult = await gitExec("branch --show-current", cwd);
+  if (branchResult.success) {
+    branch = branchResult.output;
+  }
+
+  // 获取当前 commit hash（短格式）
+  let commit = "";
+  const commitResult = await gitExec("rev-parse --short HEAD", cwd);
+  if (commitResult.success) {
+    commit = commitResult.output;
+  }
+
+  return { url, branch, commit };
 }
 
 /**
@@ -236,15 +278,23 @@ export async function initProjectMode() {
   // 创建 .gitignore
   await writeFile(join(DOC_SMITH_DIR, ".gitignore"), GITIGNORE_CONTENT, "utf8");
 
-  // 生成 config.yaml
+  // 获取项目 git 信息
+  const gitInfo = await getGitInfo(".");
+
+  // 生成 config.yaml（包含 git 信息，与 git-clone 格式一致）
+  const sourceConfig = {
+    type: "local-path",
+    path: "../../",
+  };
+
+  // 添加 git 信息到根级别（与 git-clone 格式一致）
+  if (gitInfo.url) sourceConfig.url = gitInfo.url;
+  if (gitInfo.branch) sourceConfig.branch = gitInfo.branch;
+  if (gitInfo.commit) sourceConfig.commit = gitInfo.commit;
+
   const configContent = generateConfig({
     mode: WORKSPACE_MODES.PROJECT,
-    sources: [
-      {
-        type: "local-path",
-        path: "../../",
-      },
-    ],
+    sources: [sourceConfig],
   });
   await writeFile(join(DOC_SMITH_DIR, "config.yaml"), configContent, "utf8");
 
@@ -256,23 +306,6 @@ export async function initProjectMode() {
   );
   if (commitResult.success) {
     console.log(`✅ Created initial commit in ${DOC_SMITH_DIR}`);
-  }
-
-  // 如果外层是 git 仓库，在其 .gitignore 中添加忽略规则
-  const gitRoot = await getGitRoot(".");
-
-  if (gitRoot) {
-    // 计算相对于 git 根目录的忽略路径
-    const cwd = process.cwd();
-    const relativePath = cwd.startsWith(gitRoot)
-      ? cwd.slice(gitRoot.length + 1) // 去掉 gitRoot 和 /
-      : "";
-    const ignorePattern = relativePath ? `${relativePath}/${DOC_SMITH_DIR}/` : `${DOC_SMITH_DIR}/`;
-
-    const added = await addToGitignore(gitRoot, ignorePattern);
-    if (added) {
-      console.log(`✅ Added ${ignorePattern} to .gitignore`);
-    }
   }
 
   console.log("✅ Workspace initialized successfully!\n");

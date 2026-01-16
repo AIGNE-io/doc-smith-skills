@@ -45,7 +45,9 @@ DocSmith 生成的文档存储在本地 workspace 目录中，使用特定的目
 2. **格式转换**：将 workspace 目录结构转换为发布格式
 3. **图片处理**：
    - 替换 AFS image slots 为真实图片引用
-   - 处理 `/sources/...` 绝对路径图片（本次新增）
+   - 处理 `/sources/...` 绝对路径图片，支持两种格式：
+     - Markdown 格式：`![alt](/sources/path/to/image.png)`
+     - HTML 格式：`<img src="/sources/path/to/image.png" ... />`
    - 调整相对路径以适应发布后的目录结构
 4. **多平台支持**：DocSmith Cloud、自有网站、新建网站
 5. **元数据翻译**：支持将项目信息翻译为多语言
@@ -91,16 +93,25 @@ DocSmith 生成的文档存储在本地 workspace 目录中，使用特定的目
 
 文档中使用 `/sources/...` 格式引用数据源中的图片时：
 
-1. **识别**：匹配 `/sources/` 开头的图片路径
+1. **识别**：匹配 `/sources/` 开头的图片路径，支持两种格式：
+   - **Markdown 格式**：`![alt](/sources/path/to/image.png)`
+   - **HTML 格式**：`<img src="/sources/path/to/image.png" ... />`
 2. **解析**：从 config.yaml 获取 sources 配置，依次在每个 source 中查找图片
 3. **复制**：将源图片复制到临时目录的 `sources/` 子目录（保持相同路径结构）
 4. **转换**：将绝对路径替换为相对路径（根据文档深度计算）
 
-**转换示例**：
+**Markdown 格式转换示例**：
 ```
-原始：/sources/assets/screenshot.png
-转换后：../sources/assets/screenshot.png（depth=1）
-       ../../sources/assets/screenshot.png（depth=2）
+原始：![screenshot](/sources/assets/screenshot.png)
+转换后：![screenshot](../sources/assets/screenshot.png)（depth=1）
+       ![screenshot](../../sources/assets/screenshot.png)（depth=2）
+```
+
+**HTML 格式转换示例**：
+```
+原始：<img src="/sources/blocklets/core/public/logo/doubao.png" alt="Doubao" style="width: 48px;" />
+转换后：<img src="../sources/blocklets/core/public/logo/doubao.png" alt="Doubao" style="width: 48px;" />（depth=1）
+       <img src="../../sources/blocklets/core/public/logo/doubao.png" alt="Doubao" style="width: 48px;" />（depth=2）
 ```
 
 ### 职责边界

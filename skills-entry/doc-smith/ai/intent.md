@@ -38,8 +38,8 @@ doc-smith 启动
 2. 在 `.aigne/doc-smith/` 中执行 `git init`
 3. 创建目录结构（intent/、planning/、docs/）
 4. 创建 `.gitignore` 文件（忽略 sources/ 目录）
-5. 生成 config.yaml（mode: project，sources 配置为 local-path 类型）
-6. 检测外层目录是否为 git 仓库，是则将 `.aigne/doc-smith/` 添加为 submodule
+5. 获取项目 git 信息（远程仓库 URL、当前分支、当前 commit）
+6. 生成 config.yaml（mode: project，sources 配置为 local-path 类型，同时记录 git 信息）
 7. 生成 AFS modules 配置
 
 ### 流程 B：独立启动
@@ -70,6 +70,7 @@ doc-smith 启动
 - 检测 workspace 是否已初始化（`.aigne/doc-smith/config.yaml` 或 `./config.yaml` 存在）
 - 检测当前目录是否为 git 仓库（`.git/` 目录存在）
 - 检测当前目录是否为空目录
+- 获取 git 仓库信息（远程 URL、当前分支、当前 commit）用于记录生成文档时的仓库状态
 
 ### 2. 用户交互
 
@@ -108,7 +109,7 @@ config.yaml 包含：
   - `project`：项目内启动
   - `standalone`：独立启动
 - `sources`：数据源配置数组
-  - 项目内启动：`[{ type: "local-path", path: "../../" }]`
+  - 项目内启动：`local-path` 类型，包含相对路径和 git 信息
   - 独立启动：`[]`（空数组，后续对话中添加）
 
 **config.yaml 示例（项目内模式）**：
@@ -116,7 +117,10 @@ config.yaml 包含：
 mode: project
 sources:
   - type: local-path
-    path: "../../"
+    path: "../../"                           # 相对路径（用于 AFS 挂载）
+    url: "git@github.com:user/project.git"   # 远程仓库 URL（origin）
+    branch: "main"                           # 当前分支
+    commit: "a1b2c3d"                        # 当前 commit hash（短格式）
 ```
 
 **config.yaml 示例（独立模式）**：
@@ -124,6 +128,13 @@ sources:
 mode: standalone
 sources: []
 ```
+
+**字段说明**（与 git-clone 格式一致）：
+- `type`：数据源类型（`local-path`、`git-clone` 等）
+- `path`：本地相对路径，用于 AFS 挂载（local-path 专用）
+- `url`：远程仓库 URL（优先获取 origin，无远程时为空）
+- `branch`：当前分支名
+- `commit`：当前 commit hash（短格式，7 位）
 
 ### 5. 动态 AFS Modules 生成
 
@@ -146,7 +157,15 @@ sources: []
 ### 6. Git 操作
 
 - `git init`：初始化仓库
-- `git submodule add`：添加 submodule（项目内模式）
+- `git remote get-url origin`：获取远程仓库 URL
+- `git branch --show-current`：获取当前分支名
+- `git rev-parse --short HEAD`：获取当前 commit hash（短格式）
+
+**获取 git 信息的策略**：
+- 优先获取 origin 远程仓库 URL
+- 如果 origin 不存在，尝试获取第一个可用的远程仓库
+- 如果没有远程仓库，url 字段为空字符串
+- 分支名、commit hash 获取失败时，默认使用空字符串
 
 ## 输入输出
 
@@ -180,6 +199,7 @@ sources: []
 
 - **必须执行**：
   - 检测当前目录状态
+  - 获取 git 仓库信息（项目内模式）
   - 创建目录结构和配置文件（首次启动）
   - 执行必要的 git 操作
   - 动态生成 AFS modules 配置
@@ -198,9 +218,10 @@ sources: []
 1. 正确检测目录状态并选择对应流程
 2. 目录结构和配置文件正确创建
 3. Git 操作正确执行
-4. AFS modules 根据模式正确生成（workspace + sources）
-5. 成功导出配置对象进入对话模式
-6. 启动过程无用户交互
+4. 项目内模式正确获取并记录 git 仓库状态（url、branch、commit）
+5. AFS modules 根据模式正确生成（workspace + sources）
+6. 成功导出配置对象进入对话模式
+7. 启动过程无用户交互
 
 ## 错误处理
 
@@ -208,11 +229,13 @@ sources: []
 
 1. **权限问题**：无法创建目录或文件
 2. **git 命令不可用**：系统未安装 git
+3. **无远程仓库**：项目未配置 origin 远程仓库
 
 ### 处理策略
 
 1. **权限问题**：输出错误信息，提示检查目录权限
 2. **git 不可用**：输出错误信息，提示安装 git
+3. **无远程仓库**：正常继续，url 字段设为空字符串（不阻断流程）
 
 ## 实现方式
 
