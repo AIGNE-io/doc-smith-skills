@@ -1,5 +1,5 @@
 import { readFile, writeFile, access } from "node:fs/promises";
-import { constants } from "node:fs";
+import { constants, realpathSync } from "node:fs";
 import { parse as yamlParse, stringify as yamlStringify } from "yaml";
 import validateYamlStructure from "./validate-structure.mjs";
 import { getPaths } from "./utils.mjs";
@@ -307,8 +307,9 @@ export default async function checkStructure() {
 checkStructure.description =
   "Check and validate document structure YAML file at planning/document-structure.yaml, automatically fix format errors";
 
-// CLI 入口
-const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+// CLI 入口（支持符号链接）
+const realArgv1 = realpathSync(process.argv[1]);
+const isMainModule = import.meta.url === `file://${realArgv1}`;
 if (isMainModule) {
   checkStructure()
     .then((result) => {
