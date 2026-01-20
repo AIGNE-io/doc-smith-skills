@@ -108,7 +108,12 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 ### 1. 分析数据源
 
-使用 Glob/Grep/Read 工具探索`sources`目录下的数据源，了解项目目的、结构、主要模块、现有文档和媒体资源。
+根据 workspace 模式，使用 Glob/Grep/Read 工具探索数据源：
+
+- **Project 模式**：数据源是项目本身，直接分析项目根目录（`../../` 相对于 workspace）
+- **Standalone 模式**：数据源在 `sources/` 目录下
+
+了解项目目的、结构、主要模块、现有文档和媒体资源。
 
 ### 2. 推断用户意图
 
@@ -244,37 +249,59 @@ git commit -m "docsmith: xxxx(合适的标题)"
 
 ## Workspace 目录结构参考
 
-完成后：
+DocSmith 支持两种工作模式，目录结构略有不同：
+
+### Project 模式（用户在 git 仓库中执行）
 
 ```
-modules/
-├── workspace/                     # doc-smith 工作空间
-│   ├── config.yaml                # workspace 配置文件
-│   ├── intent/
-│   │   └── user-intent.md         # 用户意图描述
-│   ├── planning/
-│   │   └── document-structure.yaml # 文档结构计划
-│   ├── docs/                      # 生成的文档
-│   │   ├── overview/
-│   │   │   ├── .meta.yaml         # 元信息 (kind/source/default)
-│   │   │   └── zh.md              # 语言版本文件
-│   │   ├── getting-started/
-│   │   │   ├── .meta.yaml
-│   │   │   └── zh.md
-│   │   └── api/
-│   │       └── authentication/
-│   │           ├── .meta.yaml
-│   │           └── zh.md
-│   ├── assets/                    # 生成的图片资源
-│   │   └── project-architecture/  # afs image slot 中的 key
-│   │       ├── .meta.yaml         # 元信息 (kind/source/default)
-│   │       └── images/
-│   │           └── zh.png         # 语言版本文件
-│   └── cache/                     # 缓存数据
-│       └── task_plan.md           # 任务规划文件 (跟踪执行进度)
-└── sources/                       # 数据源目录
-    └── my-project/                # 克隆的源仓库
+my-project/                        # 用户的项目目录（cwd）
+├── .aigne/
+│   └── doc-smith/                 # DocSmith workspace
+│       ├── config.yaml            # workspace 配置文件
+│       ├── intent/
+│       │   └── user-intent.md     # 用户意图描述
+│       ├── planning/
+│       │   └── document-structure.yaml  # 文档结构计划
+│       ├── docs/                  # 生成的文档
+│       │   ├── overview/
+│       │   │   ├── .meta.yaml     # 元信息 (kind/source/default)
+│       │   │   └── zh.md          # 语言版本文件
+│       │   └── api/
+│       │       └── authentication/
+│       │           ├── .meta.yaml
+│       │           └── zh.md
+│       ├── assets/                # 生成的图片资源
+│       │   └── project-architecture/
+│       │       ├── .meta.yaml
+│       │       └── images/
+│       │           └── zh.png
+│       └── cache/                 # 缓存数据
+│           └── task_plan.md       # 任务规划文件
+├── src/                           # 项目源代码（数据源）
+├── README.md
+└── ...
 ```
+
+**数据源路径**：项目本身，通过 `../../` 相对路径访问
+
+### Standalone 模式（用户在非 git 目录执行）
+
+```
+doc-workspace/                     # 用户创建的工作目录（cwd）
+├── config.yaml                    # workspace 配置文件
+├── intent/
+│   └── user-intent.md
+├── planning/
+│   └── document-structure.yaml
+├── docs/                          # 生成的文档
+├── assets/                        # 生成的图片资源
+├── cache/                         # 缓存数据
+│   └── task_plan.md
+└── sources/                       # 克隆的数据源
+    └── cloned-repo/
+```
+
+**数据源路径**：`sources/<repo-name>/`
 
 ## 关键原则
 

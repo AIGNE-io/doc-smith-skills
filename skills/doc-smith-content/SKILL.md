@@ -22,14 +22,27 @@ description: |
 
 当用户直接调用此技能（而非通过 doc-smith 主流程）时，必须先检查：
 
-1. **检查 workspace 是否存在**
+1. **检测 workspace 模式和位置**
    ```bash
+   # 检查是否在 git 仓库中（Project 模式）
+   git rev-parse --is-inside-work-tree
+   ```
+
+   - **Project 模式**（在 git 仓库中）：workspace 在 `.aigne/doc-smith/`
+   - **Standalone 模式**（非 git 仓库）：workspace 在当前目录
+
+2. **检查 workspace 是否存在**
+   ```bash
+   # Project 模式
+   ls -la .aigne/doc-smith/config.yaml .aigne/doc-smith/planning/document-structure.yaml
+
+   # Standalone 模式
    ls -la config.yaml planning/document-structure.yaml
    ```
    如果不存在，提示用户："请先使用 doc-smith 初始化 workspace 并生成文档结构。"
 
-2. **检查目标文档是否在结构中**
-   读取 `planning/document-structure.yaml`，确认用户请求的文档路径存在。
+3. **检查目标文档是否在结构中**
+   读取 `planning/document-structure.yaml`（根据模式选择正确路径），确认用户请求的文档路径存在。
    如果不存在，提示用户："文档路径 /xxx 不在文档结构中，请先添加到文档结构或使用 doc-smith 生成。"
 
 如果是通过 doc-smith 主流程调用，跳过此检查（假设已完成初始化）。
@@ -91,14 +104,23 @@ config.yaml                      → 语言配置（locale）
 
 #### 4.1 确定文档输出目录
 
-文档输出目录固定为：`docs/`
+文档输出目录根据 workspace 模式确定：
+- **Project 模式**：`.aigne/doc-smith/docs/`
+- **Standalone 模式**：`./docs/`
 
 #### 4.2 查找所有媒体文件
 
-执行以下命令查找 `sources` 中的所有媒体文件：
+根据 workspace 模式，在数据源中查找所有媒体文件：
 
+**Project 模式**（数据源是项目本身）：
 ```bash
-find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" -o -name "*.mp4" -o -name "*.webp" \)
+# 在项目根目录查找
+find ../../ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" -o -name "*.mp4" -o -name "*.webp" \) -not -path "*/.aigne/*" -not -path "*/node_modules/*"
+```
+
+**Standalone 模式**（数据源在 sources 目录）：
+```bash
+find sources/ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" -o -name "*.mp4" -o -name "*.webp" \)
 ```
 
 记录所有结果，例如：
@@ -108,16 +130,18 @@ find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.g
 
 #### 4.3 图片路径格式
 
-**sources 中的图片使用绝对路径**：
+**数据源中的图片使用相对路径引用**：
 
-对于数据源中的图片，使用 `/sources/` 开头的绝对路径格式：
-
-**示例**：
-- 图片路径：`modules/sources/assets/run/screenshot.png`
+**Project 模式**（数据源是项目本身）：
+- 图片路径：`../../assets/run/screenshot.png`（相对于 workspace）
 - 文档中引用：`![截图](/sources/assets/run/screenshot.png)`
 
+**Standalone 模式**（数据源在 sources 目录）：
+- 图片路径：`sources/my-project/assets/run/screenshot.png`
+- 文档中引用：`![截图](/sources/my-project/assets/run/screenshot.png)`
+
 **注意**：
-- 直接使用在 sources 目录下看到的路径
+- 根据 workspace 模式选择正确的路径格式
 
 ### 5. 生成文档内容
 
