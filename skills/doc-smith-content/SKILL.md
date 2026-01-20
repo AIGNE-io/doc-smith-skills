@@ -18,6 +18,22 @@ description: |
 
 ## 工作流程
 
+### 0. 前置检查（独立调用时）
+
+当用户直接调用此技能（而非通过 doc-smith 主流程）时，必须先检查：
+
+1. **检查 workspace 是否存在**
+   ```bash
+   ls -la config.yaml planning/document-structure.yaml
+   ```
+   如果不存在，提示用户："请先使用 doc-smith 初始化 workspace 并生成文档结构。"
+
+2. **检查目标文档是否在结构中**
+   读取 `planning/document-structure.yaml`，确认用户请求的文档路径存在。
+   如果不存在，提示用户："文档路径 /xxx 不在文档结构中，请先添加到文档结构或使用 doc-smith 生成。"
+
+如果是通过 doc-smith 主流程调用，跳过此检查（假设已完成初始化）。
+
 ### 1. 读取配置信息
 
 从 workspace 约定目录自动读取：
