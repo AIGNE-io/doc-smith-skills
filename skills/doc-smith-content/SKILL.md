@@ -317,10 +317,16 @@ Rules:
 **首次创建文档时，必须同时创建 `.meta.yaml` 文件**：
 
 ```yaml
-kind: document
-source: /api/overview          # 对应 document-structure.yaml 中的 path
+kind: doc                      # 固定值，表示文档类型
+source: zh                     # 源语言，与 default 相同
 default: zh                    # 默认语言，从 config.yaml 的 locale 读取
 ```
+
+| 字段 | 说明 |
+|------|------|
+| `kind` | 固定为 `doc`，表示这是一个文档 |
+| `source` | 文档的源语言，新建时与 `default` 相同 |
+| `default` | 默认显示语言，从 `config.yaml` 的 `locale` 读取 |
 
 #### 6.3 保存步骤
 
