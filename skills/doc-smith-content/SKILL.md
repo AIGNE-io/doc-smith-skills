@@ -341,10 +341,11 @@ default: zh                    # 默认语言，从 config.yaml 的 locale 读�
 
 ### 7. 校验内容
 
-调用 `doc-smith-check` 校验文档：
+调用 `doc-smith-check` 校验**本次生成的文档**（使用 `--path` 指定文档路径）：
 
 ```bash
-/doc-smith-check --content
+# 只检查当前生成的文档
+/doc-smith-check --content --path /api/overview
 ```
 
 校验内容：
@@ -352,6 +353,8 @@ default: zh                    # 默认语言，从 config.yaml 的 locale 读�
 - 导航链接完整性
 - 代码示例语法
 - AFS image slot 格式
+
+**注意**：使用 `--path` 参数只检查本次生成的文档，避免检查整个 docs 目录。
 
 ### 8. 验证保存结果
 
@@ -381,7 +384,7 @@ default: zh                    # 默认语言，从 config.yaml 的 locale 读�
 - ✅ 读取 workspace 约定目录中的配置信息
 - ✅ 分析源代码并生成文档内容
 - ✅ 创建文档目录、元信息文件和语言文件
-- ✅ 调用 `/doc-smith-check --content` 校验文档
+- ✅ 调用 `/doc-smith-check --content --path <文档路径>` 校验文档
 - ✅ 返回摘要信息
 
 **不应执行**：
@@ -396,7 +399,7 @@ default: zh                    # 默认语言，从 config.yaml 的 locale 读�
 2. **准确性**：与源代码一致、技术细节正确
 3. **可读性**：结构清晰、语言流畅、示例恰当
 4. **一致性**：风格符合用户意图、格式遵循 doc-smith 规范
-5. **校验通过**：`/doc-smith-check --content` 校验无错误
+5. **校验通过**：`/doc-smith-check --content --path <文档路径>` 校验无错误
 6. **保存验证**：文档目录、`.meta.yaml` 和语言文件都已正确创建
 7. **长度适当**：符合下方长度参考标准
 

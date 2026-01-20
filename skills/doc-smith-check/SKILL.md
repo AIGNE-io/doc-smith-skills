@@ -21,6 +21,13 @@ description: 检查 Doc-Smith 文档的结构和内容完整性。当需要校�
 /doc-smith-check --content
 /doc-smith-check -c
 
+# 只检查指定文档的内容
+/doc-smith-check --content --path /api/overview
+/doc-smith-check -c -p /api/overview
+
+# 检查多个指定文档
+/doc-smith-check --content --path /api/overview --path /guides/start
+
 # 指定工作区路径
 /doc-smith-check --workspace /path/to/docs
 /doc-smith-check -w /path/to/docs
@@ -35,6 +42,7 @@ description: 检查 Doc-Smith 文档的结构和内容完整性。当需要校�
 |--------|-------|-------------|
 | `--structure` | `-s` | 只运行结构检查 |
 | `--content` | `-c` | 只运行内容检查 |
+| `--path <docPath>` | `-p` | 指定要检查的文档路径（可多次使用，仅与 `--content` 配合） |
 | `--workspace <path>` | `-w` | 指定工作区路径（默认：当前目录） |
 
 ## 检查项目
