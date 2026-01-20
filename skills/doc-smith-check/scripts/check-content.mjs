@@ -1,5 +1,6 @@
 import { access } from "node:fs/promises";
 import { constants, realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import validateDocumentContent from "./validate-content.mjs";
 import { cleanInvalidDocs, formatCleanResult } from "./clean-invalid-docs.mjs";
 import { getPaths, parseCliArgs } from "./utils.mjs";
@@ -191,9 +192,9 @@ checkContent.input_schema = {
   },
 };
 
-// CLI 入口（支持符号链接）
-const realArgv1 = realpathSync(process.argv[1]);
-const isMainModule = import.meta.url === `file://${realArgv1}`;
+// CLI 入口
+const __filename = fileURLToPath(import.meta.url);
+const isMainModule = realpathSync(__filename) === realpathSync(process.argv[1]);
 if (isMainModule) {
   const args = parseCliArgs();
   const docs = args.paths.length > 0 ? args.paths : undefined;
