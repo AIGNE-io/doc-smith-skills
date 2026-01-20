@@ -7,50 +7,62 @@ description: 使用 AI 生成图片。当需要生成技术图表、架构图、
 
 使用 AI 生成图片，支持技术图表、架构图、流程图等。
 
-## 触发场景
+## Usage
 
-- 文档中有 AFS Image Slot 需要生成图片
-- 用户要求生成某张图片
-- 用户要求更新/修改已有图片
-- 任何需要 AI 生成图片的场景
+```bash
+# 基础用法：描述要生成的图片
+/doc-smith-images "系统架构图，展示微服务之间的调用关系"
 
-## 核心能力
+# 指定输出路径
+/doc-smith-images "用户登录流程图" --output ./images/login-flow.png
+/doc-smith-images "用户登录流程图" -o ./images/login-flow.png
 
-这是一个**通用的图片生成能力**，不与文档强绑定。
+# 指定宽高比
+/doc-smith-images "系统架构图" --ratio 16:9
+/doc-smith-images "数据流向图" -r 4:3
 
-**输入参数：**
+# 指定图片尺寸
+/doc-smith-images "概念图" --size 4K
 
-| 参数 | 类型 | 必需 | 说明 |
-|------|------|------|------|
-| `prompt` | string | 是 | 图片描述/生成提示词 |
-| `size` | string | 否 | 图片尺寸，默认 "2K" |
-| `ratio` | string | 否 | 宽高比，默认 "4:3"，可选 "1:1", "5:4", "4:3", "3:2", "16:9", "21:9" |
-| `outputPath` | string | 否 | 图片保存路径 |
-| `locale` | string | 否 | 图片中文字的语言，默认 "zh" |
-| `context` | string | 否 | 上下文信息（如文档内容），帮助生成更准确的图片 |
-| `existingImage` | string | 否 | 已有图片路径，用于图片更新场景 |
+# 指定图片中文字的语言
+/doc-smith-images "API 调用流程" --locale en
 
-**输出：**
+# 更新已有图片（基于原图修改）
+/doc-smith-images "优化配色和布局" --update ./images/old.png
+/doc-smith-images "改成 16:9 比例" -u ./images/architecture.png --ratio 16:9
+
+# 组合使用
+/doc-smith-images "微服务架构图" --ratio 16:9 --locale zh -o ./docs/arch.png
+```
+
+## Options
+
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--output <path>` | `-o` | 图片保存路径（默认自动生成） |
+| `--ratio <ratio>` | `-r` | 宽高比：1:1, 5:4, 4:3, 3:2, 16:9, 21:9（默认 4:3） |
+| `--size <size>` | `-s` | 图片尺寸：2K, 4K（默认 2K） |
+| `--locale <lang>` | `-l` | 图片中文字语言（默认 zh） |
+| `--update <path>` | `-u` | 基于已有图片更新（image-to-image 模式） |
+| `--context <text>` | `-c` | 提供上下文信息，帮助生成更准确的图片 |
+
+## 推荐比例
+
+| 图片类型 | 推荐比例 | 说明 |
+|----------|---------|------|
+| 架构图 | 16:9 或 4:3 | 系统架构、模块关系、组件结构 |
+| 流程图 | 4:3 或 3:2 | 业务流程、数据流向、状态转换 |
+| 时序图 | 16:9 | 交互时序、调用链路 |
+| 概念图 | 4:3 | 概念关系、层次结构 |
+| 示意图 | 4:3 或 1:1 | 功能示意、原理说明 |
+
+## 输出
+
 - 生成的图片文件路径
 
 ## 工作流程
 
-### 1. 收集生图参数
-
-从用户输入或调用方收集必要参数：
-
-```
-必需参数：
-- prompt: 描述要生成的图片内容
-
-可选参数：
-- size: 默认 "2K"
-- ratio: 默认 "4:3"
-- outputPath: 默认根据 prompt 生成
-- locale: 默认 "zh"
-```
-
-### 2. 调用 AIGNE 生图
+### 1. 调用 AIGNE 生图
 
 通过 bash 调用 AIGNE 项目执行生图：
 
@@ -69,7 +81,7 @@ aigne run . generate \
 - `context` → AIGNE 的 `documentContent` 参数
 - `ratio` → AIGNE 的 `aspectRatio` 参数
 
-### 3. 验证生成结果
+### 2. 验证生成结果
 
 检查图片是否成功生成：
 
@@ -78,25 +90,11 @@ ls -la "$OUTPUT_PATH"
 file "$OUTPUT_PATH"  # 验证是图片格式
 ```
 
-### 4. 返回结果
+### 3. 返回结果
 
 返回生成的图片路径，供调用方使用。
 
-## 使用示例
-
-### 独立生成图片
-
-```
-用户：帮我生成一张系统架构图，展示微服务之间的调用关系
-
-处理：
-1. prompt: "系统架构图，展示微服务之间的调用关系，包括 API Gateway、用户服务、订单服务、支付服务的交互"
-2. ratio: "16:9"（架构图适合宽屏）
-3. 调用 AIGNE 生图
-4. 返回图片路径
-```
-
-### 在文档流程中使用
+## 与 doc-smith 流程集成
 
 当 doc-smith 主流程检测到 AFS Image Slot：
 
@@ -105,32 +103,12 @@ file "$OUTPUT_PATH"  # 验证是图片格式
 ```
 
 主流程提取参数并调用此技能：
-- `prompt`: "系统架构图，展示各模块关系"
-- `context`: 文档内容（帮助理解上下文）
-- `outputPath`: `.aigne/doc-smith/assets/architecture/images/zh.png`
 
-### 更新已有图片
-
+```bash
+/doc-smith-images "系统架构图，展示各模块关系" \
+  --context "文档内容..." \
+  --output .aigne/doc-smith/assets/architecture/images/zh.png
 ```
-用户：把这张架构图的比例改成 16:9
-
-处理：
-1. existingImage: 原图片路径
-2. prompt: 原有描述
-3. ratio: "16:9"
-4. 调用 AIGNE 生图（image-to-image 模式）
-5. 返回新图片路径
-```
-
-## 图片类型支持
-
-| 类型 | 说明 | 推荐比例 |
-|------|------|---------|
-| **架构图** | 系统架构、模块关系、组件结构 | 16:9 或 4:3 |
-| **流程图** | 业务流程、数据流向、状态转换 | 4:3 或 3:2 |
-| **时序图** | 交互时序、调用链路 | 16:9 |
-| **概念图** | 概念关系、层次结构 | 4:3 |
-| **示意图** | 功能示意、原理说明 | 4:3 或 1:1 |
 
 ## 注意事项
 

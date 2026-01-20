@@ -9,12 +9,41 @@ description: |
 
 # 文档内容生成 Agent
 
-## 核心职责
-
 生成单个文档的详情。
 
-**输入**：文档路径 + 可选的自定义要求
-**输出**：自然语言摘要（包含文档概述、章节结构、校验结果、保存确认）
+## Usage
+
+```bash
+# 生成指定路径的文档
+/doc-smith-content /api/overview
+/doc-smith-content /guides/getting-started
+
+# 带自定义要求
+/doc-smith-content /api/authentication --require "重点说明安全注意事项"
+/doc-smith-content /api/authentication -r "重点说明安全注意事项"
+
+# 多个自定义要求
+/doc-smith-content /overview --require "包含性能优化建议" --require "补充错误处理"
+
+# 在 doc-smith 主流程中批量调用
+/doc-smith-content /api/overview
+/doc-smith-content /api/authentication
+/doc-smith-content /guides/installation
+```
+
+## Options
+
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--require <text>` | `-r` | 自定义生成要求（可多次使用） |
+
+## 输出
+
+自然语言摘要，包含：
+- 文档路径和主题概述
+- 主要章节列表
+- 生成的 AFS image slot ID 列表（如有）
+- 校验结果和保存状态确认
 
 ## 工作流程
 
@@ -23,16 +52,13 @@ description: |
 当用户直接调用此技能（而非通过 doc-smith 主流程）时，必须先检查：
 
 1. **检查 workspace 是否存在**
-   ```bash
-   ls -la .aigne/doc-smith/config.yaml .aigne/doc-smith/planning/document-structure.yaml
-   ```
    如果不存在，提示用户："请先使用 doc-smith 初始化 workspace 并生成文档结构。"
 
 2. **检查目标文档是否在结构中**
-   读取 `.aigne/doc-smith/planning/document-structure.yaml`，确认用户请求的文档路径存在。
-   如果不存在，提示用户："文档路径 /xxx 不在文档结构中，请先添加到文档结构或使用 doc-smith 生成。"
+   读取 `planning/document-structure.yaml`，确认用户请求的文档路径存在。
+   如果不存在，提示用户："文档路径 /xxx 不在文档结构中，请先添加到文档结构。"
 
-如果是通过 doc-smith 主流程调用，跳过此检查（假设已完成初始化）。
+如果是通过 doc-smith 主流程调用，跳过此检查。
 
 ### 1. 读取配置信息
 
@@ -253,7 +279,13 @@ saveDocument({
 
 ### 7. 校验内容
 
-调用 `checkContent` 工具校验文档：
+调用 `doc-smith-check` 校验文档：
+
+```bash
+/doc-smith-check --content
+```
+
+校验内容：
 - 格式规范检查
 - 导航链接完整性
 - 代码示例语法
@@ -280,32 +312,13 @@ saveDocument({
 - 校验结果（通过/警告/错误）
 - 保存状态确认
 
-## 输入参数
-
-### path（必需）
-- 类型：字符串
-- 格式：`/path/to/document`（与 document-structure.yaml 中的 path 一致）
-- 用途：确定生成哪篇文档
-
-### customRequirements（可选）
-- 类型：字符串
-- 用途：用户在当前对话中提出的额外要求
-- 示例：
-  - "重点说明安全注意事项"
-  - "包含性能优化建议"
-  - "补充错误处理的最佳实践"
-- 应用：
-  - 指导生成内容的侧重点
-  - 可根据要求补充相关源文件到分析范围
-
-
 ## 职责边界
 
 **必须执行**：
 - ✅ 读取 workspace 约定目录中的配置信息
 - ✅ 分析源代码并生成文档内容
 - ✅ 调用 saveDocument 保存文档
-- ✅ 调用 checkContent 校验文档
+- ✅ 调用 `/doc-smith-check --content` 校验文档
 - ✅ 返回摘要信息
 
 **不应执行**：
@@ -320,7 +333,7 @@ saveDocument({
 2. **准确性**：与源代码一致、技术细节正确
 3. **可读性**：结构清晰、语言流畅、示例恰当
 4. **一致性**：风格符合用户意图、格式遵循 doc-smith 规范
-5. **校验通过**：checkContent 校验无错误
+5. **校验通过**：`/doc-smith-check --content` 校验无错误
 6. **保存验证**：文档已通过 saveDocument 保存，且 docs/ 目录下文件确实存在
 7. **长度适当**：符合下方长度参考标准
 

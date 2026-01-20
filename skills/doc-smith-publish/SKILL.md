@@ -7,38 +7,50 @@ description: 将 Doc-Smith 生成的文档发布到在线平台。当用户要�
 
 将生成的文档发布到在线平台。
 
-## 触发场景
+## Usage
 
-- 用户要求发布文档
-- 用户说"发布"、"上线"、"部署文档"
+```bash
+# 发布到上次使用的目标（从 config.yaml 读取）
+/doc-smith-publish
+
+# 指定发布目标 URL
+/doc-smith-publish --url https://example.com/docs
+/doc-smith-publish -u https://example.com/docs
+
+# 跳过发布前检查（不推荐）
+/doc-smith-publish --skip-check
+
+# 组合使用
+/doc-smith-publish --url https://example.com/docs --skip-check
+```
+
+## Options
+
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--url <url>` | `-u` | 发布目标 URL（默认使用 config.yaml 中的 appUrl） |
+| `--skip-check` | | 跳过发布前的文档检查（不推荐） |
 
 ## 工作流程
 
 ### 1. 检测 Workspace
 
-检查当前目录是否为有效的 Doc-Smith workspace：
-
-```bash
-ls -la config.yaml planning/document-structure.yaml docs/
-```
+检查当前目录是否为有效的 Doc-Smith workspace。
 
 ### 2. 检查发布条件
 
 调用 `doc-smith-check` 确保文档完整：
-- 文档结构校验通过
-- 文档内容检查通过
-- 必需的文档都已生成
+
+```bash
+/doc-smith-check
+```
 
 如果检查失败，提示用户先修复问题。
 
 ### 3. 确认发布目标
 
-**读取已有配置：**
-从 `config.yaml` 读取 `appUrl`（上次发布的目标）
-
-**确认或更新目标：**
-- 如果用户提供了新的 URL，使用新 URL
-- 如果未提供且有历史记录，询问是否使用上次的目标
+- 如果指定了 `--url`，使用指定的 URL
+- 如果未指定且 `config.yaml` 有 `appUrl`，询问是否使用
 - 如果都没有，要求用户提供发布目标 URL
 
 ### 4. 检查授权
@@ -56,32 +68,23 @@ ls -la config.yaml planning/document-structure.yaml docs/
 
 ### 6. 执行发布
 
-调用发布脚本上传文档。
-
-**执行方式：**
+调用发布脚本上传文档：
 
 ```bash
 node skills/doc-smith-publish/scripts/publish-docs.mjs
 ```
 
-### 7. 保存发布信息
-
-更新 `config.yaml`：
-- `appUrl`: 发布目标 URL
-
-### 8. 返回结果
+### 7. 返回结果
 
 返回发布结果：
 - 发布状态（成功/失败）
 - 发布的文档数量
 - 在线访问 URL
 
-## 参数
-
-- `appUrl`: 发布目标 URL（可选，优先使用历史记录）
-
 ## 错误处理
 
-- **授权失败**：引导用户重新授权
-- **网络错误**：提示重试
-- **文档不完整**：提示先完成文档生成
+| 错误类型 | 处理方式 |
+|---------|---------|
+| 授权失败 | 引导用户重新授权 |
+| 网络错误 | 提示重试 |
+| 文档不完整 | 提示先运行 `/doc-smith-check` 并修复问题 |

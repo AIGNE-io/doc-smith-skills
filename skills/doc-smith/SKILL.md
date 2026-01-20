@@ -66,7 +66,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 - [ ] 阶段 4: 生成 document-structure.yaml
 - [ ] 阶段 5: 确认文档结构
 - [ ] 阶段 6: 生成文档内容
-- [ ] 阶段 7: 检查是否存在`AFS Image Slot`，如果存在调用`generateImages`Tool 生成图片
+- [ ] 阶段 7: 检查是否存在 `AFS Image Slot`，如果存在调用 `/doc-smith-images` 生成图片
 - [ ] 阶段 9: 结束前确认任务都已完成
 - [ ] 阶段 10: (用户提出的其他要求，根据要求扩展这个列表)
 
@@ -77,7 +77,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 - [ ] 阶段 2: 检查是否需要修改文档结构，如需要则更新 document-structure.yaml 并校验
 - [ ] 阶段 3: 应用文档内容更新
 - [ ] 阶段 4: 处理文档中的 PATCH 标记
-- [ ] 阶段 5: 只要文档有新增或更新，就需要检查是否新增了`AFS Image Slot`，如果新增了则调用`generateImages`Tool 生成图片
+- [ ] 阶段 5: 只要文档有新增或更新，就需要检查是否新增了 `AFS Image Slot`，如果新增了则调用 `/doc-smith-images` 生成图片
 - [ ] 阶段 6: 执行文档结构和内容校验
 - [ ] 阶段 7: 确认所有更新任务完成
 - [ ] 阶段 8: (用户提出的其他要求，根据要求扩展这个列表)
@@ -133,7 +133,11 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 生成 YAML 后，必须立即调用校验工具进行检查：
 
-**调用方式**：使用 `checkStructure` 工具（自动检查 `planning/document-structure.yaml` 并修复错误）
+**调用方式**：使用 `doc-smith-check` 技能进行结构校验
+
+```bash
+/doc-smith-check --structure
+```
 
 **校验结果处理**:
 
@@ -142,9 +146,9 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 - ❌ **失败（valid: false）**:
   1. 分析错误报告（errors 字段），理解哪些字段或格式不正确
   2. 阅读 `references/document-structure-schema.md`
-  4. 修复错误或重新生成 `planning/document-structure.yaml`
-  5. 重新调用 `checkStructure`
-  6. 如果连续 3 次失败，向用户报告错误并询问如何处理
+  3. 修复错误或重新生成 `.aigne/doc-smith/planning/document-structure.yaml`
+  4. 重新调用 `/doc-smith-check --structure`
+  5. 如果连续 3 次失败，向用户报告错误并询问如何处理
 
 **重要提醒**:
 - 不要跳过校验步骤
@@ -155,31 +159,56 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 5.1: 向用户展示的结构**必须**参考： `references/structure-confirmation-guide.md`
 5.2: 确认文档结构符合指定的数据结构，参考：`references/document-structure-schema.md`
-5.3: 如果用户提出修改意见，修改之后需要再次使用 `checkStructure`工具检查更新后的文档结构。
+5.3: 如果用户提出修改意见，修改之后需要再次调用 `/doc-smith-check --structure` 检查更新后的文档结构。
 
 ### 6. 生成文档内容
 
 使用 `doc-smith-content` 技能为文档结构中的每个文档生成内容。
 
-**调用方式**：对每个需要生成的文档路径，调用 `doc-smith-content` 技能，传入文档路径参数。
+**调用方式**：
 
-**批量生成**：可以并行调用多个 `doc-smith-content` 实例，以加快生成速度。
+```bash
+# 生成单个文档
+/doc-smith-content /api/overview
+
+# 带自定义要求
+/doc-smith-content /api/authentication --require "重点说明安全注意事项"
+```
+
+**批量生成**：可以并行调用多个实例加快生成速度：
+
+```bash
+/doc-smith-content /overview
+/doc-smith-content /api/authentication
+/doc-smith-content /guides/getting-started
+```
 
 ### 7. 更新已有文档
 
-仅当 `docs/` 目录已存在时处理文档更新、文档中图片更新。
+仅当 `.aigne/doc-smith/docs/` 目录已存在时处理文档更新、文档中图片更新。
 
 **更新流程参考：**
 - 整体流程与输入识别：`references/update-workflow.md`
 - Changeset 文件处理：`references/changeset-guide.md`
 - PATCH 标记处理 (每次文档更新都需要检查文档中是否有 PATCH 需要处理)：`references/patch-guide.md`
 - 文档内容要求：`references/document-content-guide.md`
-- 更新文档中的图片：使用`updateImage`工具
 
-如果涉及文档结构的修改，需要参考以下信息：
+**更新文档中的图片**：
+
+```bash
+/doc-smith-images "优化图片描述" --update ./assets/old-image.png
+```
+
+**如果涉及文档结构的修改**：
 - 文档结构数据结构参考： `references/document-structure-schema.md`
 - 向用户展示的结构请参考： `references/structure-confirmation-guide.md`
-- 新增了文档，必须使用`generateDocumentDetails` 工具为新文档文档生成内容，支持批量生成多个文档。
+- 新增文档时，调用 `doc-smith-content` 生成内容：
+
+```bash
+# 为新增的文档生成内容
+/doc-smith-content /new-section/overview
+/doc-smith-content /new-section/details
+```
 
 ### 8. 结束前确认任务都已完成
 
@@ -187,7 +216,11 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 在结束前，必须再次校验文档结构文件的完整性：
 
-**调用方式**：使用 `checkStructure` 工具
+**调用方式**：
+
+```bash
+/doc-smith-check --structure
+```
 
 如果校验失败，按照步骤 4.2 的错误处理流程处理。
 
@@ -195,7 +228,11 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 在结束前，必须执行文档内容检查：
 
-**调用方式**：使用 `checkContent` 工具
+**调用方式**：
+
+```bash
+/doc-smith-check --content
+```
 
 - ✅ **成功（valid: true）**: 继续后续流程
 
@@ -206,18 +243,28 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
      - 链接错误：修正链接路径
      - 图片问题：提供图片或修正路径
      - 空文档：补充内容
-  3. 修复后重新调用 `checkContent`
+  3. 修复后重新调用 `/doc-smith-check --content`
   4. 如果连续 3 次失败，向用户报告错误并询问如何处理
 
 **重要提醒**:
 - 不要跳过内容检查步骤
 - 检查失败时必须采取行动（修复或重新生成），不能忽略错误
 
-8.4 **检查是否存在 afs image slot 需要生成图片**
+8.4 **检查是否存在 AFS Image Slot 需要生成图片**
 
-当检测到文档需要展示技术类图片，但是数据源中没有提供的时候，会生成 `AFS Image Slot` 占位符，参考`references/document-content-guide.md`。
-根据`AFS Image Slot`生成的图片会保存在 `assets` 目录，可以根据 `key` 字段检查图片是否存在。
-文档生成结束之后，检查本次生成的文档中是否包含 `AFS Image Slot`, 如果存在, 使用 `generateImages` Tool 自动生成文档中的图片。
+当检测到文档需要展示技术类图片，但是数据源中没有提供的时候，会生成 `AFS Image Slot` 占位符，参考 `references/document-content-guide.md`。
+
+文档生成结束之后，检查本次生成的文档中是否包含 `AFS Image Slot`，如果存在，调用 `doc-smith-images` 生成图片：
+
+```bash
+# 根据 slot 中的描述生成图片
+/doc-smith-images "系统架构图，展示各模块关系" --output ./assets/architecture/images/zh.png
+
+# 指定比例
+/doc-smith-images "数据流向图" --ratio 16:9 --output ./assets/data-flow/images/zh.png
+```
+
+生成的图片会保存在 `assets` 目录，可以根据 `key` 字段检查图片是否存在。
 
 8.5 **核对完成清单**
 
@@ -292,14 +339,18 @@ my-project/                        # 用户的项目目录（cwd）
 
 ## 相关技能
 
-本技能在执行过程中会引导调用以下技能：
+本技能在执行过程中会调用以下技能：
 
-- `doc-smith-content`：生成单篇文档内容（上下文隔离）
-- `doc-smith-images`：生成文档中的图片
-- `doc-smith-check`：校验文档结构和内容
+| 技能 | 用途 | 调用示例 |
+|------|------|----------|
+| `doc-smith-content` | 生成单篇文档内容 | `/doc-smith-content /api/overview` |
+| `doc-smith-images` | 生成文档中的图片 | `/doc-smith-images "架构图" --ratio 16:9` |
+| `doc-smith-check` | 校验文档结构和内容 | `/doc-smith-check` 或 `/doc-smith-check --structure` |
 
 以下技能由用户按需独立调用：
 
-- `doc-smith-translate`：翻译文档到其他语言
-- `doc-smith-publish`：发布文档到平台
-- `doc-smith-clear`：清除授权和配置
+| 技能 | 用途 | 调用示例 |
+|------|------|----------|
+| `doc-smith-translate` | 翻译文档到其他语言 | `/doc-smith-translate --lang en` |
+| `doc-smith-publish` | 发布文档到平台 | `/doc-smith-publish --url https://...` |
+| `doc-smith-clear` | 清除授权和配置 | `/doc-smith-clear` |
