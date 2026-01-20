@@ -258,17 +258,29 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 当检测到文档需要展示技术类图片，但是数据源中没有提供的时候，会生成 `AFS Image Slot` 占位符，参考 `references/document-content-guide.md`。
 
-文档生成结束之后，检查本次生成的文档中是否包含 `AFS Image Slot`，如果存在，调用 `doc-smith-images` 生成图片：
+文档生成结束之后，扫描本次生成的文档中是否包含 `AFS Image Slot`：
 
-```bash
-# 根据 slot 中的描述生成图片
-/doc-smith-images "系统架构图，展示各模块关系" --output ./assets/architecture/images/zh.png
-
-# 指定比例
-/doc-smith-images "数据流向图" --ratio 16:9 --output ./assets/data-flow/images/zh.png
+**Slot 格式**：
+```markdown
+<!-- afs:image id="architecture-overview" desc="系统架构图，展示各模块关系" -->
+<!-- afs:image id="data-flow" key="shared-data-flow" desc="数据流向图" -->
 ```
 
-生成的图片会保存在 `assets` 目录，可以根据 `key` 字段检查图片是否存在。
+**使用 `generate-slot-image` 子代理并行生成图片**：
+
+```
+使用单独的 generate-slot-image 子代理并行生成以下图片：
+- docPath=/overview, slotId=architecture-overview, slotDesc="系统架构图，展示各模块关系"
+- docPath=/api/auth, slotId=auth-flow, slotDesc="认证流程图", aspectRatio=16:9
+- docPath=/guides/start, slotId=setup-steps, slotDesc="安装步骤示意图"
+```
+
+**子代理的优势**：
+- 每个子代理独立处理一个 slot，有独立的上下文窗口
+- 可以并行执行多个子代理，加快生成速度
+- 子代理自动处理图片保存和 meta 文件创建
+
+生成的图片会保存在 `.aigne/doc-smith/assets/{key}/images/` 目录。
 
 8.5 **核对完成清单**
 
