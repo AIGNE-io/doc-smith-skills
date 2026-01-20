@@ -16,11 +16,11 @@
       "strict": false,
       "skills": [
         "./skills/doc-smith",
-        "./skills/doc-smith-content",
         "./skills/doc-smith-images",
         "./skills/doc-smith-check",
         "./skills/doc-smith-publish"
-      ]
+      ],
+      "agents": "./agents/"
     }
   ]
 }

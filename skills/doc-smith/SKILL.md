@@ -163,25 +163,28 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 ### 6. 生成文档内容
 
-使用 `doc-smith-content` 技能为文档结构中的每个文档生成内容。
+使用 `doc-smith-content` **子代理**为文档结构中的每个文档生成内容。
 
 **调用方式**：
 
-```bash
+```
 # 生成单个文档
-/doc-smith-content /api/overview
+使用 doc-smith-content 子代理生成 /api/overview 文档
 
 # 带自定义要求
-/doc-smith-content /api/authentication --require "重点说明安全注意事项"
+使用 doc-smith-content 子代理生成 /api/authentication 文档，重点说明安全注意事项
 ```
 
-**批量生成**：可以并行调用多个实例加快生成速度：
+**批量并行生成**（推荐）：
 
-```bash
-/doc-smith-content /overview
-/doc-smith-content /api/authentication
-/doc-smith-content /guides/getting-started
 ```
+使用单独的 doc-smith-content 子代理并行生成以下文档：
+- /overview
+- /api/authentication
+- /guides/getting-started
+```
+
+每个子代理完成后会返回摘要，包含：文档路径、主题概述、章节列表、image slots、校验结果。
 
 ### 7. 更新已有文档
 
@@ -202,12 +205,13 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 **如果涉及文档结构的修改**：
 - 文档结构数据结构参考： `references/document-structure-schema.md`
 - 向用户展示的结构请参考： `references/structure-confirmation-guide.md`
-- 新增文档时，调用 `doc-smith-content` 生成内容：
+- 新增文档时，使用 `doc-smith-content` 子代理生成内容：
 
-```bash
+```
 # 为新增的文档生成内容
-/doc-smith-content /new-section/overview
-/doc-smith-content /new-section/details
+使用 doc-smith-content 子代理并行生成以下文档：
+- /new-section/overview
+- /new-section/details
 ```
 
 ### 8. 结束前确认任务都已完成
