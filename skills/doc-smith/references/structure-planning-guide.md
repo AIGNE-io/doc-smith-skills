@@ -1,6 +1,6 @@
 # 文档结构规划指南
 
-**文件位置**: `planning/document-structure.yaml`
+**文件位置**: `.aigne/doc-smith/planning/document-structure.yaml`
 **权限**: AI 可重写/更新，可重算
 
 本文档提供如何规划文档结构和决定是否拆分的详细指南。
@@ -9,7 +9,7 @@
 
 **规划必须依据用户意图**
 
-在规划文档结构时，持续参考 `intent/user-intent.md` 中的内容：
+在规划文档结构时，持续参考 `.aigne/doc-smith/intent/user-intent.md` 中的内容：
 - **目标用户决定文档类型**：技术开发者需要 API 参考，最终用户需要使用指南
 - **使用场景决定文档范围**：快速上手只需核心功能，深入学习才需要完整架构
 - **侧重点决定详细程度**：使用指南型文档重实践轻原理，参考手册型文档要全面覆盖
@@ -35,7 +35,7 @@
 只规划用户意图中明确需要的文档。
 
 **检查清单**：
-- [ ] 这个文档是否在 intent/user-intent.md 的使用场景中？
+- [ ] 这个文档是否在 `.aigne/doc-smith/intent/user-intent.md` 的使用场景中？
 - [ ] 这个文档是否符合文档侧重点？
 - [ ] 如果去掉这个文档，用户会缺失重要信息吗？
 
@@ -44,7 +44,7 @@
 优先覆盖用户的主要使用场景。
 
 **优先级排序**：
-1. intent/user-intent.md 中明确提到的场景
+1. `.aigne/doc-smith/intent/user-intent.md` 中明确提到的场景
 2. 对目标用户最重要的功能
 3. 可选的高级特性
 

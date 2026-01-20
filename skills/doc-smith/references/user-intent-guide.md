@@ -1,6 +1,6 @@
 # 用户意图推断指南
 
-**文件位置**: `intent/user-intent.md`
+**文件位置**: `.aigne/doc-smith/intent/user-intent.md`
 **权限**: 仅在用户确认后写入，AI 可起草但不可直接修改
 
 本文档提供如何推断和生成用户意图的详细指南。

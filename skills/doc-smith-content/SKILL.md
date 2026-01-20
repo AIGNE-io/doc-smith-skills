@@ -55,8 +55,8 @@ description: |
    如果不存在，提示用户："请先使用 doc-smith 初始化 workspace 并生成文档结构。"
 
 2. **检查目标文档是否在结构中**
-   读取 `planning/document-structure.yaml`，确认用户请求的文档路径存在。
-   如果不存在，提示用户："文档路径 /xxx 不在文档结构中，请先添加到文档结构。"
+   读取 `.aigne/doc-smith/planning/document-structure.yaml`，确认用户请求的文档路径存在。
+   如果不存在，提示用户："文档路径 /xxx 不在文档结构中，是否添加文档？"
 
 如果是通过 doc-smith 主流程调用，跳过此检查。
 
@@ -65,9 +65,9 @@ description: |
 从 workspace 约定目录自动读取：
 
 ```
-planning/document-structure.yaml  → 文档的 title、description、sourcePaths、层级关系
-intent/user-intent.md            → 目标用户、使用场景、文档侧重点
-config.yaml                      → 语言配置（locale）
+.aigne/doc-smith/planning/document-structure.yaml  → 文档的 title、description、sourcePaths、层级关系
+.aigne/doc-smith/intent/user-intent.md            → 目标用户、使用场景、文档侧重点
+.aigne/doc-smith/config.yaml                      → 语言配置（locale）
 ```
 
 **关键步骤**：
@@ -124,8 +124,8 @@ config.yaml                      → 语言配置（locale）
 在项目根目录查找所有媒体文件（数据源是项目本身）：
 
 ```bash
-# 从 workspace 目录查找项目根目录中的媒体文件
-find ../../ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" -o -name "*.mp4" -o -name "*.webp" \) -not -path "*/.aigne/*" -not -path "*/node_modules/*"
+# 查找项目根目录中的媒体文件
+find ./ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" -o -name "*.mp4" -o -name "*.webp" \) -not -path "*/.aigne/*" -not -path "*/node_modules/*"
 ```
 
 记录所有结果，例如：
@@ -135,13 +135,40 @@ find ../../ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name
 
 #### 4.3 图片路径格式
 
-**数据源中的图片使用 `/sources/` 前缀引用**：
+文档中引用图片使用**相对路径**，需要根据文档层级计算 `../` 的数量。
 
-- 图片实际路径：`../../assets/run/screenshot.png`（相对于 workspace）
-- 文档中引用：`![截图](/sources/assets/run/screenshot.png)`
+**路径计算规则**：
+
+```
+总层级 = 基础层级(3) + 文档路径层级
+
+基础层级 = 3（.aigne/ + doc-smith/ + docs/）
+文档路径层级 = 文档 path 的目录深度
+```
+
+**计算示例**：
+
+| 文档 path | 文档文件位置 | 路径层级 | 总 `../` 数 | 图片引用示例 |
+|-----------|-------------|---------|------------|-------------|
+| `/overview` | `docs/overview/zh.md` | 1 | 4 | `![img](../../../../assets/logo.png)` |
+| `/api/auth` | `docs/api/auth/zh.md` | 2 | 5 | `![img](../../../../../assets/logo.png)` |
+| `/guides/quick/start` | `docs/guides/quick/start/zh.md` | 3 | 6 | `![img](../../../../../../assets/logo.png)` |
+
+**完整路径格式**：
+
+```markdown
+![描述](../../../.../<项目中的图片路径>)
+```
+
+**示例**：
+- 文档 path: `/api/overview`（2 层）
+- 图片位置: `assets/screenshots/login.png`（在项目根目录下）
+- 文档中引用: `![登录截图](../../../../../assets/screenshots/login.png)`
 
 **注意**：
-- `/sources/` 前缀表示数据源中的文件，实际指向项目根目录
+- 路径层级从文档的 `path` 字段计算，不是从文件系统路径
+- 每个 `/` 分隔的目录算 1 层（如 `/api/auth` 是 2 层）
+- 语言文件（zh.md、en.md）位于文档目录内，不额外增加层级计算
 
 ### 5. 生成文档内容
 

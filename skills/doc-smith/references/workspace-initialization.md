@@ -26,7 +26,7 @@ my-project/                        # 用户的项目目录（cwd）
 └── ...
 ```
 
-**数据源**：项目本身，通过相对路径 `../../` 访问（从 workspace 目录）
+**数据源**：项目本身
 
 ---
 
@@ -126,10 +126,6 @@ git add .
 git commit -m "Initial commit: doc-smith workspace"
 ```
 
-### 步骤 7: 更新主项目 .gitignore（可选）
-
-询问用户是否将 `.aigne/doc-smith` 添加到主项目的 `.gitignore`。
-
 ---
 
 ## 四、Config.yaml Schema
@@ -208,10 +204,6 @@ sources:
 - `projectDesc`
 - `locale`
 
-### 6.2 数据源有效性检查
-
-检查相对路径 `../../` 指向的目录是否存在，是否包含有效的项目文件。
-
 ---
 
 ## 七、路径映射
@@ -229,16 +221,7 @@ sources:
 
 ## 八、错误处理
 
-### 错误 1: 不在 git 仓库中
-
-```
-错误: 当前目录不是 git 仓库
-
-DocSmith 需要在 git 仓库中执行。
-请先初始化 git 仓库: git init
-```
-
-### 错误 2: config.yaml 格式错误
+### 错误 1: config.yaml 格式错误
 
 ```
 错误: config.yaml 格式不正确

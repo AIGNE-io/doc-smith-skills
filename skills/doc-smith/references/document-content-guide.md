@@ -4,7 +4,7 @@
 
 ## 基本要求
 
-为结构中的每个文档在 `docs/` 目录中创建文档文件夹和文件：
+为结构中的每个文档在 `.aigne/doc-smith/docs/` 目录中创建文档文件夹和文件：
 - 使用 YAML 中的 `path` 创建文件夹
 - 生成 `.meta.yaml` 元信息文件
 - 生成语言版本的 markdown 文件
@@ -16,7 +16,7 @@
 
 ### 6.1 读取配置
 
-读取 `config.yaml` 获取输出语言(locale)：
+读取 `.aigne/doc-smith/config.yaml` 获取输出语言(locale)：
 
 ### 6.2 使用 saveDocument 工具
 
