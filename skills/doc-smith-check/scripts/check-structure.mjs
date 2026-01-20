@@ -2,7 +2,7 @@ import { readFile, writeFile, access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { parse as yamlParse, stringify as yamlStringify } from "yaml";
 import validateYamlStructure from "./validate-structure.mjs";
-import { PATHS } from "../../../utils/agent-constants.mjs";
+import { getPaths } from "./utils.mjs";
 
 /**
  * 文档结构修复器类
@@ -185,6 +185,7 @@ function formatRemainingErrors(errors) {
  * @returns {Promise<Object>} - 检查和修复结果
  */
 export default async function checkStructure() {
+  const PATHS = getPaths();
   const yamlPath = PATHS.DOCUMENT_STRUCTURE;
   try {
     // 1. 检查文件是否存在
@@ -305,3 +306,17 @@ export default async function checkStructure() {
 
 checkStructure.description =
   "Check and validate document structure YAML file at planning/document-structure.yaml, automatically fix format errors";
+
+// CLI 入口
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+if (isMainModule) {
+  checkStructure()
+    .then((result) => {
+      console.log(JSON.stringify(result, null, 2));
+      process.exit(result.valid ? 0 : 1);
+    })
+    .catch((error) => {
+      console.error("Error:", error.message);
+      process.exit(1);
+    });
+}

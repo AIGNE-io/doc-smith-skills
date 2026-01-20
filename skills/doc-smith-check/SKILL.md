@@ -27,13 +27,6 @@ description: 检查 Doc-Smith 文档的结构和内容完整性。当需要校�
 
 # 检查多个指定文档
 /doc-smith-check --content --path /api/overview --path /guides/start
-
-# 指定工作区路径
-/doc-smith-check --workspace /path/to/docs
-/doc-smith-check -w /path/to/docs
-
-# 组合使用
-/doc-smith-check --structure --workspace ./my-docs
 ```
 
 ## Options
@@ -43,7 +36,6 @@ description: 检查 Doc-Smith 文档的结构和内容完整性。当需要校�
 | `--structure` | `-s` | 只运行结构检查 |
 | `--content` | `-c` | 只运行内容检查 |
 | `--path <docPath>` | `-p` | 指定要检查的文档路径（可多次使用，仅与 `--content` 配合） |
-| `--workspace <path>` | `-w` | 指定工作区路径（默认：当前目录） |
 
 ## 检查项目
 
@@ -77,7 +69,12 @@ node skills/doc-smith-check/scripts/check-structure.mjs
 
 **执行脚本：**
 ```bash
+# 检查所有文档
 node skills/doc-smith-check/scripts/check-content.mjs
+
+# 只检查指定文档
+node skills/doc-smith-check/scripts/check-content.mjs --path /overview
+node skills/doc-smith-check/scripts/check-content.mjs -p /api/auth -p /guides/start
 ```
 
 ## 返回结果

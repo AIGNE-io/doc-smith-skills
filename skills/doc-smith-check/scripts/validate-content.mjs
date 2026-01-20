@@ -2,21 +2,24 @@ import { readFile, access, readdir, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import { parse as yamlParse } from "yaml";
 import path from "node:path";
-import { collectDocumentPaths } from "../../../utils/document-paths.mjs";
-import { PATHS, ERROR_CODES } from "../../../utils/agent-constants.mjs";
 import {
+  getPaths,
+  ERROR_CODES,
+  collectDocumentPaths,
+  loadConfigFromFile,
   isSourcesAbsolutePath,
   resolveSourcesPath,
-} from "../../../utils/sources-path-resolver.mjs";
-import { loadConfigFromFile } from "../../../utils/config.mjs";
+} from "./utils.mjs";
 
 /**
  * 文档内容校验器类
  */
 class DocumentContentValidator {
-  constructor(yamlPath = PATHS.DOCUMENT_STRUCTURE, docsDir = PATHS.DOCS_DIR, docs = undefined) {
-    this.yamlPath = yamlPath;
-    this.docsDir = docsDir;
+  constructor(yamlPath, docsDir, docs = undefined) {
+    const PATHS = getPaths();
+    this.yamlPath = yamlPath || PATHS.DOCUMENT_STRUCTURE;
+    this.docsDir = docsDir || PATHS.DOCS_DIR;
+    this.PATHS = PATHS;
     this.docsFilter = docs ? new Set(docs) : null;
     this.errors = {
       fatal: [],
@@ -712,7 +715,7 @@ class DocumentContentValidator {
     // 检查是否为 /sources/... 绝对路径
     if (isSourcesAbsolutePath(imageUrl)) {
       const sourcesConfig = await this.loadSourcesConfig();
-      const resolved = await resolveSourcesPath(imageUrl, sourcesConfig, PATHS.WORKSPACE_BASE);
+      const resolved = await resolveSourcesPath(imageUrl, sourcesConfig, this.PATHS.WORKSPACE_BASE);
 
       if (!resolved) {
         this.stats.missingImages++;
@@ -957,11 +960,14 @@ function formatOutput(result) {
  * @returns {Promise<Object>} - 校验结果
  */
 export default async function validateDocumentContent({
-  yamlPath = PATHS.DOCUMENT_STRUCTURE,
-  docsDir = PATHS.DOCS_DIR,
+  yamlPath,
+  docsDir,
   docs = undefined,
   checkRemoteImages = true,
 } = {}) {
+  const PATHS = getPaths();
+  yamlPath = yamlPath || PATHS.DOCUMENT_STRUCTURE;
+  docsDir = docsDir || PATHS.DOCS_DIR;
   try {
     const validator = new DocumentContentValidator(yamlPath, docsDir, docs);
     const result = await validator.validate(checkRemoteImages);

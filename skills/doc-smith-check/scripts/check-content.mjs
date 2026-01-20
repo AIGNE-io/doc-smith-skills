@@ -2,7 +2,7 @@ import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import validateDocumentContent from "./validate-content.mjs";
 import { cleanInvalidDocs, formatCleanResult } from "./clean-invalid-docs.mjs";
-import { PATHS } from "../../../utils/agent-constants.mjs";
+import { getPaths, parseCliArgs } from "./utils.mjs";
 
 /**
  * 文档内容修复器类
@@ -45,6 +45,7 @@ class DocumentContentFixer {
  * @returns {Promise<Object>} - 检查和修复结果
  */
 export default async function checkContent({ docs = undefined } = {}) {
+  const PATHS = getPaths();
   const yamlPath = PATHS.DOCUMENT_STRUCTURE;
   const docsDir = PATHS.DOCS_DIR;
   const autoFix = true;
@@ -189,3 +190,20 @@ checkContent.input_schema = {
     },
   },
 };
+
+// CLI 入口
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+if (isMainModule) {
+  const args = parseCliArgs();
+  const docs = args.paths.length > 0 ? args.paths : undefined;
+
+  checkContent({ docs })
+    .then((result) => {
+      console.log(JSON.stringify(result, null, 2));
+      process.exit(result.valid ? 0 : 1);
+    })
+    .catch((error) => {
+      console.error("Error:", error.message);
+      process.exit(1);
+    });
+}

@@ -1,8 +1,7 @@
 import { readdir, readFile, rm, stat } from "node:fs/promises";
 import { parse as yamlParse } from "yaml";
 import path from "node:path";
-import { loadDocumentPaths } from "../../../utils/document-paths.mjs";
-import { PATHS } from "../../../utils/agent-constants.mjs";
+import { getPaths, loadDocumentPaths } from "./utils.mjs";
 
 /**
  * 无效文档清理器
@@ -98,11 +97,10 @@ function extractLanguageFromFilename(filename) {
  * @param {boolean} options.dryRun - 是否为预览模式（只报告不删除）
  * @returns {Promise<Object>} - 清理结果
  */
-export async function cleanInvalidDocs({
-  yamlPath = PATHS.DOCUMENT_STRUCTURE,
-  docsDir = PATHS.DOCS_DIR,
-  dryRun = false,
-} = {}) {
+export async function cleanInvalidDocs({ yamlPath, docsDir, dryRun = false } = {}) {
+  const PATHS = getPaths();
+  yamlPath = yamlPath || PATHS.DOCUMENT_STRUCTURE;
+  docsDir = docsDir || PATHS.DOCS_DIR;
   const result = {
     dryRun,
     deletedFolders: [],

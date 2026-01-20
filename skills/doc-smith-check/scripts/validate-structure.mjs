@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { parse as yamlParse } from "yaml";
-import { PATHS } from "../../../utils/agent-constants.mjs";
+import { getPaths } from "./utils.mjs";
 
 /**
  * 文档结构校验器类
@@ -431,7 +431,9 @@ function formatOutput(result) {
  * @param {string} params.yamlPath - YAML 文件路径
  * @returns {Promise<Object>} - 校验结果
  */
-export default async function validateYamlStructure({ yamlPath = PATHS.DOCUMENT_STRUCTURE }) {
+export default async function validateYamlStructure({ yamlPath } = {}) {
+  const PATHS = getPaths();
+  yamlPath = yamlPath || PATHS.DOCUMENT_STRUCTURE;
   try {
     // 读取 YAML 文件
     const content = await readFile(yamlPath, "utf8");
