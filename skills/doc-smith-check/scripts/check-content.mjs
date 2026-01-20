@@ -199,7 +199,7 @@ if (isMainModule) {
 
   checkContent({ docs })
     .then((result) => {
-      console.log(JSON.stringify(result, null, 2));
+      console.log(result.message);
       process.exit(result.valid ? 0 : 1);
     })
     .catch((error) => {
