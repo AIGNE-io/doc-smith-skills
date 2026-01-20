@@ -108,10 +108,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 
 ### 1. 分析数据源
 
-根据 workspace 模式，使用 Glob/Grep/Read 工具探索数据源：
-
-- **Project 模式**：数据源是项目本身，直接分析项目根目录（`../../` 相对于 workspace）
-- **Standalone 模式**：数据源在 `sources/` 目录下
+使用 Glob/Grep/Read 工具探索项目根目录（数据源是项目本身，从 workspace 通过 `../../` 访问）。
 
 了解项目目的、结构、主要模块、现有文档和媒体资源。
 
@@ -249,9 +246,7 @@ git commit -m "docsmith: xxxx(合适的标题)"
 
 ## Workspace 目录结构参考
 
-DocSmith 支持两种工作模式，目录结构略有不同：
-
-### Project 模式（用户在 git 仓库中执行）
+用户在项目根目录执行 `/doc-smith`，workspace 创建在 `.aigne/doc-smith/` 目录：
 
 ```
 my-project/                        # 用户的项目目录（cwd）
@@ -282,26 +277,7 @@ my-project/                        # 用户的项目目录（cwd）
 └── ...
 ```
 
-**数据源路径**：项目本身，通过 `../../` 相对路径访问
-
-### Standalone 模式（用户在非 git 目录执行）
-
-```
-doc-workspace/                     # 用户创建的工作目录（cwd）
-├── config.yaml                    # workspace 配置文件
-├── intent/
-│   └── user-intent.md
-├── planning/
-│   └── document-structure.yaml
-├── docs/                          # 生成的文档
-├── assets/                        # 生成的图片资源
-├── cache/                         # 缓存数据
-│   └── task_plan.md
-└── sources/                       # 克隆的数据源
-    └── cloned-repo/
-```
-
-**数据源路径**：`sources/<repo-name>/`
+**数据源**：项目本身，从 workspace 通过 `../../` 相对路径访问
 
 ## 关键原则
 
