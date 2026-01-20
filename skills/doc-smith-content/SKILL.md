@@ -253,7 +253,7 @@ find ./ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.
 **应用截图：**
 1. 从前置准备的查找结果中匹配相关图片
 2. 只在图片明确与文档内容相关时使用
-3. 引用格式：`![截图说明](/sources/assets/screenshot.png)`
+3. 引用格式：`![截图说明](../../../../assets/screenshot.png)`
 
 **技术图表：**
 1. 判断是否真的需要图表来辅助理解
@@ -291,18 +291,47 @@ Rules:
 
 ### 6. 保存文档
 
-**必须调用 `saveDocument` 工具保存文档，工具中有额外的保存逻辑：**
-```javascript
-saveDocument({
-  path: "/api/overview",           // 文档路径
-  content: "# API 概览\n...",      // Markdown 内容
-  options: {
-    language: "zh"                 // 从 config.yaml 的 locale 读取
-  }
-})
+根据文档的 `path` 创建目录结构并保存文件。
+
+#### 6.1 目录结构
+
+```
+.aigne/doc-smith/docs/
+└── {path}/                    # 根据文档 path 创建目录
+    ├── .meta.yaml             # 元信息文件（首次创建时必须生成）
+    └── {locale}.md            # 语言版本文件（如 zh.md、en.md）
 ```
 
-**重要**：`language` 参数必须从 `config.yaml` 的 `locale` 字段读取并传入。
+**示例**：文档 path 为 `/api/overview`，语言为 `zh`
+
+```
+.aigne/doc-smith/docs/
+└── api/
+    └── overview/
+        ├── .meta.yaml         # 元信息
+        └── zh.md              # 中文内容
+```
+
+#### 6.2 元信息文件 (.meta.yaml)
+
+**首次创建文档时，必须同时创建 `.meta.yaml` 文件**：
+
+```yaml
+kind: document
+source: /api/overview          # 对应 document-structure.yaml 中的 path
+default: zh                    # 默认语言，从 config.yaml 的 locale 读取
+```
+
+#### 6.3 保存步骤
+
+1. **读取语言配置**：从 `config.yaml` 获取 `locale` 字段（如 `zh`）
+2. **创建文档目录**：根据 path 创建 `docs/{path}/` 目录
+3. **创建元信息文件**：首次保存时创建 `.meta.yaml`
+4. **保存语言文件**：将 Markdown 内容保存为 `{locale}.md`
+
+**更新已有文档时**：
+- 如果 `.meta.yaml` 已存在，无需重新创建
+- 直接更新对应的语言文件内容
 
 ### 7. 校验内容
 
@@ -322,9 +351,10 @@ saveDocument({
 
 **在结束前必须执行以下检查：**
 
-1. **确认文档已保存**：检查 `saveDocument` 工具是否成功执行
-2. **验证文件存在**：使用 `ls` 或 `Read` 工具检查 `docs/` 目录下对应的文档文件是否已创建
-3. **如果文件不存在**：重新调用 `saveDocument` 保存文档
+1. **验证目录结构**：检查 `docs/{path}/` 目录是否已创建
+2. **验证元信息文件**：检查 `.meta.yaml` 是否存在且内容正确
+3. **验证语言文件**：检查 `{locale}.md` 是否存在且内容完整
+4. **如果文件缺失**：重新创建缺失的文件
 
 ### 9. 返回摘要
 
@@ -344,7 +374,7 @@ saveDocument({
 **必须执行**：
 - ✅ 读取 workspace 约定目录中的配置信息
 - ✅ 分析源代码并生成文档内容
-- ✅ 调用 saveDocument 保存文档
+- ✅ 创建文档目录、元信息文件和语言文件
 - ✅ 调用 `/doc-smith-check --content` 校验文档
 - ✅ 返回摘要信息
 
@@ -361,7 +391,7 @@ saveDocument({
 3. **可读性**：结构清晰、语言流畅、示例恰当
 4. **一致性**：风格符合用户意图、格式遵循 doc-smith 规范
 5. **校验通过**：`/doc-smith-check --content` 校验无错误
-6. **保存验证**：文档已通过 saveDocument 保存，且 docs/ 目录下文件确实存在
+6. **保存验证**：文档目录、`.meta.yaml` 和语言文件都已正确创建
 7. **长度适当**：符合下方长度参考标准
 
 ### 长度参考标准
