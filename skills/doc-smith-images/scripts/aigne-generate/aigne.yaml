@@ -3,8 +3,6 @@
 # Doc-Smith Images - AIGNE 生图项目
 # 提供原子的图片生成能力
 
-model: anthropic/claude-sonnet-4-5
-
 cli:
   agents:
     - name: generate
