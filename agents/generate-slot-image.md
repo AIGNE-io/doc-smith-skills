@@ -71,22 +71,26 @@ ls .aigne/doc-smith/assets/{key}/images/*.png 2>/dev/null || ls .aigne/doc-smith
 
 从 `.aigne/doc-smith/config.yaml` 读取 `locale` 字段获取主语言。
 
-### 5. 调用 doc-smith-images 生成图片
+### 5. 调用 AIGNE CLI 生成并保存图片
 
-调用 `/doc-smith-images` skill 生成图片：
+使用 AIGNE CLI 的 `save` 命令生成并保存图片：
 
-```
-/doc-smith-images "{slotDesc}" \
-  --context "{文档内容摘要}" \
-  --ratio {aspectRatio} \
-  --output .aigne/doc-smith/assets/{key}/images/{locale}.png
+```bash
+cd {doc-smith-skill项目路径}/skills/doc-smith-images/scripts/aigne-generate
+aigne run . save \
+  --desc="{slotDesc}" \
+  --documentContent="{文档内容摘要}" \
+  --aspectRatio={aspectRatio} \
+  --savePath={workspace}/.aigne/doc-smith/assets/{key}/images/{locale}.png
 ```
 
 **参数说明**：
-- 第一个参数是 slot 的描述，作为生图 prompt
-- `--context` 提供文档内容作为上下文
-- `--ratio` 指定宽高比（默认 4:3）
-- `--output` 指定输出路径
+- `--desc` slot 的描述，作为生图 prompt
+- `--documentContent` 文档内容作为上下文（可选）
+- `--aspectRatio` 宽高比（默认 4:3）
+- `--savePath` 图片保存路径（必需）
+
+**注意**：`--savePath` 参数不是 `--output`，后者是 CLI 的输出重定向参数。
 
 ### 6. 创建 .meta.yaml 文件
 
@@ -159,7 +163,7 @@ languages:
 - ✅ 验证输入参数
 - ✅ 检查图片是否已存在
 - ✅ 读取文档内容作为上下文
-- ✅ 调用 `/doc-smith-images` 生成图片
+- ✅ 调用 AIGNE CLI `aigne run . save` 生成并保存图片
 - ✅ 创建 `.meta.yaml` 元信息文件
 - ✅ 返回操作摘要
 
