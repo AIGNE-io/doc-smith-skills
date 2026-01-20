@@ -5,6 +5,7 @@ description: |
   - doc-smith 主流程调用，批量生成各文档内容
   - 用户独立调用，重新生成某篇文档（如"重新生成 /overview"）
   独立调用时会先检查 workspace 和文档结构是否存在。
+context: fork
 ---
 
 # 文档内容生成 Agent
