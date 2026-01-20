@@ -16,7 +16,8 @@
       "strict": false,
       "skills": [
         "./skills/doc-smith",
-        "./skills/doc-smith-content"
+        "./skills/doc-smith-content",
+        "./skills/doc-smith-images"
       ]
     }
   ]
