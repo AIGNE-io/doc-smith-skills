@@ -1,0 +1,23 @@
+{
+  "name": "doc-smith",
+  "owner": {
+    "name": "ArcBlock",
+    "email": "contact@arcblock.io"
+  },
+  "metadata": {
+    "description": "DocSmith - AI-powered documentation generation, translation, and publishing skills",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "doc-smith-skills",
+      "description": "Documentation generation, translation, and publishing skills",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/doc-smith",
+        "./skills/doc-smith-content"
+      ]
+    }
+  ]
+}
