@@ -1,14 +1,10 @@
 ---
-name: doc-smith-docs-detail
+name: doc-smith-content
 description: |
-  生成单个文档的详细内容，根据文档结构和用户意图生成包含导航、代码示例、技术图表的完整文档。
-  使用场景：
+  生成单个文档的详细内容。使用场景：
   - doc-smith 主流程调用，批量生成各文档内容
-  - 输入文档路径（与 document-structure.yaml 中的 path 对应）
-  - 自动读取 workspace 配置（document-structure.yaml、user-intent.md、config.yaml）
-  - 分析源代码并生成结构化内容
-  - 调用 saveDocument 保存，调用 checkContent 校验
-  - 返回摘要信息（不返回完整内容以节省上下文）
+  - 用户独立调用，重新生成某篇文档（如"重新生成 /overview"）
+  独立调用时会先检查 workspace 和文档结构是否存在。
 ---
 
 # 文档内容生成 Agent
