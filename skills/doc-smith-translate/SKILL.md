@@ -7,6 +7,37 @@ description: 将 Doc-Smith 生成的文档翻译成多种语言。当用户要�
 
 将文档翻译成多种语言，支持批量翻译和术语一致性。
 
+## Usage
+
+```bash
+# 翻译所有文档到指定语言
+/doc-smith-translate --lang en
+/doc-smith-translate -l en
+
+# 翻译到多个语言
+/doc-smith-translate --lang en --lang ja
+/doc-smith-translate -l en -l ja
+
+# 只翻译指定文档
+/doc-smith-translate --lang en --path /overview
+/doc-smith-translate -l en -p /overview
+
+# 翻译多个指定文档
+/doc-smith-translate --lang en --path /overview --path /api/auth
+
+# 强制重新翻译（覆盖已有翻译）
+/doc-smith-translate --lang en --force
+/doc-smith-translate -l en -f
+```
+
+## Options
+
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--lang <code>` | `-l` | 目标语言代码（可多次使用），如 en, ja, fr, de |
+| `--path <docPath>` | `-p` | 指定要翻译的文档路径（可多次使用），不指定则翻译全部 |
+| `--force` | `-f` | 强制重新翻译，覆盖已存在的翻译文件 |
+
 ## 触发场景
 
 - 用户要求翻译文档到其他语言
@@ -76,24 +107,19 @@ ls -la config.yaml planning/document-structure.yaml docs/
 - **上下文理解**：根据技术文档语境选择合适译法
 - **自然流畅**：翻译结果应符合目标语言习惯
 
-## 参数
-
-- `docs`: 文档路径列表（可选），如 `["/overview", "/api/auth"]`
-- `langs`: 目标语言列表（必需），如 `["en", "ja"]`
-- `force`: 是否强制重新翻译（可选，默认 false）
-
 ## 示例
 
 **翻译所有文档到英文和日文：**
-```
-用户：把文档翻译成英文和日文
-→ langs: ["en", "ja"]
-→ docs: 全部
+```bash
+/doc-smith-translate -l en -l ja
 ```
 
-**翻译指定文档：**
+**翻译指定文档到英文：**
+```bash
+/doc-smith-translate -l en -p /overview -p /api/auth
 ```
-用户：把 /overview 翻译成英文
-→ langs: ["en"]
-→ docs: ["/overview"]
+
+**强制重新翻译（覆盖已有）：**
+```bash
+/doc-smith-translate -l en --force
 ```
