@@ -114,9 +114,8 @@ aigne run . save \
 
 ## 注意事项
 
-- 此 Skill 依赖 AIGNE 框架执行实际生图（Claude Code 不支持生图）
-- 确保 AIGNE CLI 已安装：`npm install -g @anthropic/aigne-cli`
-- 生图使用 Google Gemini 模型，需要配置相应的 API 密钥
+- 此 Skill 依赖 AIGNE 框架执行实际生图
+- 确保 AIGNE CLI 已安装：`npm install -g @aigne/cli`
 - 生图可能需要一定时间，请耐心等待
 
 ## 错误处理
@@ -127,7 +126,7 @@ aigne run . save \
 错误: aigne 命令未找到
 
 请安装 AIGNE CLI:
-npm install -g @anthropic/aigne-cli
+npm install -g @aigne/cli
 ```
 
 ### API 密钥未配置
@@ -135,7 +134,7 @@ npm install -g @anthropic/aigne-cli
 ```
 错误: 生图模型认证失败
 
-请检查 Google Gemini API 密钥配置。
+请执行 `aigne hub connect` 连接到 AIGNE Hub 使用服务，或在环境变量中配置 Google Gemini API 密钥 `GEMINI_API_KEY` 配。
 ```
 
 ### 生图失败
