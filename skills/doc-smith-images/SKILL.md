@@ -62,24 +62,26 @@ description: 使用 AI 生成图片。当需要生成技术图表、架构图、
 
 ## 工作流程
 
-### 1. 调用 AIGNE 生图
+### 1. 调用 AIGNE 生图并保存
 
-通过 bash 调用 AIGNE 项目执行生图：
+通过 bash 调用 AIGNE 项目执行生图并保存到指定路径：
 
 ```bash
 cd <skill-directory>/scripts/aigne-generate
-aigne run . generate \
-  --prompt="$PROMPT" \
-  --size="$SIZE" \
-  --ratio="$RATIO" \
-  --locale="$LOCALE" \
-  --output="$OUTPUT_PATH"
+aigne run . save \
+  --desc="$PROMPT" \
+  --documentContent="$CONTEXT" \
+  --aspectRatio="$RATIO" \
+  --savePath="$OUTPUT_PATH"
 ```
 
 **参数映射：**
-- `prompt` → AIGNE 的 `desc` 参数
-- `context` → AIGNE 的 `documentContent` 参数
-- `ratio` → AIGNE 的 `aspectRatio` 参数
+- `prompt` → AIGNE 的 `--desc` 参数
+- `context` → AIGNE 的 `--documentContent` 参数
+- `ratio` → AIGNE 的 `--aspectRatio` 参数
+- `output` → AIGNE 的 `--savePath` 参数
+
+**注意**：使用 `--savePath` 而非 `--output`，因为 `--output` 是 AIGNE CLI 的输出重定向参数。
 
 ### 2. 验证生成结果
 
@@ -102,12 +104,15 @@ file "$OUTPUT_PATH"  # 验证是图片格式
 <!-- afs:image id="architecture" desc="系统架构图，展示各模块关系" -->
 ```
 
-主流程提取参数并调用此技能：
+主流程通过 `generate-slot-image` 子代理处理，内部调用 AIGNE CLI：
 
 ```bash
-/doc-smith-images "系统架构图，展示各模块关系" \
-  --context "文档内容..." \
-  --output .aigne/doc-smith/assets/architecture/images/zh.png
+cd <skill-directory>/scripts/aigne-generate
+aigne run . save \
+  --desc="系统架构图，展示各模块关系" \
+  --documentContent="文档内容..." \
+  --aspectRatio="4:3" \
+  --savePath=".aigne/doc-smith/assets/architecture/images/zh.png"
 ```
 
 ## 注意事项
