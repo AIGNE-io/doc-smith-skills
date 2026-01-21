@@ -28,6 +28,10 @@ context: fork
 
 # 检查多个指定文档
 /doc-smith-check --content --path /api/overview --path /guides/start
+
+# 检查内容并验证 AFS image slot 已替换
+/doc-smith-check --content --check-slots
+/doc-smith-check -c --check-slots
 ```
 
 ## Options
@@ -37,6 +41,7 @@ context: fork
 | `--structure` | `-s` | 只运行结构检查 |
 | `--content` | `-c` | 只运行内容检查 |
 | `--path <docPath>` | `-p` | 指定要检查的文档路径（可多次使用，仅与 `--content` 配合） |
+| `--check-slots` | - | 检查 AFS image slot 已替换（仅与 `--content` 配合） |
 
 ## 检查项目
 
@@ -76,6 +81,52 @@ node skills/doc-smith-check/scripts/check-content.mjs
 # 只检查指定文档
 node skills/doc-smith-check/scripts/check-content.mjs --path /overview
 node skills/doc-smith-check/scripts/check-content.mjs -p /api/auth -p /guides/start
+```
+
+### AFS Image Slot 检查 (--check-slots)
+
+当启用 `--check-slots` 时，执行以下额外检查：
+
+| 检查项 | 说明 |
+|--------|------|
+| slot 已替换 | 文档中不应存在 `<!-- afs:image ... -->` 占位符（排除代码块中的示例） |
+| 路径正确 | 图片引用路径相对于文档位置的层级正确（需考虑语言文件层级） |
+| 文件存在 | 对应的图片文件确实存在于 assets 目录 |
+
+**执行脚本：**
+```bash
+# 检查所有文档的 slot 是否已替换
+node skills/doc-smith-check/scripts/check-content.mjs --check-slots
+
+# 检查指定文档的 slot
+node skills/doc-smith-check/scripts/check-content.mjs --path /overview --check-slots
+```
+
+**错误报告示例：**
+```
+❌ FAIL: 文档内容存在错误
+
+统计信息:
+  总文档数: 5
+  已检查: 5
+  未替换的 slot: 2
+  路径层级错误: 1
+  缺失的图片: 1
+
+致命错误（必须修复）:
+
+1. AFS image slot 未替换: architecture-overview
+   文档: /overview
+   语言文件: zh.md
+   Slot ID: architecture-overview
+   操作: 请使用 generate-slot-image 生成图片
+
+2. 图片路径层级错误: ../assets/setup/images/zh.png
+   文档: /guides/start
+   语言文件: zh.md
+   图片: ../assets/setup/images/zh.png
+   期望路径: ../../../assets/setup/images/zh.png
+   操作: 修正相对路径层级
 ```
 
 ## 返回结果
@@ -133,4 +184,5 @@ cd skills/doc-smith-check/scripts && npm install
 在 doc-smith 主流程中：
 - 生成 document-structure.yaml 后：`/doc-smith-check --structure`
 - 生成文档内容后：`/doc-smith-check --content`
+- 图片生成后校验 slot 已替换：`/doc-smith-check --content --check-slots`
 - 结束前进行最终校验：`/doc-smith-check`

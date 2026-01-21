@@ -158,11 +158,39 @@ languages:
 - `--savePath`：图片保存路径（必需）
 - `--ratio`：宽高比（默认 4:3）
 
-### 8. 返回摘要
+### 8. 替换文档中的占位符
+
+图片生成成功后，更新文档中对应的 slot：
+
+1. **读取文档文件**：`.aigne/doc-smith/docs/{docPath}/{locale}.md`
+
+2. **计算图片相对路径**：
+   - 根据文档深度计算 `../` 的数量
+   - 深度 1（如 /overview）：`../../assets/{key}/images/{locale}.png`
+   - 深度 2（如 /api/auth）：`../../../assets/{key}/images/{locale}.png`
+
+3. **构建图片 Markdown**：
+   ```markdown
+   ![{slotDesc}]({相对路径})
+   ```
+
+4. **替换占位符**：
+   - 查找：`<!-- afs:image id="{slotId}" ... -->`（可能包含 key 和 desc 属性）
+   - 替换为：`![{slotDesc}]({相对路径})`
+
+5. **写回文档文件**
+
+**示例**：
+- 文档路径 `/overview`（深度 1），slot ID `architecture-overview`
+- 相对路径：`../../assets/architecture-overview/images/zh.png`
+- 替换前：`<!-- afs:image id="architecture-overview" desc="系统架构图" -->`
+- 替换后：`![系统架构图](../../assets/architecture-overview/images/zh.png)`
+
+### 9. 返回摘要
 
 返回操作结果摘要：
 
-**成功**（必须同时包含图片和元文件信息）：
+**成功**（必须同时包含图片、元文件和文档更新信息）：
 ```
 成功生成图片:
 - 文档: /overview
@@ -170,6 +198,7 @@ languages:
 - Prompt: 电商系统微服务架构图：展示用户服务、订单服务...
 - 图片: .aigne/doc-smith/assets/architecture-overview/images/zh.png
 - 元文件: .aigne/doc-smith/assets/architecture-overview/.meta.yaml ✓
+- 文档已更新: .aigne/doc-smith/docs/overview/zh.md ✓
 ```
 
 **跳过**：
@@ -209,16 +238,16 @@ languages:
 - ✅ 根据上下文生成详细的图片 prompt
 - ✅ **先创建 `.meta.yaml` 元信息文件并验证（图片生成前必须完成）**
 - ✅ 调用 `/doc-smith-images` skill 生成图片
-- ✅ 返回操作摘要（必须包含元文件路径）
+- ✅ **替换文档中的 slot 占位符为实际图片引用**
+- ✅ 返回操作摘要（必须包含元文件路径和文档更新状态）
 
 **不应执行**：
 - ❌ 不扫描文档中的 slot（由主流程负责）
-- ❌ 不修改文档内容
 - ❌ 不进行 Git 操作
 
 ## 成功标准
 
-> **核心原则**：先创建元文件，再生成图片。元文件不存在则不生成图片。
+> **核心原则**：先创建元文件，再生成图片，最后替换占位符。元文件不存在则不生成图片。
 
 1. **元文件先于图片**：元文件必须在图片生成前创建并验证存在
 2. **元信息完整**：`.meta.yaml` 必须包含以下字段：
@@ -228,7 +257,9 @@ languages:
    - `documents`、`languages`
 3. **Prompt 质量**：生成的 prompt 具体、可视化，结合了文档上下文
 4. **路径正确**：文件保存在正确的目录结构中
-5. **摘要包含元文件信息**：返回的摘要必须明确显示元文件路径
+5. **占位符已替换**：文档中的 `<!-- afs:image ... -->` 已替换为 `![desc](path)` 格式
+6. **图片路径层级正确**：根据文档深度使用正确数量的 `../`
+7. **摘要完整**：返回的摘要必须明确显示元文件路径和文档更新状态
 
 ## 错误处理
 

@@ -43,9 +43,10 @@ class DocumentContentFixer {
  * 主函数 - 智能内容检查器
  * @param {Object} params - 检查参数
  * @param {string[]} params.docs - 要检查的文档路径数组，如 ["/overview", "/api/introduction"]，如果不提供则检查所有文档
+ * @param {boolean} params.checkSlots - 是否检查 AFS image slot 已替换，默认 false
  * @returns {Promise<Object>} - 检查和修复结果
  */
-export default async function checkContent({ docs = undefined } = {}) {
+export default async function checkContent({ docs = undefined, checkSlots = false } = {}) {
   const PATHS = getPaths();
   const yamlPath = PATHS.DOCUMENT_STRUCTURE;
   const docsDir = PATHS.DOCS_DIR;
@@ -98,6 +99,7 @@ export default async function checkContent({ docs = undefined } = {}) {
       docsDir,
       docs,
       checkRemoteImages,
+      checkSlots,
     });
 
     // 4. 如果校验通过，直接返回
@@ -122,6 +124,7 @@ export default async function checkContent({ docs = undefined } = {}) {
           docsDir,
           docs,
           checkRemoteImages,
+          checkSlots,
         });
 
         // 返回修复结果
@@ -198,8 +201,9 @@ const isMainModule = realpathSync(__filename) === realpathSync(process.argv[1]);
 if (isMainModule) {
   const args = parseCliArgs();
   const docs = args.paths.length > 0 ? args.paths : undefined;
+  const checkSlots = args.checkSlots;
 
-  checkContent({ docs })
+  checkContent({ docs, checkSlots })
     .then((result) => {
       console.log(result.message);
       process.exit(result.valid ? 0 : 1);

@@ -11,16 +11,19 @@ import {
   resolveSourcesPath,
 } from "./utils.mjs";
 
+const ASSETS_DIR_NAME = "assets";
+
 /**
  * 文档内容校验器类
  */
 class DocumentContentValidator {
-  constructor(yamlPath, docsDir, docs = undefined) {
+  constructor(yamlPath, docsDir, docs = undefined, options = {}) {
     const PATHS = getPaths();
     this.yamlPath = yamlPath || PATHS.DOCUMENT_STRUCTURE;
     this.docsDir = docsDir || PATHS.DOCS_DIR;
     this.PATHS = PATHS;
     this.docsFilter = docs ? new Set(docs) : null;
+    this.checkSlots = options.checkSlots || false;
     this.errors = {
       fatal: [],
       fixable: [],
@@ -36,6 +39,9 @@ class DocumentContentValidator {
       brokenLinks: 0,
       missingImages: 0,
       inaccessibleRemoteImages: 0,
+      unreplacedSlots: 0,
+      invalidSlotPaths: 0,
+      missingSlotImages: 0,
     };
     this.documents = [];
     this.documentPaths = new Set();
@@ -364,6 +370,11 @@ class DocumentContentValidator {
         // Layer 3: 链接和图片验证
         await this.validateLinks(content, doc, langFile);
         await this.validateImages(content, doc, langFile, checkRemoteImages);
+
+        // Layer 5: AFS image slot 校验（当 checkSlots 启用时）
+        if (this.checkSlots) {
+          await this.validateImageSlots(content, doc, langFile);
+        }
       }
     } catch (_error) {
       // 错误已在 Layer 1 报告
@@ -758,6 +769,11 @@ class DocumentContentValidator {
           });
         }
       }
+
+      // 当 checkSlots 启用时，验证 assets 目录中的图片路径
+      if (this.checkSlots) {
+        await this.validateAssetImagePath(imageUrl, doc, langFile);
+      }
     } catch (_error) {
       this.stats.missingImages++;
       this.errors.fatal.push({
@@ -874,6 +890,109 @@ class DocumentContentValidator {
   }
 
   /**
+   * 验证 AFS image slots（当 checkSlots 启用时）
+   * 检查文档中是否存在未替换的占位符
+   */
+  async validateImageSlots(content, doc, langFile) {
+    // 获取代码块位置范围
+    const codeBlockRanges = this.getCodeBlockRanges(content);
+
+    // 匹配所有 slot: <!-- afs:image id="xxx" ... -->
+    const slotRegex = /<!--\s*afs:image\s+id="([^"]+)"(?:\s+key="([^"]+)")?(?:\s+desc="([^"]+)")?\s*-->/g;
+
+    for (const match of content.matchAll(slotRegex)) {
+      // 跳过代码块中的 slot
+      if (this.isInCodeBlock(match.index, codeBlockRanges)) {
+        continue;
+      }
+
+      const slotId = match[1];
+      this.stats.unreplacedSlots++;
+
+      this.errors.fatal.push({
+        type: ERROR_CODES.UNREPLACED_IMAGE_SLOT,
+        path: doc.path,
+        langFile,
+        slotId,
+        message: `AFS image slot 未替换: ${slotId}`,
+        suggestion: `请使用 generate-slot-image 生成图片`,
+      });
+    }
+  }
+
+  /**
+   * 验证图片路径层级是否正确（针对 assets 目录中的图片）
+   * @param {string} imageUrl - 图片 URL
+   * @param {Object} doc - 文档对象
+   * @param {string} langFile - 语言文件名
+   */
+  async validateAssetImagePath(imageUrl, doc, langFile) {
+    // 只检查指向 assets 目录的图片
+    if (!imageUrl.includes(`/${ASSETS_DIR_NAME}/`)) {
+      return;
+    }
+
+    // 从 imageUrl 中提取 key 和文件名
+    // 格式: ../../assets/{key}/images/{locale}.png 或 ../../../assets/{key}/images/{locale}.png
+    const assetsMatch = imageUrl.match(/(?:\.\.\/)+assets\/([^/]+)\/images\/([^/]+)$/);
+    if (!assetsMatch) {
+      return;
+    }
+
+    const key = assetsMatch[1];
+    const imageName = assetsMatch[2];
+
+    // 计算文档深度
+    // 文档路径格式: /overview 或 /api/auth
+    // 实际文件路径: docs/overview/zh.md 或 docs/api/auth/zh.md
+    // 从语言文件访问 assets 需要考虑语言文件本身的层级
+    const docPathParts = doc.path.split("/").filter((p) => p);
+    const docPathDepth = docPathParts.length;
+    // +1 是因为语言文件（如 zh.md）本身占一层
+    const totalDepth = docPathDepth + 1;
+
+    // 计算期望的相对路径层级
+    // 深度 1（如 /overview）文件 docs/overview/zh.md: ../../assets/...
+    // 深度 2（如 /api/auth）文件 docs/api/auth/zh.md: ../../../assets/...
+    const expectedPrefix = "../".repeat(totalDepth);
+    const expectedPath = `${expectedPrefix}${ASSETS_DIR_NAME}/${key}/images/${imageName}`;
+
+    // 检查实际路径是否与期望路径一致
+    if (imageUrl !== expectedPath) {
+      this.stats.invalidSlotPaths++;
+      this.errors.fatal.push({
+        type: ERROR_CODES.IMAGE_PATH_LEVEL_ERROR,
+        path: doc.path,
+        langFile,
+        imageUrl,
+        expectedPath,
+        message: `图片路径层级错误: ${imageUrl}`,
+        suggestion: `期望路径: ${expectedPath}`,
+      });
+      return;
+    }
+
+    // 检查图片文件是否存在
+    const assetsDir = path.join(this.PATHS.WORKSPACE_BASE, ASSETS_DIR_NAME);
+    const imagePath = path.join(assetsDir, key, "images", imageName);
+
+    try {
+      await access(imagePath, constants.F_OK);
+    } catch (_error) {
+      this.stats.missingSlotImages++;
+      this.errors.fatal.push({
+        type: ERROR_CODES.MISSING_SLOT_IMAGE,
+        path: doc.path,
+        langFile,
+        imageUrl,
+        imagePath,
+        message: `图片文件缺失: ${imageUrl}`,
+        suggestion: `生成图片或移除引用`,
+      });
+    }
+  }
+
+  /**
    * 获取校验结果
    */
   getResult() {
@@ -889,8 +1008,12 @@ class DocumentContentValidator {
 
 /**
  * 格式化输出
+ * @param {Object} result - 校验结果
+ * @param {Object} options - 格式化选项
+ * @param {boolean} options.checkSlots - 是否检查了 AFS image slots
  */
-function formatOutput(result) {
+function formatOutput(result, options = {}) {
+  const { checkSlots = false } = options;
   let output = "";
 
   if (result.valid) {
@@ -901,6 +1024,10 @@ function formatOutput(result) {
     output += `  内部链接: ${result.stats.totalLinks}\n`;
     output += `  本地图片: ${result.stats.localImages}\n`;
     output += `  远程图片: ${result.stats.remoteImages}\n`;
+
+    if (checkSlots) {
+      output += `  AFS Image Slot 检查: 已启用\n`;
+    }
 
     if (result.errors.warnings.length > 0) {
       output += `\n警告: ${result.errors.warnings.length}\n`;
@@ -915,7 +1042,15 @@ function formatOutput(result) {
   output += `  已检查: ${result.stats.checkedDocs}\n`;
   output += `  致命错误: ${result.errors.fatal.length}\n`;
   output += `  可修复错误: ${result.errors.fixable.length}\n`;
-  output += `  警告: ${result.errors.warnings.length}\n\n`;
+  output += `  警告: ${result.errors.warnings.length}\n`;
+
+  if (checkSlots) {
+    output += `  未替换的 slot: ${result.stats.unreplacedSlots}\n`;
+    output += `  路径层级错误: ${result.stats.invalidSlotPaths}\n`;
+    output += `  缺失的图片: ${result.stats.missingSlotImages}\n`;
+  }
+
+  output += "\n";
 
   // FATAL 错误
   if (result.errors.fatal.length > 0) {
@@ -923,8 +1058,11 @@ function formatOutput(result) {
     result.errors.fatal.forEach((err, idx) => {
       output += `${idx + 1}. ${err.message}\n`;
       if (err.path) output += `   文档: ${err.path}\n`;
+      if (err.langFile) output += `   语言文件: ${err.langFile}\n`;
+      if (err.slotId) output += `   Slot ID: ${err.slotId}\n`;
       if (err.link) output += `   链接: ${err.link}\n`;
       if (err.imageUrl) output += `   图片: ${err.imageUrl}\n`;
+      if (err.expectedPath) output += `   期望路径: ${err.expectedPath}\n`;
       if (err.suggestion) output += `   操作: ${err.suggestion}\n`;
       output += "\n";
     });
@@ -957,6 +1095,7 @@ function formatOutput(result) {
  * @param {string} params.docsDir - 文档目录路径
  * @param {string[]} params.docs - 要检查的文档路径数组，如 ['/overview', '/api/introduction']，如果不提供则检查所有文档
  * @param {boolean} params.checkRemoteImages - 是否检查远程图片
+ * @param {boolean} params.checkSlots - 是否检查 AFS image slot 已替换
  * @returns {Promise<Object>} - 校验结果
  */
 export default async function validateDocumentContent({
@@ -964,15 +1103,16 @@ export default async function validateDocumentContent({
   docsDir,
   docs = undefined,
   checkRemoteImages = true,
+  checkSlots = false,
 } = {}) {
   const PATHS = getPaths();
   yamlPath = yamlPath || PATHS.DOCUMENT_STRUCTURE;
   docsDir = docsDir || PATHS.DOCS_DIR;
   try {
-    const validator = new DocumentContentValidator(yamlPath, docsDir, docs);
+    const validator = new DocumentContentValidator(yamlPath, docsDir, docs, { checkSlots });
     const result = await validator.validate(checkRemoteImages);
 
-    const formattedOutput = formatOutput(result);
+    const formattedOutput = formatOutput(result, { checkSlots });
 
     return {
       valid: result.valid,

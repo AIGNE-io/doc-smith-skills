@@ -29,6 +29,9 @@ export const ERROR_CODES = {
   SOURCE_LOCALE_MISMATCH: "SOURCE_LOCALE_MISMATCH",
   MISSING_TRANSLATE_LANGUAGE: "MISSING_TRANSLATE_LANGUAGE",
   INVALID_LINK_FORMAT: "INVALID_LINK_FORMAT",
+  UNREPLACED_IMAGE_SLOT: "UNREPLACED_IMAGE_SLOT",
+  IMAGE_PATH_LEVEL_ERROR: "IMAGE_PATH_LEVEL_ERROR",
+  MISSING_SLOT_IMAGE: "MISSING_SLOT_IMAGE",
 };
 
 /**
@@ -45,6 +48,10 @@ export function parseCliArgs(args = process.argv.slice(2)) {
         short: "p",
         multiple: true,
       },
+      "check-slots": {
+        type: "boolean",
+        default: false,
+      },
     },
     allowPositionals: false,
     strict: false,
@@ -52,6 +59,7 @@ export function parseCliArgs(args = process.argv.slice(2)) {
 
   return {
     paths: values.path || [],
+    checkSlots: values["check-slots"] || false,
   };
 }
 
