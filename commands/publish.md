@@ -1,22 +1,22 @@
 ---
-description: 将文档发布到在线平台，支持发布到已有网站或创建新网站
+description: Publish documents to online platforms, supports publishing to existing websites or creating new ones
 ---
 
-# 文档发布命令
+# Document Publishing Command
 
-启动 doc-smith-publish skill 执行文档发布任务。
+Invoke the doc-smith-publish skill to execute document publishing tasks.
 
-## 使用方式
+## Usage
 
 ```
-/doc-smith:publish                              # 发布到已配置的目标
-/doc-smith:publish 发布文档到网站                 # 自然语言描述
-/doc-smith:publish --url https://example.com    # 发布到指定 URL
-/doc-smith:publish --new-website                # 创建新网站并发布
+/doc-smith:publish                              # Publish to configured target
+/doc-smith:publish publish docs to website      # Natural language description
+/doc-smith:publish --url https://example.com    # Publish to specified URL
+/doc-smith:publish --new-website                # Create new website and publish
 ```
 
-## 执行流程
+## Execution
 
-请立即调用 `/doc-smith-publish` skill 开始执行文档发布任务。
+Immediately invoke the `/doc-smith-publish` skill to begin document publishing.
 
-如果用户提供了额外参数："$ARGUMENTS"，将其作为任务描述传递给 skill。
+If the user provides additional arguments: "$ARGUMENTS", pass them as task description to the skill.

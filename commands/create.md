@@ -1,20 +1,20 @@
 ---
-description: 启动 DocSmith 生成文档
+description: Start DocSmith to generate documentation
 ---
 
-# 文档生成命令
+# Document Generation Command
 
-启动 doc-smith skill 执行文档生成任务。
+Invoke the doc-smith skill to execute documentation generation tasks.
 
-## 使用方式
+## Usage
 
 ```
-/doc-smith:create              # 开始文档生成流程
-/doc-smith:create 更新文档      # 带参数启动，指定任务类型
+/doc-smith:create                # Start document generation workflow
+/doc-smith:create update docs    # Start with parameters, specify task type
 ```
 
-## 执行流程
+## Execution
 
-请立即调用 `/doc-smith` skill 开始执行文档生成任务。
+Immediately invoke the `/doc-smith` skill to begin documentation generation.
 
-如果用户提供了额外参数："$ARGUMENTS"，将其作为任务描述传递给 skill。
+If the user provides additional arguments: "$ARGUMENTS", pass them as task description to the skill.
