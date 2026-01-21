@@ -9,8 +9,8 @@ description: 启动 DocSmith 生成文档
 ## 使用方式
 
 ```
-/doc-smith:generate              # 开始文档生成流程
-/doc-smith:generate 更新文档      # 带参数启动，指定任务类型
+/doc-smith:create              # 开始文档生成流程
+/doc-smith:create 更新文档      # 带参数启动，指定任务类型
 ```
 
 ## 执行流程
