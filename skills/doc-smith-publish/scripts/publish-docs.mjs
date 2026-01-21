@@ -216,7 +216,7 @@ export default async function publishDocs({
     }
 
     // clean up tmp work dir
-    // await fs.rm(tmpDirRelative, { recursive: true, force: true });
+    await fs.rm(tmpDirRelative, { recursive: true, force: true });
   } catch (error) {
     message = `❌ Sorry, I encountered an error while publishing your documentation: \n\n${error.message}`;
 
