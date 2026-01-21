@@ -1010,7 +1010,14 @@ function formatOutput(result, options = {}) {
     }
 
     if (result.errors.warnings.length > 0) {
-      output += `\n警告: ${result.errors.warnings.length}\n`;
+      output += `\n警告: ${result.errors.warnings.length}\n\n`;
+      result.errors.warnings.forEach((warn, idx) => {
+        output += `${idx + 1}. ${warn.message}\n`;
+        if (warn.path) output += `   文档: ${warn.path}\n`;
+        if (warn.langFile) output += `   语言文件: ${warn.langFile}\n`;
+        if (warn.suggestion) output += `   建议: ${warn.suggestion}\n`;
+        output += "\n";
+      });
     }
 
     return output;
