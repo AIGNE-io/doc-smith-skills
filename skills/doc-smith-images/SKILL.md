@@ -64,10 +64,10 @@ description: 使用 AI 生成图片。当需要生成技术图表、架构图、
 ### 1. 调用 AIGNE 生图并保存
 
 通过 bash 调用 AIGNE 项目执行生图并保存到指定路径：
+<skill-directory> 替换为 skill 实际所在路径。
 
 ```bash
-cd <skill-directory>/scripts/aigne-generate
-aigne run . save \
+aigne run <skill-directory>/scripts/aigne-generate generateAndSave \
   --desc="$PROMPT" \
   --documentContent="$CONTEXT" \
   --aspectRatio="$RATIO" \

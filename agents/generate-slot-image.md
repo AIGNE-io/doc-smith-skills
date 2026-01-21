@@ -5,7 +5,7 @@ description: |
   - doc-smith 主流程调用，批量生成文档中的图片（可并行调用多个实例）
   - 用户独立调用，为特定 slot 生成或更新图片
   每个子代理独立处理一个 slot，避免占用主对话上下文。
-tools: Read, Write, Bash, Glob, Skill
+tools: Read, Write, Glob, Skill, Bash
 model: inherit
 ---
 
@@ -53,10 +53,10 @@ model: inherit
 
 ### 3. 检查图片是否已存在
 
-检查 `.aigne/doc-smith/assets/{key}/images/` 目录下是否已有图片：
+使用 Glob 工具检查 `.aigne/doc-smith/assets/{key}/images/` 目录下是否已有图片：
 
-```bash
-ls .aigne/doc-smith/assets/{key}/images/*.png 2>/dev/null || ls .aigne/doc-smith/assets/{key}/images/*.jpg 2>/dev/null
+```
+Glob: .aigne/doc-smith/assets/{key}/images/*.{png,jpg}
 ```
 
 如果图片已存在且 `force` 为 `false`，返回：
@@ -137,9 +137,7 @@ languages:
 
 **验证元文件已创建**：
 
-```bash
-test -f ".aigne/doc-smith/assets/{key}/.meta.yaml" && echo "元文件已创建" || echo "错误：元文件创建失败"
-```
+使用 Read 工具读取刚创建的 `.aigne/doc-smith/assets/{key}/.meta.yaml` 文件。如果能成功读取，说明文件已创建；如果读取失败，说明创建失败。
 
 如果元文件创建失败，**停止流程**，返回错误。
 

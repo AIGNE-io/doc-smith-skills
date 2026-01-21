@@ -66,7 +66,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 - [ ] 阶段 4: 生成 document-structure.yaml
 - [ ] 阶段 5: 确认文档结构
 - [ ] 阶段 6: 生成文档内容
-- [ ] 阶段 7: 检查是否存在 `AFS Image Slot`，如果存在调用 `/doc-smith-images` 生成图片
+- [ ] 阶段 7: 检查是否存在 `AFS Image Slot`，如果存在调用 `generate-slot-image` SubAgent 生成图片
 - [ ] 阶段 9: 结束前确认任务都已完成
 - [ ] 阶段 10: (用户提出的其他要求，根据要求扩展这个列表)
 
@@ -77,7 +77,7 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 - [ ] 阶段 2: 检查是否需要修改文档结构，如需要则更新 document-structure.yaml 并校验
 - [ ] 阶段 3: 应用文档内容更新
 - [ ] 阶段 4: 处理文档中的 PATCH 标记
-- [ ] 阶段 5: 只要文档有新增或更新，就需要检查是否新增了 `AFS Image Slot`，如果新增了则调用 `/doc-smith-images` 生成图片
+- [ ] 阶段 5: 只要文档有新增或更新，就需要检查是否新增了 `AFS Image Slot`，如果新增了则调用 `generate-slot-image` 生成图片
 - [ ] 阶段 6: 执行文档结构和内容校验
 - [ ] 阶段 7: 确认所有更新任务完成
 - [ ] 阶段 8: (用户提出的其他要求，根据要求扩展这个列表)
@@ -195,12 +195,6 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 - Changeset 文件处理：`references/changeset-guide.md`
 - PATCH 标记处理 (每次文档更新都需要检查文档中是否有 PATCH 需要处理)：`references/patch-guide.md`
 - 文档内容要求：`references/document-content-guide.md`
-
-**更新文档中的图片**：
-
-```bash
-/doc-smith-images "优化图片描述" --update ./assets/old-image.png
-```
 
 **如果涉及文档结构的修改**：
 - 文档结构数据结构参考： `references/document-structure-schema.md`
@@ -360,7 +354,7 @@ my-project/                        # 用户的项目目录（cwd）
 | 技能 | 用途 | 调用示例 |
 |------|------|----------|
 | `doc-smith-content` | 生成单篇文档内容 | `/doc-smith-content /api/overview` |
-| `doc-smith-images` | 生成文档中的图片 | `/doc-smith-images "架构图" --ratio 16:9` |
+| `generate-slot-image` | 生成文档中的图片 | `generate-slot-image docPath=/overview, slotId=architecture-overview, slotDesc="系统架构图，展示各模块关系"`|
 | `doc-smith-check` | 校验文档结构和内容 | `/doc-smith-check` 或 `/doc-smith-check --structure` |
 
 以下技能由用户按需独立调用：

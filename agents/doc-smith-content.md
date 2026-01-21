@@ -5,7 +5,7 @@ description: |
   - doc-smith 主流程调用，批量生成各文档内容（可并行调用多个实例）
   - 用户独立调用，重新生成某篇文档（如"使用 doc-smith-content 代理重新生成 /overview"）
   独立调用时会先检查 workspace 和文档结构是否存在。
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Skill, Bash
 model: inherit
 ---
 
@@ -103,12 +103,13 @@ model: inherit
 
 #### 4.2 查找所有媒体文件
 
-在项目根目录查找所有媒体文件（数据源是项目本身）：
+使用 Glob 工具在项目根目录查找所有媒体文件（排除 `.aigne/` 和 `node_modules/`）：
 
-```bash
-# 查找项目根目录中的媒体文件
-find ./ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" -o -name "*.mp4" -o -name "*.webp" \) -not -path "*/.aigne/*" -not -path "*/node_modules/*"
 ```
+Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}
+```
+
+**注意**：过滤掉 `.aigne/` 和 `node_modules/` 目录下的结果。
 
 记录所有结果，例如：
 - `../../assets/create/screenshot1.png`
@@ -323,11 +324,10 @@ default: zh                    # 默认语言，从 config.yaml 的 locale 读�
 
 ### 7. 校验内容
 
-调用 `doc-smith-check` 校验**本次生成的文档**（使用 `--path` 指定文档路径）：
+使用 Skill 工具调用 `doc-smith-check` 校验**本次生成的文档**（使用 `--path` 指定文档路径）：
 
-```bash
-# 只检查当前生成的文档
-/doc-smith-check --content --path /api/overview
+```
+Skill: doc-smith-check --content --path /api/overview
 ```
 
 校验内容：
