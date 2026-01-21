@@ -1,12 +1,11 @@
 import { basename, join, relative } from "node:path";
 import { publishDocs as publishDocsFn } from "@aigne/publish-docs";
-import { BrokerClient } from "@blocklet/payment-broker-client/node";
-import chalk from "chalk";
 import fs from "fs-extra";
+import yaml from "js-yaml";
 import { joinURL } from "ufo";
 
-import { getAccessToken, getCachedAccessToken, getDiscussKitMountPoint } from "./utils/auth.mjs";
-import { CLOUD_SERVICE_URL_PROD, DISCUSS_KIT_STORE_URL } from "./utils/constants.mjs";
+import { getAccessToken, getDiscussKitMountPoint } from "./utils/auth.mjs";
+import { CLOUD_SERVICE_URL_PROD } from "./utils/constants.mjs";
 import { PATHS } from "./utils/agent-constants.mjs";
 import { deploy } from "./utils/deploy.mjs";
 import { loadConfigFromFile, saveValueToConfig } from "./utils/config.mjs";
@@ -16,20 +15,13 @@ import updateBranding from "./utils/branding.mjs";
 import { generateSidebar, loadDocumentStructure } from "./utils/docs.mjs";
 import { copyDocumentsToTemp } from "./utils/docs-converter.mjs";
 
-const BASE_URL = process.env.DOC_SMITH_BASE_URL || CLOUD_SERVICE_URL_PROD;
-
-export default async function publishDocs(
-  {
-    appUrl,
-    outputDir = PATHS.PLANNING_DIR,
-    "with-branding": withBrandingOption,
-    config,
-    translatedMetadata,
-  },
-  options,
-) {
-  // Note: Document validation is now done in check.mjs which throws errors on failure
-
+export default async function publishDocs({
+  appUrl,
+  outputDir = PATHS.PLANNING_DIR,
+  "with-branding": withBrandingOption,
+  config,
+  newWebsite,
+}) {
   // Absolute path for file operations (reading docs)
   const docsAbsolutePath = PATHS.DOCS_DIR;
   // Relative path for mediaFolder (relative to cwd for publish-docs library)
@@ -76,131 +68,33 @@ export default async function publishDocs(
       process.env.DOC_DISCUSS_KIT_URL ||
       appUrl ||
       config?.appUrl;
-    const hasInputAppUrl = !!appUrl;
 
-    let shouldSyncBranding = void 0;
     let token = "";
-    let client = null;
-    let sessionId = null;
     let locale = config?.locale;
 
-    if (!hasInputAppUrl) {
-      const officialAccessToken = await getCachedAccessToken(BASE_URL);
+    // Handle newWebsite mode - create a new website for publishing
+    if (newWebsite) {
+      console.log(`\nCreating a new website for your documentation...`);
+      try {
+        const { appUrl: homeUrl, token: ltToken, data } = (await deploy("", locale)) || {};
 
-      sessionId = "";
-      if (officialAccessToken) {
-        client = new BrokerClient({
-          baseUrl: BASE_URL,
-          authToken: officialAccessToken,
-        });
-        const info = await client.checkCacheSession({
-          needShortUrl: true,
-          sessionId: config?.checkoutId,
-        });
-        sessionId = info.sessionId;
+        appUrl = homeUrl;
+        token = ltToken;
+        locale = data?.preferredLocale || locale;
+        shouldWithBranding = true;
+      } catch (error) {
+        const errorMsg = error?.message || "Unknown error occurred";
+        return {
+          message: `❌ Failed to create website: ${errorMsg}`,
+        };
       }
+    }
 
-      const choice = await options.prompts.select({
-        message: "Please select a platform to publish your documents:",
-        choices: [
-          ...(sessionId
-            ? [
-                {
-                  name: `${chalk.yellow("Resume previous website setup")} - ${chalk.green("Already paid.")} Continue where you left off. Your payment has already been processed.`,
-                  value: "new-instance-continue",
-                },
-              ]
-            : []),
-          {
-            name: `${chalk.blue("DocSmith Cloud (docsmith.aigne.io)")} – ${chalk.green("Free")} hosting. Your documents will be publicly accessible. Best for open-source projects or community sharing.`,
-            value: "default",
-          },
-          {
-            name: `${chalk.blue("Your existing website")} - Integrate and publish directly on your current site (setup required)`,
-            value: "custom",
-          },
-          {
-            name: `${chalk.blue("New website")} - ${chalk.yellow("Paid service.")} We'll help you set up a brand-new website with custom domain and hosting. Great if you want a professional presence.`,
-            value: "new-instance",
-          },
-        ],
-      });
-
-      if (choice === "custom") {
-        console.log(
-          `${chalk.bold("\n💡 Tips")}\n\n` +
-            `Start here to run your own website:\n${chalk.cyan(DISCUSS_KIT_STORE_URL)}\n`,
-        );
-        const userInput = await options.prompts.input({
-          message: "Please enter the URL of your website:",
-          validate: (input) => {
-            try {
-              // Check if input contains protocol, if not, prepend https://
-              const urlWithProtocol = input.includes("://") ? input : `https://${input}`;
-              new URL(urlWithProtocol);
-              return true;
-            } catch {
-              return "Please enter a valid URL";
-            }
-          },
-        });
-        // Ensure appUrl has protocol
-        appUrl = userInput.includes("://") ? userInput : `https://${userInput}`;
-      } else if (["new-instance", "new-instance-continue"].includes(choice)) {
-        // resume previous website setup
-        const isNewInstance = choice === "new-instance";
-        if (!isNewInstance) {
-          shouldSyncBranding = config?.shouldSyncBranding ?? void 0;
-          if (shouldSyncBranding !== void 0) {
-            shouldWithBranding = shouldWithBranding ?? shouldSyncBranding;
-          }
-        }
-
-        if (options?.prompts?.confirm) {
-          if (shouldSyncBranding === void 0) {
-            shouldSyncBranding = await options.prompts.confirm({
-              message: "Would you like to update the project branding (title, description, logo)?",
-              default: true,
-            });
-            await saveValueToConfig(
-              "shouldSyncBranding",
-              shouldSyncBranding,
-              "Should sync branding for documentation",
-            );
-            shouldWithBranding = shouldSyncBranding;
-          } else {
-            console.log(
-              `Would you like to update the project branding (title, description, logo)? ${chalk.cyan(shouldSyncBranding ? "Yes" : "No")}`,
-            );
-          }
-        }
-
-        try {
-          let id = "";
-          if (!isNewInstance) {
-            id = sessionId;
-            console.log(`\nResuming your previous website setup...`);
-          } else {
-            console.log(`\nCreating a new website for your documentation...`);
-          }
-          const {
-            appUrl: homeUrl,
-            token: ltToken,
-            sessionId: newSessionId,
-            data,
-          } = (await deploy(id, isNewInstance ? locale : undefined)) || {};
-
-          sessionId = newSessionId;
-          appUrl = homeUrl;
-          token = ltToken;
-          locale = data?.preferredLocale || locale;
-        } catch (error) {
-          const errorMsg = error?.message || "Unknown error occurred";
-          return {
-            message: `${chalk.red("❌ Failed to create website:")} ${errorMsg}`,
-          };
-        }
-      }
+    // Validate that we have an appUrl at this point
+    if (!appUrl) {
+      return {
+        message: `❌ Missing appUrl: Please provide --appUrl parameter or use --newWebsite to create a new website.`,
+      };
     }
 
     appUrl = appUrl ?? CLOUD_SERVICE_URL_PROD;
@@ -210,7 +104,7 @@ export default async function publishDocs(
     const discussKitMountPoint = await getDiscussKitMountPoint(appUrlInfo.origin);
     const discussKitUrl = joinURL(appUrlInfo.origin, discussKitMountPoint);
 
-    console.log(`\nPublishing your documentation to ${chalk.cyan(discussKitUrl)}`);
+    console.log(`\nPublishing your documentation to ${discussKitUrl}`);
 
     const accessToken = await getAccessToken(appUrlInfo.origin, token, locale);
 
@@ -226,7 +120,7 @@ export default async function publishDocs(
       icon: projectLogo || config?.projectLogo || "",
     };
 
-    console.log(`Publishing docs collection: ${chalk.cyan(projectInfo.name || boardId)}\n`);
+    console.log(`Publishing docs collection: ${projectInfo.name || boardId}\n`);
 
     // Skip image download - use icon URL directly
     if (shouldWithBranding) {
@@ -253,9 +147,23 @@ export default async function publishDocs(
       ].filter((lang, index, arr) => arr.indexOf(lang) === index), // Remove duplicates
     };
 
-    // Add translatedMetadata if available
-    if (translatedMetadata) {
-      boardMeta.translation = translatedMetadata;
+    // Load translatedMetadata from cache file
+    const translationCachePath = join(PATHS.CACHE, "translation-cache.yaml");
+    if (await fs.pathExists(translationCachePath)) {
+      try {
+        const translationContent = await fs.readFile(translationCachePath, "utf8");
+        const translatedMetadata = yaml.load(translationContent);
+        if (translatedMetadata) {
+          boardMeta.translation = translatedMetadata;
+        }
+      } catch (error) {
+        console.warn(`⚠️  Failed to load translation cache: ${error.message}`);
+      }
+    } else if (config?.translateLanguages?.length > 0) {
+      // Translation file is required when multiple languages are configured
+      return {
+        message: `❌ Translation cache file not found: ${translationCachePath}\n💡 Please translate the project metadata first before publishing.`,
+      };
     }
 
     const {
@@ -289,7 +197,7 @@ export default async function publishDocs(
       if (boardId !== newBoardId) {
         await saveValueToConfig("boardId", newBoardId);
       }
-      message = `✅ Documentation published successfully!\n📖 Docs available at: ${chalk.cyan(docsUrl)}`;
+      message = `✅ Documentation published successfully!\n📖 Docs available at: ${docsUrl}`;
 
       await saveValueToConfig("checkoutId", "", "Checkout ID for document deployment service");
       await saveValueToConfig("shouldSyncBranding", "", "Should sync branding for documentation");
@@ -300,15 +208,15 @@ export default async function publishDocs(
         message = `❌ Publishing failed with error: \n💡 ${obj.message || error}`;
       } catch {
         if (error?.includes("401")) {
-          message = `❌ Publishing failed due to an authorization error: \n💡 Please run ${chalk.cyan("aigne doc clear")} to reset your credentials and try again.`;
+          message = `❌ Publishing failed due to an authorization error: \n💡 Please run "aigne doc clear" to reset your credentials and try again.`;
         } else if (error?.includes("403")) {
-          message = `❌ Publishing failed due to an authorization error: \n💡 You’re not the creator of this document (Board ID: ${boardId}). You can change the board ID and try again. \n💡  Or run ${chalk.cyan("aigne doc clear")} to reset your credentials and try again.`;
+          message = `❌ Publishing failed due to an authorization error: \n💡 You're not the creator of this document (Board ID: ${boardId}). You can change the board ID and try again. \n💡 Or run "aigne doc clear" to reset your credentials and try again.`;
         }
       }
     }
 
     // clean up tmp work dir
-    await fs.rm(tmpDirRelative, { recursive: true, force: true });
+    // await fs.rm(tmpDirRelative, { recursive: true, force: true });
   } catch (error) {
     message = `❌ Sorry, I encountered an error while publishing your documentation: \n\n${error.message}`;
 
@@ -323,50 +231,33 @@ export default async function publishDocs(
   return message ? { message } : {};
 }
 
-publishDocs.input_schema = {
-  type: "object",
-  properties: {
-    config: {
-      type: "object",
-      description: "Configuration object from check step.",
-    },
-    docsDir: {
-      type: "string",
-      description: "The directory of the documentation.",
-    },
-    outputDir: {
-      type: "string",
-      description: "Output directory containing document structure file (default: ./planning).",
-    },
-    appUrl: {
-      type: "string",
-      description: "The URL of the app.",
-    },
-    boardId: {
-      type: "string",
-      description: "The ID of the board.",
-    },
-    "with-branding": {
-      type: "boolean",
-      description: "Update the website branding (title, description, and logo).",
-    },
-    projectName: {
-      type: "string",
-      description: "The name of the project.",
-    },
-    projectDesc: {
-      type: "string",
-      description: "A description of the project.",
-    },
-    projectLogo: {
-      type: "string",
-      description: "The logo or icon of the project.",
-    },
-    translatedMetadata: {
-      type: "object",
-      description: "Translated metadata (title and description) for multiple languages.",
-    },
-  },
-};
+// CLI entry point
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const args = process.argv.slice(2);
+  const options = {};
 
-publishDocs.description = "Publish the documentation to a website";
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--appUrl" && args[i + 1]) {
+      options.appUrl = args[++i];
+    } else if (arg === "--newWebsite") {
+      options.newWebsite = true;
+    } else if (arg === "--with-branding") {
+      options["with-branding"] = true;
+    } else if (arg === "--outputDir" && args[i + 1]) {
+      options.outputDir = args[++i];
+    }
+  }
+
+  publishDocs(options)
+    .then((result) => {
+      if (result?.message) {
+        console.log(result.message);
+      }
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error(error.message);
+      process.exit(1);
+    });
+}
