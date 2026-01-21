@@ -14,8 +14,7 @@ description: 使用 AI 生成图片。当需要生成技术图表、架构图、
 /doc-smith-images "系统架构图，展示微服务之间的调用关系"
 
 # 指定输出路径
-/doc-smith-images "用户登录流程图" --output ./images/login-flow.png
-/doc-smith-images "用户登录流程图" -o ./images/login-flow.png
+/doc-smith-images "用户登录流程图" --savePath ./images/login-flow.png
 
 # 指定宽高比
 /doc-smith-images "系统架构图" --ratio 16:9
@@ -32,14 +31,14 @@ description: 使用 AI 生成图片。当需要生成技术图表、架构图、
 /doc-smith-images "改成 16:9 比例" -u ./images/architecture.png --ratio 16:9
 
 # 组合使用
-/doc-smith-images "微服务架构图" --ratio 16:9 --locale zh -o ./docs/arch.png
+/doc-smith-images "微服务架构图" --ratio 16:9 --locale zh --savePath ./docs/arch.png
 ```
 
 ## Options
 
 | Option | Alias | Description |
 |--------|-------|-------------|
-| `--output <path>` | `-o` | 图片保存路径（默认自动生成） |
+| `--savePath <path>` | | 图片保存路径（必需） |
 | `--ratio <ratio>` | `-r` | 宽高比：1:1, 5:4, 4:3, 3:2, 16:9, 21:9（默认 4:3） |
 | `--size <size>` | `-s` | 图片尺寸：2K, 4K（默认 2K） |
 | `--locale <lang>` | `-l` | 图片中文字语言（默认 zh） |
@@ -75,13 +74,11 @@ aigne run . save \
   --savePath="$OUTPUT_PATH"
 ```
 
-**参数映射：**
-- `prompt` → AIGNE 的 `--desc` 参数
-- `context` → AIGNE 的 `--documentContent` 参数
-- `ratio` → AIGNE 的 `--aspectRatio` 参数
-- `output` → AIGNE 的 `--savePath` 参数
-
-**注意**：使用 `--savePath` 而非 `--output`，因为 `--output` 是 AIGNE CLI 的输出重定向参数。
+**AIGNE CLI 参数：**
+- `--desc` 图片描述/生成提示词
+- `--documentContent` 上下文信息
+- `--aspectRatio` 宽高比
+- `--savePath` 图片保存路径
 
 ### 2. 验证生成结果
 

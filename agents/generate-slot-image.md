@@ -90,8 +90,6 @@ aigne run . save \
 - `--aspectRatio` 宽高比（默认 4:3）
 - `--savePath` 图片保存路径（必需）
 
-**注意**：`--savePath` 参数不是 `--output`，后者是 CLI 的输出重定向参数。
-
 ### 6. 创建 .meta.yaml 文件
 
 图片生成成功后，在 `.aigne/doc-smith/assets/{key}/` 目录创建 `.meta.yaml`：
