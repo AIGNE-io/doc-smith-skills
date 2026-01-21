@@ -7,8 +7,6 @@ import {
   ERROR_CODES,
   collectDocumentPaths,
   loadConfigFromFile,
-  isSourcesAbsolutePath,
-  resolveSourcesPath,
 } from "./utils.mjs";
 
 const ASSETS_DIR_NAME = "assets";
@@ -57,14 +55,6 @@ class DocumentContentValidator {
       this.workspaceConfig = (await loadConfigFromFile()) || {};
     }
     return this.workspaceConfig;
-  }
-
-  /**
-   * 加载 sources 配置（懒加载）
-   */
-  async loadSourcesConfig() {
-    const config = await this.loadWorkspaceConfig();
-    return config.sources || [];
   }
 
   /**
@@ -719,55 +709,45 @@ class DocumentContentValidator {
 
   /**
    * 验证本地图片
+   * 只允许相对路径，不允许绝对路径（如 /sources/...）
    */
   async validateLocalImage(imageUrl, doc, altText, langFile) {
-    let imagePath;
-
-    // 检查是否为 /sources/... 绝对路径
-    if (isSourcesAbsolutePath(imageUrl)) {
-      const sourcesConfig = await this.loadSourcesConfig();
-      const resolved = await resolveSourcesPath(imageUrl, sourcesConfig, this.PATHS.WORKSPACE_BASE);
-
-      if (!resolved) {
-        this.stats.missingImages++;
-        this.errors.fatal.push({
-          type: "INVALID_SOURCES_PATH",
-          path: doc.path,
-          langFile,
-          imageUrl,
-          altText,
-          message: `无法在任何 source 中找到图片: ${imageUrl}`,
-          suggestion: `检查 sources 目录下是否存在该图片文件`,
-        });
-        return;
-      }
-      imagePath = resolved.physicalPath;
-    } else {
-      // 原有的相对路径处理逻辑
-      const fullDocPath = path.join(doc.filePath, langFile);
-      const docDir = path.dirname(path.join(this.docsDir, fullDocPath));
-      imagePath = path.resolve(docDir, imageUrl);
+    // 检查是否为绝对路径（以 / 开头）- 不允许使用
+    if (imageUrl.startsWith("/")) {
+      this.stats.missingImages++;
+      this.errors.fatal.push({
+        type: ERROR_CODES.ABSOLUTE_IMAGE_PATH_NOT_ALLOWED,
+        path: doc.path,
+        langFile,
+        imageUrl,
+        altText,
+        message: `图片不允许使用绝对路径: ${imageUrl}`,
+        suggestion: `请使用相对路径访问图片，根据文档位置计算正确的相对路径`,
+      });
+      return;
     }
+
+    // 相对路径处理：基于文档位置解析
+    const fullDocPath = path.join(doc.filePath, langFile);
+    const docDir = path.dirname(path.join(this.docsDir, fullDocPath));
+    const imagePath = path.resolve(docDir, imageUrl);
 
     // 检查文件是否存在
     try {
       await access(imagePath, constants.F_OK);
 
-      // 仅对相对路径进行层级验证（绝对路径不需要）
-      if (!isSourcesAbsolutePath(imageUrl)) {
-        const fullDocPath = path.join(doc.filePath, langFile);
-        const expectedRelativePath = this.calculateExpectedRelativePath(fullDocPath, imagePath);
-        if (expectedRelativePath && imageUrl !== expectedRelativePath) {
-          this.errors.warnings.push({
-            type: "IMAGE_PATH_LEVEL",
-            path: doc.path,
-            langFile,
-            imageUrl,
-            expectedPath: expectedRelativePath,
-            message: `图片路径层级可能不正确: ${imageUrl}`,
-            suggestion: `建议使用: ${expectedRelativePath}`,
-          });
-        }
+      // 验证相对路径层级是否正确
+      const expectedRelativePath = this.calculateExpectedRelativePath(fullDocPath, imagePath);
+      if (expectedRelativePath && imageUrl !== expectedRelativePath) {
+        this.errors.warnings.push({
+          type: "IMAGE_PATH_LEVEL",
+          path: doc.path,
+          langFile,
+          imageUrl,
+          expectedPath: expectedRelativePath,
+          message: `图片路径层级可能不正确: ${imageUrl}`,
+          suggestion: `建议使用: ${expectedRelativePath}`,
+        });
       }
 
       // 当 checkSlots 启用时，验证 assets 目录中的图片路径
