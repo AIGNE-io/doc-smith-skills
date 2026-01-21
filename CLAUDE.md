@@ -43,7 +43,6 @@ doc-smith-skill/
 4. **开发规范**
    - 创建或修改 Skill 时，使用 `/skill-creator` 获取指导
    - 提交 commit 时不要带 `Co-Authored-By` 信息
-   - 每次修改后执行 `pnpm lint:fix`
 
 5. **废弃代码处理**
    - `skills-entry/`、`utils/` 等 AIGNE 相关代码仅作参考
@@ -176,5 +175,4 @@ model: inherit
 ### 修改现有组件
 
 1. 直接编辑对应的 `.md` 文件
-2. 执行 `pnpm lint:fix`
 3. 不要修改 `skills-entry/` 或 `utils/` 中的废弃代码

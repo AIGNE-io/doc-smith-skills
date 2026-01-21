@@ -5,20 +5,16 @@ import chalk from "chalk";
 import fs from "fs-extra";
 import { joinURL } from "ufo";
 
-import {
-  getAccessToken,
-  getCachedAccessToken,
-  getDiscussKitMountPoint,
-} from "../../../utils/auth.mjs";
-import { CLOUD_SERVICE_URL_PROD, DISCUSS_KIT_STORE_URL } from "../../../utils/constants.mjs";
-import { PATHS } from "../../../utils/agent-constants.mjs";
-import { deploy } from "../../../utils/deploy.mjs";
-import { loadConfigFromFile, saveValueToConfig } from "../../../utils/config.mjs";
-import { ensureTmpDir } from "../../../utils/files.mjs";
-import { getGithubRepoUrl, isValidGithubUrl } from "../../../utils/git.mjs";
-import updateBranding from "../../../utils/branding.mjs";
-import { generateSidebar, loadDocumentStructure } from "../../../utils/docs.mjs";
-import { copyDocumentsToTemp } from "../../../utils/docs-converter.mjs";
+import { getAccessToken, getCachedAccessToken, getDiscussKitMountPoint } from "./utils/auth.mjs";
+import { CLOUD_SERVICE_URL_PROD, DISCUSS_KIT_STORE_URL } from "./utils/constants.mjs";
+import { PATHS } from "./utils/agent-constants.mjs";
+import { deploy } from "./utils/deploy.mjs";
+import { loadConfigFromFile, saveValueToConfig } from "./utils/config.mjs";
+import { ensureTmpDir } from "./utils/files.mjs";
+import { getGithubRepoUrl, isValidGithubUrl } from "./utils/git.mjs";
+import updateBranding from "./utils/branding.mjs";
+import { generateSidebar, loadDocumentStructure } from "./utils/docs.mjs";
+import { copyDocumentsToTemp } from "./utils/docs-converter.mjs";
 
 const BASE_URL = process.env.DOC_SMITH_BASE_URL || CLOUD_SERVICE_URL_PROD;
 

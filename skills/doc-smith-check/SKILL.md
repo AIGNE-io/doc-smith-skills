@@ -104,6 +104,14 @@ node skills/doc-smith-check/scripts/check-content.mjs -p /api/auth -p /guides/st
 
 ## 错误处理
 
+### 依赖未安装
+
+如果执行脚本时出现模块找不到的错误（如 `Cannot find module 'yaml'`），需要先安装依赖：
+
+```bash
+cd skills/doc-smith-check/scripts && npm install
+```
+
 ### 结构检查失败
 
 1. 分析错误报告，理解问题所在
