@@ -10,9 +10,6 @@ skills:
   - ./generate-image.yaml
   - ./save-image.mjs
 
-# 将所有步骤的输出合并到最终结果
-include_all_steps_output: true
-
 input_schema:
   type: object
   properties:
@@ -42,15 +39,6 @@ input_schema:
 output_schema:
   type: object
   properties:
-    success:
-      type: boolean
-      description: 是否成功保存图片
-    savedPath:
+    message:
       type: string
-      description: 保存的图片路径
-    fileSize:
-      type: number
-      description: 图片文件大小（字节）
-    error:
-      type: string
-      description: 错误信息（如有）
+      description: 执行结果的自然语言描述

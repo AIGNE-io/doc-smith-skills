@@ -9,19 +9,11 @@ export default async function saveImage(input) {
 
   // 验证输入
   if (!images || !Array.isArray(images) || images.length === 0) {
-    return {
-      success: false,
-      error: "No images in input",
-      ...input,
-    };
+    return { message: "保存失败：输入中没有图片数据" };
   }
 
   if (!savePath) {
-    return {
-      success: false,
-      error: "No savePath specified",
-      ...input,
-    };
+    return { message: "保存失败：未指定保存路径" };
   }
 
   const sourceImage = images[0];
@@ -31,11 +23,7 @@ export default async function saveImage(input) {
   try {
     await fs.access(sourcePath);
   } catch {
-    return {
-      success: false,
-      error: `Source image not found: ${sourcePath}`,
-      ...input,
-    };
+    return { message: `保存失败：源图片文件不存在 (${sourcePath})` };
   }
 
   // 确保输出目录存在
@@ -45,23 +33,12 @@ export default async function saveImage(input) {
   // 复制图片到目标路径
   try {
     await fs.copyFile(sourcePath, savePath);
-
-    // 验证复制成功
     const stats = await fs.stat(savePath);
+    const sizeKB = (stats.size / 1024).toFixed(1);
 
-    return {
-      success: true,
-      savedPath: savePath,
-      fileSize: stats.size,
-      mimeType: sourceImage.mimeType,
-      ...input,
-    };
+    return { message: `图片已保存到 ${savePath}（${sizeKB} KB）` };
   } catch (err) {
-    return {
-      success: false,
-      error: `Failed to save image: ${err.message}`,
-      ...input,
-    };
+    return { message: `保存失败：${err.message}` };
   }
 }
 
@@ -91,9 +68,6 @@ saveImage.input_schema = {
 saveImage.output_schema = {
   type: "object",
   properties: {
-    success: { type: "boolean" },
-    savedPath: { type: "string" },
-    fileSize: { type: "number" },
-    error: { type: "string" },
+    message: { type: "string", description: "执行结果的自然语言描述" },
   },
 };

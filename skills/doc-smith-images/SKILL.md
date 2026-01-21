@@ -102,10 +102,9 @@ file "$OUTPUT_PATH"  # 验证是图片格式
 ```
 
 主流程通过 `generate-slot-image` 子代理处理，内部调用 AIGNE CLI：
-
+<skill-directory> 替换为 skill 实际所在路径。
 ```bash
-cd <skill-directory>/scripts/aigne-generate
-aigne run . save \
+aigne run <skill-directory>/scripts/aigne-generate generateAndSave \
   --desc="系统架构图，展示各模块关系" \
   --documentContent="文档内容..." \
   --aspectRatio="4:3" \
