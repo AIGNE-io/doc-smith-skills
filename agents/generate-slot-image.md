@@ -34,7 +34,7 @@ model: inherit
 
 ## 工作流程
 
-> **⚠️ 关键原则**：图片生成和元文件创建是**原子操作**，必须一起完成。如果图片生成成功但元文件未创建，视为**任务失败**。
+> **⚠️ 关键原则**：**先创建元文件，再生成图片**。这确保了原子性——如果图片生成失败，元文件已存在可以重试；如果图片生成成功，元文件必定已存在。
 
 ### 1. 验证输入参数
 
@@ -102,26 +102,9 @@ ls .aigne/doc-smith/assets/{key}/images/*.png 2>/dev/null || ls .aigne/doc-smith
 | 用户登录流程 | 文档说明 OAuth2 认证流程 | OAuth2 用户登录流程图：从用户点击登录开始，经过授权服务器认证、获取 token、验证 token，最终完成登录，使用流程图样式展示各步骤 |
 | 数据模型关系 | 文档描述订单和商品的关系 | 订单系统 ER 图：展示订单表、订单明细表、商品表、用户表之间的关联关系，标注主键和外键，使用数据库模型图风格 |
 
-### 6. 调用 doc-smith-images Skill 生成图片
+### 6. 创建 .meta.yaml 文件（先于图片生成）
 
-使用生成的 prompt 调用 `/doc-smith-images` skill：
-
-```
-/doc-smith-images "{生成的 prompt}" \
-  --savePath .aigne/doc-smith/assets/{key}/images/{locale}.png \
-  --ratio {aspectRatio}
-```
-
-**参数说明**：
-- 第一个参数：步骤 5 生成的详细 prompt
-- `--savePath`：图片保存路径（必需）
-- `--ratio`：宽高比（默认 4:3）
-
-**图片生成成功后，必须立即执行步骤 7 创建元文件。**
-
-### 7. 创建或更新 .meta.yaml 文件（必需）
-
-图片生成成功后，在 `.aigne/doc-smith/assets/{key}/` 目录创建 `.meta.yaml`：
+**在生成图片之前**，先在 `.aigne/doc-smith/assets/{key}/` 目录创建 `.meta.yaml`：
 
 ```yaml
 kind: image
@@ -152,21 +135,30 @@ languages:
 - `documents`: 关联的文档列表
 - `languages`: 已生成的语言列表
 
-### 8. 验证元文件已创建
-
-**在返回结果之前，必须验证元文件存在**：
+**验证元文件已创建**：
 
 ```bash
-# 验证元文件存在
-test -f ".aigne/doc-smith/assets/{key}/.meta.yaml" && echo "元文件已创建" || echo "错误：元文件未创建"
+test -f ".aigne/doc-smith/assets/{key}/.meta.yaml" && echo "元文件已创建" || echo "错误：元文件创建失败"
 ```
 
-如果元文件不存在：
-1. **不要返回成功状态**
-2. 尝试重新创建元文件
-3. 如果仍然失败，返回错误
+如果元文件创建失败，**停止流程**，返回错误。
 
-### 9. 返回摘要
+### 7. 调用 doc-smith-images Skill 生成图片
+
+元文件创建成功后，使用生成的 prompt 调用 `/doc-smith-images` skill：
+
+```
+/doc-smith-images "{生成的 prompt}" \
+  --savePath .aigne/doc-smith/assets/{key}/images/{locale}.png \
+  --ratio {aspectRatio}
+```
+
+**参数说明**：
+- 第一个参数：步骤 5 生成的详细 prompt
+- `--savePath`：图片保存路径（必需）
+- `--ratio`：宽高比（默认 4:3）
+
+### 8. 返回摘要
 
 返回操作结果摘要：
 
@@ -215,9 +207,8 @@ test -f ".aigne/doc-smith/assets/{key}/.meta.yaml" && echo "元文件已创建" 
 - ✅ 检查图片是否已存在
 - ✅ 读取文档并分析 slot 上下文
 - ✅ 根据上下文生成详细的图片 prompt
+- ✅ **先创建 `.meta.yaml` 元信息文件并验证（图片生成前必须完成）**
 - ✅ 调用 `/doc-smith-images` skill 生成图片
-- ✅ **创建 `.meta.yaml` 元信息文件（关键步骤，图片生成后必须立即执行）**
-- ✅ **验证元文件已成功创建**
 - ✅ 返回操作摘要（必须包含元文件路径）
 
 **不应执行**：
@@ -227,9 +218,9 @@ test -f ".aigne/doc-smith/assets/{key}/.meta.yaml" && echo "元文件已创建" 
 
 ## 成功标准
 
-> **核心原则**：图片和元文件必须同时存在，缺一不可。只有图片没有元文件 = 失败。
+> **核心原则**：先创建元文件，再生成图片。元文件不存在则不生成图片。
 
-1. **图片和元文件配对**：图片生成后，元文件必须立即创建并验证存在
+1. **元文件先于图片**：元文件必须在图片生成前创建并验证存在
 2. **元信息完整**：`.meta.yaml` 必须包含以下字段：
    - `kind: image`
    - `slot.id`、`slot.key`、`slot.desc`
@@ -269,12 +260,11 @@ test -f ".aigne/doc-smith/assets/{key}/.meta.yaml" && echo "元文件已创建" 
 
 ```
 错误: 元文件创建失败
-图片: .aigne/doc-smith/assets/{key}/images/{locale}.png（已生成）
 元文件: .aigne/doc-smith/assets/{key}/.meta.yaml（未创建）
-状态: 任务未完成，请重新执行创建元文件步骤
+状态: 已停止，不会生成图片
 ```
 
 **处理方式**：
-1. 不要返回成功状态
+1. 停止流程，不继续生成图片
 2. 尝试重新创建 `.meta.yaml`
-3. 验证文件确实存在后才能返回成功
+3. 元文件验证存在后才能继续生成图片
