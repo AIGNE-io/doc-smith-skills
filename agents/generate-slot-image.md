@@ -1,7 +1,7 @@
 ---
 name: generate-slot-image
 description: |
-  为单个 AFS image slot 生成图片。使用场景：
+  为单个 AFS image slot 生成图片和 meta 信息。使用场景：
   - doc-smith 主流程调用，批量生成文档中的图片（可并行调用多个实例）
   - 用户独立调用，为特定 slot 生成或更新图片
   每个子代理独立处理一个 slot，避免占用主对话上下文。
@@ -11,7 +11,7 @@ model: inherit
 
 # AFS Image Slot 图片生成代理
 
-为单个 AFS image slot 生成图片并保存。
+为单个 AFS image slot 生成图片和 meta 信息并保存。
 
 ## 输入参数
 
@@ -29,9 +29,12 @@ model: inherit
 自然语言摘要，包含：
 - 文档路径和 slot ID
 - 生成的图片路径
+- 元信息文件路径
 - 操作结果（成功/失败/跳过）
 
 ## 工作流程
+
+> **⚠️ 关键原则**：图片生成和元文件创建是**原子操作**，必须一起完成。如果图片生成成功但元文件未创建，视为**任务失败**。
 
 ### 1. 验证输入参数
 
@@ -114,7 +117,9 @@ ls .aigne/doc-smith/assets/{key}/images/*.png 2>/dev/null || ls .aigne/doc-smith
 - `--savePath`：图片保存路径（必需）
 - `--ratio`：宽高比（默认 4:3）
 
-### 7. 创建 .meta.yaml 文件
+**图片生成成功后，必须立即执行步骤 7 创建元文件。**
+
+### 7. 创建或更新 .meta.yaml 文件（必需）
 
 图片生成成功后，在 `.aigne/doc-smith/assets/{key}/` 目录创建 `.meta.yaml`：
 
@@ -147,17 +152,32 @@ languages:
 - `documents`: 关联的文档列表
 - `languages`: 已生成的语言列表
 
-### 8. 返回摘要
+### 8. 验证元文件已创建
+
+**在返回结果之前，必须验证元文件存在**：
+
+```bash
+# 验证元文件存在
+test -f ".aigne/doc-smith/assets/{key}/.meta.yaml" && echo "元文件已创建" || echo "错误：元文件未创建"
+```
+
+如果元文件不存在：
+1. **不要返回成功状态**
+2. 尝试重新创建元文件
+3. 如果仍然失败，返回错误
+
+### 9. 返回摘要
 
 返回操作结果摘要：
 
-**成功**：
+**成功**（必须同时包含图片和元文件信息）：
 ```
 成功生成图片:
 - 文档: /overview
 - Slot: architecture-overview
 - Prompt: 电商系统微服务架构图：展示用户服务、订单服务...
 - 图片: .aigne/doc-smith/assets/architecture-overview/images/zh.png
+- 元文件: .aigne/doc-smith/assets/architecture-overview/.meta.yaml ✓
 ```
 
 **跳过**：
@@ -196,8 +216,9 @@ languages:
 - ✅ 读取文档并分析 slot 上下文
 - ✅ 根据上下文生成详细的图片 prompt
 - ✅ 调用 `/doc-smith-images` skill 生成图片
-- ✅ 创建 `.meta.yaml` 元信息文件（包含生成的 prompt）
-- ✅ 返回操作摘要
+- ✅ **创建 `.meta.yaml` 元信息文件（关键步骤，图片生成后必须立即执行）**
+- ✅ **验证元文件已成功创建**
+- ✅ 返回操作摘要（必须包含元文件路径）
 
 **不应执行**：
 - ❌ 不扫描文档中的 slot（由主流程负责）
@@ -206,11 +227,17 @@ languages:
 
 ## 成功标准
 
-1. **Prompt 质量**：生成的 prompt 具体、可视化，结合了文档上下文
-2. **图片生成**：图片文件成功保存到指定路径
-3. **元信息完整**：`.meta.yaml` 包含 prompt 和所有必需字段
+> **核心原则**：图片和元文件必须同时存在，缺一不可。只有图片没有元文件 = 失败。
+
+1. **图片和元文件配对**：图片生成后，元文件必须立即创建并验证存在
+2. **元信息完整**：`.meta.yaml` 必须包含以下字段：
+   - `kind: image`
+   - `slot.id`、`slot.key`、`slot.desc`
+   - `generation.prompt`、`generation.model`、`generation.createdAt`
+   - `documents`、`languages`
+3. **Prompt 质量**：生成的 prompt 具体、可视化，结合了文档上下文
 4. **路径正确**：文件保存在正确的目录结构中
-5. **摘要清晰**：返回的摘要包含 prompt 和关键信息
+5. **摘要包含元文件信息**：返回的摘要必须明确显示元文件路径
 
 ## 错误处理
 
@@ -237,3 +264,17 @@ languages:
 原因: {具体错误}
 建议: 检查 AIGNE CLI 配置和 API 密钥
 ```
+
+### 元文件创建失败
+
+```
+错误: 元文件创建失败
+图片: .aigne/doc-smith/assets/{key}/images/{locale}.png（已生成）
+元文件: .aigne/doc-smith/assets/{key}/.meta.yaml（未创建）
+状态: 任务未完成，请重新执行创建元文件步骤
+```
+
+**处理方式**：
+1. 不要返回成功状态
+2. 尝试重新创建 `.meta.yaml`
+3. 验证文件确实存在后才能返回成功

@@ -63,7 +63,8 @@ description: 生成或编辑文档中的图片
 文档图片生成完成:
 
 文档: /overview
-- architecture: 已生成
+- architecture: 图片和元信息已生成
+- work-flow: 图片已重新生成，并更新元信息
 - data-flow: 已跳过（已存在）
 
 共 2 个，生成 1 个，跳过 1 个
