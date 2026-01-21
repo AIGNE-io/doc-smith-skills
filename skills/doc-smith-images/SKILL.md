@@ -61,35 +61,95 @@ description: 使用 AI 生成图片。当需要生成技术图表、架构图、
 
 ## 工作流程
 
-### 1. 调用 AIGNE 生图并保存
+根据是否提供 `--update` 参数，选择不同的工作流程。
 
-通过 bash 调用 AIGNE 项目执行生图并保存到指定路径：
-<skill-directory> 替换为 skill 实际所在路径。
+### 模式 A: 生成新图片（默认）
+
+当未提供 `--update` 参数时，生成全新的图片。
+
+**调用 AIGNE CLI**：
+`<skill-directory>` 替换为 skill 实际所在路径。
 
 ```bash
-aigne run <skill-directory>/scripts/aigne-generate generateAndSave \
+aigne run <skill-directory>/scripts/aigne-generate save \
   --desc="$PROMPT" \
   --documentContent="$CONTEXT" \
+  --locale="$LOCALE" \
   --aspectRatio="$RATIO" \
   --savePath="$OUTPUT_PATH"
 ```
 
 **AIGNE CLI 参数：**
 - `--desc` 图片描述/生成提示词
-- `--documentContent` 上下文信息
-- `--aspectRatio` 宽高比
+- `--documentContent` 上下文信息（可选）
+- `--locale` 图片中文字语言（默认 zh）
+- `--aspectRatio` 宽高比（默认 4:3）
 - `--savePath` 图片保存路径
 
-### 2. 验证生成结果
+### 模式 B: 编辑已有图片（--update）
 
-检查图片是否成功生成：
+当提供 `--update` 参数时，基于已有图片进行修改（image-to-image 模式）。
+
+**使用场景：**
+- 图片翻译：将图片中的文字翻译成其他语言
+- 样式调整：修改配色、布局、比例等
+- 内容修改：添加、删除或修改图片中的元素
+
+**调用 AIGNE CLI**：
+`<skill-directory>` 替换为 skill 实际所在路径。
+
+```bash
+aigne run <skill-directory>/scripts/aigne-generate edit \
+  --desc="$EDIT_INSTRUCTION" \
+  --sourcePath="$SOURCE_IMAGE" \
+  --savePath="$OUTPUT_PATH" \
+  --sourceLocale="$SOURCE_LOCALE" \
+  --targetLocale="$TARGET_LOCALE" \
+  --aspectRatio="$RATIO"
+```
+
+**AIGNE CLI 参数（edit 模式）：**
+- `--desc` 编辑要求/修改说明
+- `--sourcePath` 源图片路径（要编辑的图片）
+- `--savePath` 输出文件路径
+- `--sourceLocale` 源图片语言（默认 zh）
+- `--targetLocale` 目标语言（翻译场景时使用）
+- `--aspectRatio` 宽高比（默认保持原图比例）
+
+**图片翻译示例**：
+
+```bash
+# 将中文图片翻译成英文
+aigne run <skill-directory>/scripts/aigne-generate edit \
+  --desc="保持图片的布局和风格不变" \
+  --sourcePath=".aigne/doc-smith/assets/arch/images/zh.png" \
+  --savePath=".aigne/doc-smith/assets/arch/images/en.png" \
+  --sourceLocale="zh" \
+  --targetLocale="en" \
+  --aspectRatio="16:9"
+```
+
+**样式调整示例**：
+
+```bash
+# 修改图片比例和布局
+aigne run <skill-directory>/scripts/aigne-generate edit \
+  --desc="改成 16:9 比例，使用更清晰的布局" \
+  --sourcePath="./images/old-arch.png" \
+  --savePath="./images/new-arch.png" \
+  --aspectRatio="16:9"
+```
+
+### 验证生成结果
+
+无论哪种模式，都需要检查图片是否成功生成：
 
 ```bash
 ls -la "$OUTPUT_PATH"
 file "$OUTPUT_PATH"  # 验证是图片格式
 ```
 
-### 3. 返回结果
+### 返回结果
 
 返回生成的图片路径，供调用方使用。
 

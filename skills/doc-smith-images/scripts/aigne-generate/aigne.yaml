@@ -7,6 +7,8 @@ agents:
   - ./generate-image.yaml
   - ./save-image.mjs
   - ./generate-and-save.yaml
+  - ./prepare-edit-input.mjs
+  - ./edit-and-save.yaml
 
 cli:
   agents:
@@ -19,3 +21,8 @@ cli:
     - name: save
       alias: [s]
       url: ./generate-and-save.yaml
+
+    # 编辑已有图片并保存（image-to-image 模式）
+    - name: edit
+      alias: [e]
+      url: ./edit-and-save.yaml
