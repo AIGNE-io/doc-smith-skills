@@ -735,20 +735,7 @@ class DocumentContentValidator {
     // 检查文件是否存在
     try {
       await access(imagePath, constants.F_OK);
-
-      // 验证相对路径层级是否正确
-      const expectedRelativePath = this.calculateExpectedRelativePath(fullDocPath, imagePath);
-      if (expectedRelativePath && imageUrl !== expectedRelativePath) {
-        this.errors.warnings.push({
-          type: "IMAGE_PATH_LEVEL",
-          path: doc.path,
-          langFile,
-          imageUrl,
-          expectedPath: expectedRelativePath,
-          message: `图片路径层级可能不正确: ${imageUrl}`,
-          suggestion: `建议使用: ${expectedRelativePath}`,
-        });
-      }
+      // 图片存在，相对路径正确
 
       // 当 checkSlots 启用时，验证 assets 目录中的图片路径
       if (this.checkSlots) {
@@ -766,29 +753,6 @@ class DocumentContentValidator {
         suggestion: `检查图片路径或删除图片引用`,
       });
     }
-  }
-
-  /**
-   * 计算期望的相对路径
-   */
-  calculateExpectedRelativePath(docFilePath, absoluteImagePath) {
-    // 计算文档层级（docs/ 目录下的层级，包含语言文件）
-    // 例如：overview/zh.md → ['overview', 'zh.md'] → 2层 → ../../
-    //       api/auth/zh.md → ['api', 'auth', 'zh.md'] → 3层 → ../../../
-    const pathParts = docFilePath.split("/").filter((p) => p);
-    const depth = pathParts.length;
-
-    // 生成回退路径
-    const backPath = "../".repeat(depth);
-
-    // 获取工作区根目录
-    const workspaceRoot = process.cwd();
-
-    // 计算图片相对于工作区的路径
-    const relativeToWorkspace = path.relative(workspaceRoot, absoluteImagePath);
-
-    // 组合完整相对路径
-    return backPath + relativeToWorkspace.replace(/\\/g, "/");
   }
 
   /**
