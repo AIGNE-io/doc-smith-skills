@@ -7,6 +7,8 @@ description: |
   独立调用时会先检查 workspace 和文档结构是否存在。
 tools: Read, Write, Edit, Glob, Grep, Skill, Bash
 model: inherit
+skills:
+  - doc-smith-check
 ---
 
 # 文档内容生成代理

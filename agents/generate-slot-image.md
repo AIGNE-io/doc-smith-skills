@@ -7,6 +7,8 @@ description: |
   每个子代理独立处理一个 slot，避免占用主对话上下文。
 tools: Read, Write, Glob, Skill, Bash
 model: inherit
+skills:
+  - doc-smith-images
 ---
 
 # AFS Image Slot 图片生成代理
