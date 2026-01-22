@@ -73,10 +73,10 @@ description: Publish Doc-Smith generated documentation to online platforms. Use 
 
 **Meta 信息格式**（translation-cache.yaml）：
 ```yaml
-projectName:
+title:
   en: Project Name
   zh: 项目名称
-projectDesc:
+desc:
   en: Project description in English
   zh: 项目中文描述
 ```
