@@ -1,10 +1,10 @@
 ---
 name: generate-slot-image
 description: |
-  为单个 AFS image slot 生成图片和 meta 信息。使用场景：
-  - doc-smith 主流程调用，批量生成文档中的图片（可并行调用多个实例）
-  - 用户独立调用，为特定 slot 生成或更新图片
-  每个子代理独立处理一个 slot，避免占用主对话上下文。
+  Generate images and meta information for a single AFS image slot. Use cases:
+  - Called by doc-smith main workflow to batch generate images in documents (can run multiple instances in parallel)
+  - Called independently by user to generate or update images for a specific slot
+  Each sub-agent handles one slot independently to avoid occupying the main conversation context.
 tools: Read, Write, Glob, Skill, Bash
 model: inherit
 skills:

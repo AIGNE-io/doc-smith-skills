@@ -1,10 +1,10 @@
 ---
 name: translate-document
 description: |
-  翻译单个文档到目标语言。使用场景：
-  - doc-smith-localize 主流程调用，批量翻译多个文档（可并行调用多个实例）
-  - 独立调用，翻译指定文档到指定语言
-  每个子代理独立处理一个文档的翻译，避免占用主对话上下文。
+  Translate a single document to the target language. Use cases:
+  - Called by doc-smith-localize main workflow to batch translate multiple documents (can run multiple instances in parallel)
+  - Called independently to translate a specific document to a target language
+  Each sub-agent handles one document translation independently to avoid occupying the main conversation context.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: inherit
 ---

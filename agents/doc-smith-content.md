@@ -1,10 +1,10 @@
 ---
 name: doc-smith-content
 description: |
-  生成单个文档的详细内容。使用场景：
-  - doc-smith 主流程调用，批量生成各文档内容（可并行调用多个实例）
-  - 用户独立调用，重新生成某篇文档（如"使用 doc-smith-content 代理重新生成 /overview"）
-  独立调用时会先检查 workspace 和文档结构是否存在。
+  Generate detailed content for a single document. Use cases:
+  - Called by doc-smith main workflow to batch generate document contents (can run multiple instances in parallel)
+  - Called independently by user to regenerate a specific document (e.g., "use doc-smith-content agent to regenerate /overview")
+  When called independently, it first checks if workspace and document structure exist.
 tools: Read, Write, Edit, Glob, Grep, Skill, Bash
 model: inherit
 skills:
