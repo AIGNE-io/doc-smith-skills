@@ -14,7 +14,7 @@ Claude Code Skills for AI-powered documentation generation and management.
 ### Quick Install (Recommended)
 
 ```bash
-npx add-skill ArcBlock/doc-smith-skills
+npx add-skill AIGNE-io/doc-smith-skills
 ```
 
 ### Register as Plugin Marketplace
@@ -22,7 +22,7 @@ npx add-skill ArcBlock/doc-smith-skills
 Run the following command in Claude Code:
 
 ```bash
-/plugin marketplace add ArcBlock/doc-smith-skills
+/plugin marketplace add AIGNE-io/doc-smith-skills
 ```
 
 ### Install Skills
@@ -38,7 +38,7 @@ Run the following command in Claude Code:
 
 ```bash
 # Install specific plugin
-/plugin install doc-smith-skills@doc-smith-skills
+/plugin install doc-smith-skills@doc-smith
 ```
 
 **Option 3: Ask the Agent**
@@ -51,22 +51,25 @@ Simply tell Claude Code:
 
 | Skill | Description |
 |-------|-------------|
-| [doc-smith](#doc-smith) | Generate structured documentation from workspace data sources |
+| [doc-smith-create](#doc-smith-create) | Generate and update comprehensive documentation from workspace data sources |
+| [doc-smith-images](#doc-smith-images) | Generate images using AI (diagrams, flowcharts, architecture diagrams) |
+| [doc-smith-check](#doc-smith-check) | Validate documentation structure and content integrity |
 | [doc-smith-localize](#doc-smith-localize) | Translate documents to multiple languages |
 | [doc-smith-publish](#doc-smith-publish) | Publish documents to online platforms |
+| [doc-smith-clear](#doc-smith-clear) | Clear site authorization and deployment configuration |
 
 ---
 
-### doc-smith
+### doc-smith-create
 
 Generate comprehensive documentation from code repositories, text files, and media resources.
 
 ```bash
 # Generate English documentation for current project
-/doc-smith Generate English documentation for the current project
+/doc-smith-create Generate English documentation for the current project
 
 # Generate Chinese documentation
-/doc-smith 为当前项目生成中文文档
+/doc-smith-create 为当前项目生成中文文档
 ```
 
 **Features:**
@@ -84,13 +87,9 @@ Translate documents to multiple languages with batch processing and terminology 
 
 ```bash
 # Translate all docs to English
-/doc-smith-localize Translate all documents to English
+/doc-smith-localize --lang en
 
 # Translate to multiple languages
-/doc-smith-localize 翻译所有文档到英文和日文
-
-# CLI format
-/doc-smith-localize --lang en
 /doc-smith-localize --lang en --lang ja
 ```
 
@@ -107,13 +106,10 @@ Translate documents to multiple languages with batch processing and terminology 
 Publish generated documents to online platforms.
 
 ```bash
-# Publish to configured target
-/doc-smith-publish Publish documents to the website
+# Publish to last used target (reads appUrl from config.yaml)
+/doc-smith-publish
 
 # Publish to specific URL
-/doc-smith-publish 发布文档到 https://example.com/docs
-
-# CLI format
 /doc-smith-publish --url https://example.com/docs
 ```
 
@@ -124,29 +120,36 @@ Publish generated documents to online platforms.
 
 ## Workspace Structure
 
-DocSmith uses an independent workspace directory:
+DocSmith creates a workspace in `.aigne/doc-smith/` directory:
 
 ```
-my-docs-workspace/
-├── config.yaml                 # Workspace configuration
-├── sources/                    # Source repositories (git submodule)
-│   └── my-project/
-├── intent/
-│   └── user-intent.md          # User intent description
-├── planning/
-│   └── document-structure.yaml # Document structure plan
-├── docs/                       # Generated documentation
-│   ├── overview.md
-│   ├── getting-started.md
-│   └── api/
-│       └── authentication.md
-└── cache/                      # Temporary data (not in git)
-```
-
-## Uninstall
-
-```bash
-./scripts/uninstall.sh
+my-project/                            # Your project directory (cwd)
+├── .aigne/
+│   └── doc-smith/                     # DocSmith workspace
+│       ├── config.yaml                # Workspace configuration
+│       ├── intent/
+│       │   └── user-intent.md         # User intent description
+│       ├── planning/
+│       │   └── document-structure.yaml # Document structure plan
+│       ├── docs/                      # Generated documentation
+│       │   ├── overview/
+│       │   │   ├── .meta.yaml         # Metadata (kind/source/default)
+│       │   │   ├── zh.md              # Chinese version
+│       │   │   └── en.md              # English version
+│       │   └── api/
+│       │       └── authentication/
+│       │           ├── .meta.yaml
+│       │           ├── zh.md
+│       │           └── en.md
+│       ├── assets/                    # Generated images
+│       │   └── architecture/
+│       │       ├── .meta.yaml
+│       │       └── images/
+│       │           ├── zh.png         # Chinese version
+│       │           └── en.png         # English version
+│       └── cache/                     # Temporary data (not in git)
+├── src/                               # Project source code (data source)
+└── ...
 ```
 
 ## Author

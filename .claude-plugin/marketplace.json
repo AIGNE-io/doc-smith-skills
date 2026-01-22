@@ -21,8 +21,7 @@
         "./skills/doc-smith-publish",
         "./skills/doc-smith-localize",
         "./skills/doc-smith-clear"
-      ],
-      "agents": "./agents/"
+      ]
     }
   ]
 }
