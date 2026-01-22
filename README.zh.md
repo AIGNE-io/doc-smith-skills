@@ -52,7 +52,7 @@ npx add-skill ArcBlock/doc-smith-skills
 | Skill | 说明 |
 |-------|------|
 | [doc-smith](#doc-smith) | 从工作区数据源生成结构化文档 |
-| [doc-smith-translate](#doc-smith-translate) | 将文档翻译成多种语言 |
+| [doc-smith-localize](#doc-smith-localize) | 将文档翻译成多种语言 |
 | [doc-smith-publish](#doc-smith-publish) | 发布文档到在线平台 |
 
 ---
@@ -78,20 +78,20 @@ npx add-skill ArcBlock/doc-smith-skills
 
 ---
 
-### doc-smith-translate
+### doc-smith-localize
 
 将文档翻译成多种语言，支持批量翻译和术语一致性。
 
 ```bash
 # 翻译所有文档到英文
-/doc-smith-translate 翻译所有文档到英文
+/doc-smith-localize 翻译所有文档到英文
 
 # 翻译到多个语言
-/doc-smith-translate Translate all documents to English and Japanese
+/doc-smith-localize Translate all documents to English and Japanese
 
 # CLI 格式
-/doc-smith-translate --lang en
-/doc-smith-translate --lang en --lang ja
+/doc-smith-localize --lang en
+/doc-smith-localize --lang en --lang ja
 ```
 
 **功能特性：**

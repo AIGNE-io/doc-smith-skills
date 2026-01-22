@@ -52,7 +52,7 @@ Simply tell Claude Code:
 | Skill | Description |
 |-------|-------------|
 | [doc-smith](#doc-smith) | Generate structured documentation from workspace data sources |
-| [doc-smith-translate](#doc-smith-translate) | Translate documents to multiple languages |
+| [doc-smith-localize](#doc-smith-localize) | Translate documents to multiple languages |
 | [doc-smith-publish](#doc-smith-publish) | Publish documents to online platforms |
 
 ---
@@ -78,20 +78,20 @@ Generate comprehensive documentation from code repositories, text files, and med
 
 ---
 
-### doc-smith-translate
+### doc-smith-localize
 
 Translate documents to multiple languages with batch processing and terminology consistency.
 
 ```bash
 # Translate all docs to English
-/doc-smith-translate Translate all documents to English
+/doc-smith-localize Translate all documents to English
 
 # Translate to multiple languages
-/doc-smith-translate 翻译所有文档到英文和日文
+/doc-smith-localize 翻译所有文档到英文和日文
 
 # CLI format
-/doc-smith-translate --lang en
-/doc-smith-translate --lang en --lang ja
+/doc-smith-localize --lang en
+/doc-smith-localize --lang en --lang ja
 ```
 
 **Features:**

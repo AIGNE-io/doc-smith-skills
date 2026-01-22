@@ -6,19 +6,21 @@
   },
   "metadata": {
     "description": "DocSmith - AI-powered documentation generation, translation, and publishing skills",
-    "version": "1.0.0"
+    "version": "0.0.1"
   },
   "plugins": [
     {
-      "name": "doc-smith-skills",
+      "name": "doc-smith",
       "description": "Documentation generation, translation, and publishing skills",
       "source": "./",
       "strict": false,
       "skills": [
-        "./skills/doc-smith",
+        "./skills/doc-smith-create",
         "./skills/doc-smith-images",
         "./skills/doc-smith-check",
-        "./skills/doc-smith-publish"
+        "./skills/doc-smith-publish",
+        "./skills/doc-smith-localize",
+        "./skills/doc-smith-clear"
       ],
       "agents": "./agents/"
     }

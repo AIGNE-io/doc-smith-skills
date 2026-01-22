@@ -15,6 +15,6 @@ Invoke the doc-smith skill to execute documentation generation tasks.
 
 ## Execution
 
-Immediately invoke the `/doc-smith` skill to begin documentation generation.
+Immediately invoke the `/doc-smith-create` skill to begin documentation generation.
 
 If the user provides additional arguments: "$ARGUMENTS", pass them as task description to the skill.

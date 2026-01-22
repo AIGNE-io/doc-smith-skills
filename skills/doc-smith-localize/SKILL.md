@@ -1,5 +1,5 @@
 ---
-name: doc-smith-translate
+name: doc-smith-localize
 description: 将 Doc-Smith 生成的文档翻译成多种语言。当用户要求翻译文档、本地化、多语言支持时使用此技能。支持批量翻译文档和图片。
 ---
 
@@ -11,26 +11,26 @@ description: 将 Doc-Smith 生成的文档翻译成多种语言。当用户要�
 
 ```bash
 # 翻译所有文档到指定语言
-/doc-smith-translate --lang en
-/doc-smith-translate -l en
+/doc-smith-localize --lang en
+/doc-smith-localize -l en
 
 # 翻译到多个语言
-/doc-smith-translate --lang en --lang ja
-/doc-smith-translate -l en -l ja
+/doc-smith-localize --lang en --lang ja
+/doc-smith-localize -l en -l ja
 
 # 只翻译指定文档
-/doc-smith-translate --lang en --path /overview
-/doc-smith-translate -l en -p /overview
+/doc-smith-localize --lang en --path /overview
+/doc-smith-localize -l en -p /overview
 
 # 翻译多个指定文档
-/doc-smith-translate --lang en --path /overview --path /api/auth
+/doc-smith-localize --lang en --path /overview --path /api/auth
 
 # 强制重新翻译（覆盖已有翻译）
-/doc-smith-translate --lang en --force
-/doc-smith-translate -l en -f
+/doc-smith-localize --lang en --force
+/doc-smith-localize -l en -f
 
 # 跳过图片翻译
-/doc-smith-translate --lang en --skip-images
+/doc-smith-localize --lang en --skip-images
 ```
 
 ## Options
@@ -326,7 +326,7 @@ translateLanguages:
 ```
 错误: 所有目标语言都与源语言 (zh) 相同
 
-请指定不同的目标语言，例如: /doc-smith-translate -l en
+请指定不同的目标语言，例如: /doc-smith-localize -l en
 ```
 
 ### 文档路径无效
@@ -361,22 +361,22 @@ translateLanguages:
 
 **翻译所有文档到英文和日文**：
 ```bash
-/doc-smith-translate -l en -l ja
+/doc-smith-localize -l en -l ja
 ```
 
 **翻译指定文档到英文**：
 ```bash
-/doc-smith-translate -l en -p /overview -p /api/auth
+/doc-smith-localize -l en -p /overview -p /api/auth
 ```
 
 **强制重新翻译（覆盖已有）**：
 ```bash
-/doc-smith-translate -l en --force
+/doc-smith-localize -l en --force
 ```
 
 **只翻译文档，跳过图片**：
 ```bash
-/doc-smith-translate -l en --skip-images
+/doc-smith-localize -l en --skip-images
 ```
 
 ## 关键原则

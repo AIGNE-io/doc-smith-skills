@@ -4,7 +4,7 @@ description: Translate documents to multiple languages, supports batch translati
 
 # Document Translation Command
 
-Invoke the doc-smith-translate skill to execute document translation tasks.
+Invoke the doc-smith-localize skill to execute document translation tasks.
 
 ## Usage
 
@@ -18,6 +18,6 @@ Invoke the doc-smith-translate skill to execute document translation tasks.
 
 ## Execution
 
-Immediately invoke the `/doc-smith-translate` skill to begin document translation.
+Immediately invoke the `/doc-smith-localize` skill to begin document translation.
 
 If the user provides additional arguments: "$ARGUMENTS", pass them as task description to the skill.

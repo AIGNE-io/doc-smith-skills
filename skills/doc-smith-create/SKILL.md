@@ -1,5 +1,5 @@
 ---
-name: doc-smith
+name: doc-smith-create
 description: "从工作区数据源生成和更新全面的文档，包括代码仓库、文本文件和媒体资源。当用户请求以下操作时使用此技能：(1) 从代码或文件创建或生成文档，(2) 构建文档结构或文档详情，(3) 更新、修改或改进已有文档，(4) 重写文档的特定章节或段落，(5) 处理 changeset 文件或 PATCH 标记的修改请求。支持技术文档、用户指南、API 参考和一般文档需求的生成与维护。"
 ---
 
@@ -388,6 +388,6 @@ my-project/                        # 用户的项目目录（cwd）
 
 | 技能 | 用途 | 调用示例 |
 |------|------|----------|
-| `doc-smith-translate` | 翻译文档到其他语言 | `/doc-smith-translate --lang en` |
+| `doc-smith-localize` | 翻译文档到其他语言 | `/doc-smith-localize --lang en` |
 | `doc-smith-publish` | 发布文档到平台 | `/doc-smith-publish --url https://...` |
 | `doc-smith-clear` | 清除授权和配置 | `/doc-smith-clear` |

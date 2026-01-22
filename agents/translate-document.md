@@ -2,7 +2,7 @@
 name: translate-document
 description: |
   翻译单个文档到目标语言。使用场景：
-  - doc-smith-translate 主流程调用，批量翻译多个文档（可并行调用多个实例）
+  - doc-smith-localize 主流程调用，批量翻译多个文档（可并行调用多个实例）
   - 独立调用，翻译指定文档到指定语言
   每个子代理独立处理一个文档的翻译，避免占用主对话上下文。
 tools: Read, Write, Edit, Glob, Grep, Bash
