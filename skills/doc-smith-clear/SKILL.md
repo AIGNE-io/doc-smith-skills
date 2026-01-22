@@ -22,7 +22,7 @@ description: 清除 Doc-Smith 的站点授权和部署配置。当用户要求�
 - 如果系统不支持 keyring，回退到 `~/.aigne/doc-smith-connected.yaml`
 
 **部署配置 (deploymentConfig)**：
-- `appUrl` 字段存储在 workspace 的 `config.yaml` 中
+- `appUrl` 字段存储在 workspace 的 `.aigne/doc-smith/config.yaml` 中
 
 ## 可清除的内容
 
@@ -109,13 +109,13 @@ node skills/doc-smith-clear/scripts/clear-auth.mjs --all
 
 如果用户选择清除部署配置：
 
-**Step 1: 检查是否在 workspace 中**
+**Step 1: 检查配置文件是否存在**
 
 ```bash
-ls config.yaml
+ls .aigne/doc-smith/config.yaml
 ```
 
-如果不存在，提示用户："当前目录不是 Doc-Smith workspace，无法清除部署配置。"
+如果不存在，提示用户："当前目录没有 Doc-Smith 部署配置，无需清除。"
 
 **Step 2: 执行清除**
 
