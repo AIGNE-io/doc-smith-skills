@@ -6,7 +6,7 @@ import validateYamlStructure from "./validate-structure.mjs";
 import { getPaths } from "./utils.mjs";
 
 /**
- * 文档结构修复器类
+ * Document structure fixer class
  */
 class DocumentStructureFixer {
   constructor(data) {
@@ -15,7 +15,7 @@ class DocumentStructureFixer {
   }
 
   /**
-   * 应用所有修复
+   * Apply all fixes
    */
   applyFixes(errors) {
     for (const error of errors) {
@@ -25,7 +25,7 @@ class DocumentStructureFixer {
   }
 
   /**
-   * 应用单个修复
+   * Apply single fix
    */
   applyFix(error) {
     const pathParts = this.parsePath(error.path);
@@ -49,10 +49,10 @@ class DocumentStructureFixer {
   }
 
   /**
-   * 修复 path 格式
+   * Fix path format
    */
   fixPath(pathParts, error) {
-    // 移除最后的字段名 'path'
+    // Remove the last field name 'path'
     const docPathParts = pathParts.slice(0, -1);
     const doc = this.getDocument(docPathParts);
     if (!doc || !doc.path) return;
@@ -64,7 +64,7 @@ class DocumentStructureFixer {
       fixed = true;
     }
 
-    // 移除：不再自动添加 .md 后缀
+    // Removed: no longer auto-add .md suffix
     // if (error.fix === "add_md_extension" && !doc.path.endsWith(".md")) {
     //   doc.path = `${doc.path}.md`;
     //   fixed = true;
@@ -76,7 +76,7 @@ class DocumentStructureFixer {
   }
 
   /**
-   * 修复 sourcePath 前缀
+   * Fix sourcePath prefix
    */
   fixSourcePath(pathParts) {
     const docPathParts = pathParts.slice(0, -1);
@@ -96,10 +96,10 @@ class DocumentStructureFixer {
   }
 
   /**
-   * 修复 icon 格式
+   * Fix icon format
    */
   fixIconFormat(pathParts) {
-    // 移除最后的字段名 'icon'
+    // Remove the last field name 'icon'
     const docPathParts = pathParts.slice(0, -1);
     const doc = this.getDocument(docPathParts);
     if (!doc || !doc.icon) return;
@@ -111,10 +111,10 @@ class DocumentStructureFixer {
   }
 
   /**
-   * 移除 icon
+   * Remove icon
    */
   removeIcon(pathParts) {
-    // 移除最后的字段名 'icon'
+    // Remove the last field name 'icon'
     const docPathParts = pathParts.slice(0, -1);
     const doc = this.getDocument(docPathParts);
     if (!doc) return;
@@ -126,14 +126,14 @@ class DocumentStructureFixer {
   }
 
   /**
-   * 解析路径字符串
+   * Parse path string
    */
   parsePath(path) {
     return path.split(/\.(?![^[]*\])/);
   }
 
   /**
-   * 获取指定路径的文档对象
+   * Get document object at specified path
    */
   getDocument(pathParts) {
     let current = this.data;
@@ -157,7 +157,7 @@ class DocumentStructureFixer {
 }
 
 /**
- * 格式化剩余错误
+ * Format remaining errors
  */
 function formatRemainingErrors(errors) {
   const formatted = [];
@@ -166,7 +166,7 @@ function formatRemainingErrors(errors) {
     formatted.push({
       path: err.path,
       message: err.message,
-      action: err.suggestion || "请检查并修复此问题",
+      action: err.suggestion || "Please check and fix this issue",
     });
   });
 
@@ -174,7 +174,7 @@ function formatRemainingErrors(errors) {
     formatted.push({
       path: err.path,
       message: err.message,
-      action: `预期值: ${err.expected || "请参考 schema"}`,
+      action: `Expected value: ${err.expected || "Please refer to schema"}`,
     });
   });
 
@@ -182,14 +182,14 @@ function formatRemainingErrors(errors) {
 }
 
 /**
- * 主函数 - 智能结构检查器
- * @returns {Promise<Object>} - 检查和修复结果
+ * Main function - Smart structure checker
+ * @returns {Promise<Object>} - Check and fix result
  */
 export default async function checkStructure() {
   const PATHS = getPaths();
   const yamlPath = PATHS.DOCUMENT_STRUCTURE;
   try {
-    // 1. 检查文件是否存在
+    // 1. Check if file exists
     try {
       await access(yamlPath, constants.F_OK);
     } catch (_error) {
@@ -198,20 +198,20 @@ export default async function checkStructure() {
         valid: false,
         fileNotFound: true,
         message:
-          `❌ 文件不存在: ${yamlPath}\n\n` +
-          `可能的原因：\n` +
-          `1. 文件路径错误 - 请检查是否在正确的 workspace 目录中\n` +
-          `2. 文件名称错误 - 确认文件名为 ${yamlPath}\n` +
-          `3. 文档结构尚未生成 - 请先执行步骤 4.1 生成 ${yamlPath}\n`,
+          `❌ File not found: ${yamlPath}\n\n` +
+          `Possible reasons:\n` +
+          `1. File path error - Please check if you are in the correct workspace directory\n` +
+          `2. File name error - Confirm the file name is ${yamlPath}\n` +
+          `3. Document structure not generated - Please execute step 4.1 to generate ${yamlPath}\n`,
       };
     }
 
-    // 2. 调用校验
+    // 2. Call validation
     const validationResult = await validateYamlStructure({
       yamlPath,
     });
 
-    // 3. 如果校验通过，直接返回
+    // 3. If validation passes, return directly
     if (validationResult.valid) {
       return {
         success: true,
@@ -221,7 +221,7 @@ export default async function checkStructure() {
       };
     }
 
-    // 4. 如果有 FIXABLE 错误，先自动修复（无论是否有 FATAL 错误）
+    // 4. If there are FIXABLE errors, auto-fix first (regardless of FATAL errors)
     if (validationResult.errors?.fixable?.length > 0) {
       const content = await readFile(yamlPath, "utf8");
       const data = yamlParse(content);
@@ -229,7 +229,7 @@ export default async function checkStructure() {
       const fixer = new DocumentStructureFixer(data);
       const fixedCount = fixer.applyFixes(validationResult.errors.fixable);
 
-      // 重写 YAML 文件
+      // Rewrite YAML file
       const fixedYaml = yamlStringify(data, {
         lineWidth: 0,
         defaultKeyType: "PLAIN",
@@ -237,26 +237,26 @@ export default async function checkStructure() {
       });
       await writeFile(yamlPath, fixedYaml, "utf8");
 
-      // 重新校验
+      // Re-validate
       const revalidation = await validateYamlStructure({ yamlPath });
 
-      // 返回修复结果
+      // Return fix result
       if (revalidation.errors.fatal.length === 0 && revalidation.errors.fixable.length === 0) {
         return {
           success: false,
           valid: false,
           fixed: true,
           fixedCount,
-          message: `⚠️  文件已更新，请使用 Read 工具重新读取 ${yamlPath} 并重新检查。`,
+          message: `⚠️  File updated, please use Read tool to re-read ${yamlPath} and check again.`,
         };
       } else {
-        // 部分修复
+        // Partial fix
         const remainingErrors = formatRemainingErrors(revalidation.errors);
         const errorList = remainingErrors
           .map((err, idx) => {
             let msg = `${idx + 1}. ${err.message}`;
-            if (err.path) msg += `\n   位置：${err.path}`;
-            if (err.action) msg += `\n   操作：${err.action}`;
+            if (err.path) msg += `\n   Location: ${err.path}`;
+            if (err.action) msg += `\n   Action: ${err.action}`;
             return msg;
           })
           .join("\n\n");
@@ -267,21 +267,21 @@ export default async function checkStructure() {
           fixed: true,
           fixedCount,
           message:
-            `❌ 存在致命错误，无法自动修复。️文件已更新，请使用 Read 工具重新读取 ${yamlPath} 。\n\n` +
-            `检测到以下问题：\n\n` +
+            `❌ Fatal errors exist, cannot auto-fix. File updated, please use Read tool to re-read ${yamlPath}.\n\n` +
+            `The following issues were detected:\n\n` +
             errorList,
           remainingErrors,
         };
       }
     }
 
-    // 5. 如果只有 FATAL 错误（没有 FIXABLE 错误）
+    // 5. If only FATAL errors (no FIXABLE errors)
     if (validationResult.errors?.fatal?.length > 0) {
       const errorList = validationResult.errors.fatal
         .map((err, idx) => {
           let msg = `${idx + 1}. ${err.message}`;
-          if (err.path) msg += `\n   位置：${err.path}`;
-          if (err.suggestion) msg += `\n   操作：${err.suggestion}`;
+          if (err.path) msg += `\n   Location: ${err.path}`;
+          if (err.suggestion) msg += `\n   Action: ${err.suggestion}`;
           return msg;
         })
         .join("\n\n");
@@ -289,18 +289,18 @@ export default async function checkStructure() {
       return {
         success: false,
         valid: false,
-        message: `❌ 存在致命错误，无法自动修复。请先解决以下问题：\n\n${errorList}`,
+        message: `❌ Fatal errors exist, cannot auto-fix. Please resolve the following issues first:\n\n${errorList}`,
         errors: validationResult.errors.fatal,
       };
     }
 
-    // 默认返回（不应该到达这里）
+    // Default return (should not reach here)
     return validationResult;
   } catch (error) {
     return {
       success: false,
       valid: false,
-      message: `❌ 检查失败: ${error.message}`,
+      message: `❌ Check failed: ${error.message}`,
     };
   }
 }

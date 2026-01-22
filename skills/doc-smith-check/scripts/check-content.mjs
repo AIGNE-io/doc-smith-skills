@@ -6,10 +6,10 @@ import { cleanInvalidDocs, formatCleanResult } from "./clean-invalid-docs.mjs";
 import { getPaths, parseCliArgs } from "./utils.mjs";
 
 /**
- * 文档内容修复器类
+ * Document content fixer class
  *
- * 注意：当前版本主要用于未来扩展，暂未实现具体的自动修复功能
- * 文档内容的修复通常需要人工判断，因为涉及到链接目标、图片内容等语义问题
+ * Note: Current version is mainly for future extension, no auto-fix functionality implemented yet
+ * Document content fixes usually require human judgment, as they involve semantic issues like link targets, image content, etc.
  */
 class DocumentContentFixer {
   constructor() {
@@ -17,7 +17,7 @@ class DocumentContentFixer {
   }
 
   /**
-   * 应用所有修复
+   * Apply all fixes
    */
   async applyFixes(errors, docsDir) {
     for (const error of errors) {
@@ -27,24 +27,24 @@ class DocumentContentFixer {
   }
 
   /**
-   * 应用单个修复
+   * Apply single fix
    */
   async applyFix(_error, _docsDir) {
-    // 当前版本暂不实现自动修复
-    // 未来可以添加以下修复功能：
-    // - 链接格式修正（添加 .md 后缀等）
-    // - 图片路径层级修正
-    // - Markdown 格式优化
+    // Current version does not implement auto-fix
+    // Future features can include:
+    // - Link format correction (adding .md suffix, etc.)
+    // - Image path level correction
+    // - Markdown format optimization
     return;
   }
 }
 
 /**
- * 主函数 - 智能内容检查器
- * @param {Object} params - 检查参数
- * @param {string[]} params.docs - 要检查的文档路径数组，如 ["/overview", "/api/introduction"]，如果不提供则检查所有文档
- * @param {boolean} params.checkSlots - 是否检查 AFS image slot 已替换，默认 false
- * @returns {Promise<Object>} - 检查和修复结果
+ * Main function - Smart content checker
+ * @param {Object} params - Check parameters
+ * @param {string[]} params.docs - Array of document paths to check, e.g. ["/overview", "/api/introduction"], check all documents if not provided
+ * @param {boolean} params.checkSlots - Whether to check AFS image slots are replaced, default false
+ * @returns {Promise<Object>} - Check and fix result
  */
 export default async function checkContent({ docs = undefined, checkSlots = false } = {}) {
   const PATHS = getPaths();
@@ -53,7 +53,7 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
   const autoFix = true;
   const checkRemoteImages = true;
   try {
-    // 1. 检查文件是否存在
+    // 1. Check if file exists
     try {
       await access(yamlPath, constants.F_OK);
     } catch (_error) {
@@ -62,15 +62,15 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
         valid: false,
         fileNotFound: true,
         message:
-          `❌ 文件不存在: ${yamlPath}\n\n` +
-          `可能的原因：\n` +
-          `1. 文件路径错误 - 请检查是否在正确的 workspace 目录中\n` +
-          `2. 文件名称错误 - 确认文件名为 ${yamlPath}\n` +
-          `3. 文档结构尚未生成 - 请先执行步骤 4 生成 ${yamlPath}\n`,
+          `❌ File not found: ${yamlPath}\n\n` +
+          `Possible reasons:\n` +
+          `1. File path error - Please check if you are in the correct workspace directory\n` +
+          `2. File name error - Confirm the file name is ${yamlPath}\n` +
+          `3. Document structure not generated - Please execute step 4 to generate ${yamlPath}\n`,
       };
     }
 
-    // 检查文档目录是否存在
+    // Check if document directory exists
     try {
       await access(docsDir, constants.F_OK);
     } catch (_error) {
@@ -78,14 +78,14 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
         success: false,
         valid: false,
         message:
-          `❌ 文档目录不存在: ${docsDir}/\n\n` +
-          `可能的原因：\n` +
-          `1. 文档尚未生成 - 请先执行步骤 6.1 生成文档内容\n` +
-          `2. 目录路径错误 - 确认文档目录为 ${docsDir}/\n`,
+          `❌ Document directory not found: ${docsDir}/\n\n` +
+          `Possible reasons:\n` +
+          `1. Documents not generated - Please execute step 6.1 to generate document content\n` +
+          `2. Directory path error - Confirm document directory is ${docsDir}/\n`,
       };
     }
 
-    // 2. Layer 0: 清理无效文档
+    // 2. Layer 0: Clean invalid documents
     const cleanResult = await cleanInvalidDocs({ yamlPath, docsDir });
     const cleanMessage = formatCleanResult(cleanResult);
     const cleaned = {
@@ -93,7 +93,7 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
       files: cleanResult.deletedFiles.length,
     };
 
-    // 3. 调用校验
+    // 3. Call validation
     const validationResult = await validateDocumentContent({
       yamlPath,
       docsDir,
@@ -102,7 +102,7 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
       checkSlots,
     });
 
-    // 4. 如果校验通过，直接返回
+    // 4. If validation passes, return directly
     if (validationResult.valid) {
       return {
         success: true,
@@ -112,13 +112,13 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
       };
     }
 
-    // 5. 如果有 FIXABLE 错误且 autoFix=true，尝试自动修复
+    // 5. If there are FIXABLE errors and autoFix=true, try auto-fix
     if (autoFix && validationResult.errors?.fixable?.length > 0) {
       const fixer = new DocumentContentFixer();
       const fixedCount = await fixer.applyFixes(validationResult.errors.fixable, docsDir);
 
       if (fixedCount > 0) {
-        // 重新校验
+        // Re-validate
         const revalidation = await validateDocumentContent({
           yamlPath,
           docsDir,
@@ -127,7 +127,7 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
           checkSlots,
         });
 
-        // 返回修复结果
+        // Return fix result
         if (revalidation.valid) {
           return {
             success: true,
@@ -137,12 +137,12 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
             cleaned,
             message:
               cleanMessage +
-              `✅ 已成功修复 ${fixedCount} 个错误。\n\n` +
-              `⚠️  重要：文件已更新，请使用 Read 工具重新读取相关文档以获取最新内容。\n\n` +
+              `✅ Successfully fixed ${fixedCount} errors.\n\n` +
+              `⚠️  Important: Files have been updated, please use Read tool to re-read relevant documents to get latest content.\n\n` +
               revalidation.message,
           };
         } else {
-          // 部分修复
+          // Partial fix
           return {
             success: false,
             valid: false,
@@ -151,9 +151,9 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
             cleaned,
             message:
               cleanMessage +
-              `⚠️  已修复 ${fixedCount} 个错误，但仍存在以下问题需要手动处理：\n\n` +
-              `重要：文件已更新，请使用 Read 工具重新读取相关文档查看当前状态。\n\n` +
-              `需要修复的问题：\n\n` +
+              `⚠️  Fixed ${fixedCount} errors, but the following issues still need manual handling:\n\n` +
+              `Important: Files have been updated, please use Read tool to re-read relevant documents to see current state.\n\n` +
+              `Issues to fix:\n\n` +
               revalidation.message,
             remainingErrors: revalidation.errors,
           };
@@ -161,7 +161,7 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
       }
     }
 
-    // 6. 无法自动修复或未启用自动修复，返回错误信息
+    // 6. Cannot auto-fix or auto-fix not enabled, return error message
     return {
       success: false,
       valid: false,
@@ -173,7 +173,7 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
     return {
       success: false,
       valid: false,
-      message: `❌ 检查失败: ${error.message}`,
+      message: `❌ Check failed: ${error.message}`,
     };
   }
 }
@@ -190,7 +190,7 @@ checkContent.input_schema = {
         type: "string",
       },
       description:
-        "要检查的文档路径数组，如 ['/overview', '/api/introduction']，如果不提供则检查所有文档",
+        "Array of document paths to check, e.g. ['/overview', '/api/introduction'], check all documents if not provided",
     },
   },
 };

@@ -12,7 +12,7 @@ import {
 const ASSETS_DIR_NAME = "assets";
 
 /**
- * 文档内容校验器类
+ * Document content validator class
  */
 class DocumentContentValidator {
   constructor(yamlPath, docsDir, docs = undefined, options = {}) {
@@ -44,11 +44,11 @@ class DocumentContentValidator {
     this.documents = [];
     this.documentPaths = new Set();
     this.remoteImageCache = new Map();
-    this.workspaceConfig = null; // 缓存 workspace 配置
+    this.workspaceConfig = null; // Cache workspace config
   }
 
   /**
-   * 加载 workspace 配置（懒加载）
+   * Load workspace config (lazy loading)
    */
   async loadWorkspaceConfig() {
     if (this.workspaceConfig === null) {
@@ -58,7 +58,7 @@ class DocumentContentValidator {
   }
 
   /**
-   * 加载 translateLanguages 配置（懒加载）
+   * Load translateLanguages config (lazy loading)
    */
   async loadTranslateLanguages() {
     const config = await this.loadWorkspaceConfig();
@@ -66,15 +66,15 @@ class DocumentContentValidator {
   }
 
   /**
-   * 执行完整校验
+   * Execute full validation
    */
   async validate(checkRemoteImages = true) {
     try {
-      // Layer 1: 加载文档结构并验证文件存在性
+      // Layer 1: Load document structure and validate file existence
       await this.loadDocumentStructure();
       await this.validateDocumentFiles();
 
-      // Layer 2-4: 逐个检查文档内容
+      // Layer 2-4: Check document content one by one
       for (const doc of this.documents) {
         await this.validateDocument(doc, checkRemoteImages);
       }
@@ -83,14 +83,14 @@ class DocumentContentValidator {
     } catch (error) {
       this.errors.fatal.push({
         type: "VALIDATION_ERROR",
-        message: `校验过程出错: ${error.message}`,
+        message: `Validation error: ${error.message}`,
       });
       return this.getResult();
     }
   }
 
   /**
-   * Layer 1: 加载文档结构
+   * Layer 1: Load document structure
    */
   async loadDocumentStructure() {
     try {
@@ -98,17 +98,17 @@ class DocumentContentValidator {
       const data = yamlParse(content);
 
       if (!data.documents || !Array.isArray(data.documents)) {
-        throw new Error(`${this.yamlPath} 缺少 documents 字段或格式错误`);
+        throw new Error(`${this.yamlPath} missing documents field or format error`);
       }
 
-      // 使用共享工具收集文档路径和元数据
+      // Use shared tool to collect document paths and metadata
       const docsWithMeta = collectDocumentPaths(data.documents, { collectMetadata: true });
 
-      // 转换为内部格式
+      // Convert to internal format
       for (const doc of docsWithMeta) {
-        // 如果指定了 docs 过滤器，则只添加匹配的文档
+        // If docs filter is specified, only add matching documents
         if (this.docsFilter && !this.docsFilter.has(doc.displayPath)) {
-          // 仍需添加到 documentPaths 用于链接验证
+          // Still need to add to documentPaths for link validation
           this.documentPaths.add(doc.displayPath);
           continue;
         }
@@ -116,7 +116,7 @@ class DocumentContentValidator {
         this.documents.push({
           path: doc.displayPath,
           filePath: doc.path,
-          title: doc.title || "未知文档",
+          title: doc.title || "Unknown document",
         });
         this.documentPaths.add(doc.displayPath);
       }
@@ -124,20 +124,20 @@ class DocumentContentValidator {
       this.stats.totalDocs = this.documents.length;
     } catch (error) {
       if (error.code === "ENOENT") {
-        throw new Error(`文件不存在: ${this.yamlPath}`);
+        throw new Error(`File not found: ${this.yamlPath}`);
       }
       throw error;
     }
   }
 
   /**
-   * Layer 1: 验证文档文件存在性
+   * Layer 1: Validate document file existence
    */
   async validateDocumentFiles() {
     for (const doc of this.documents) {
       const docFolder = path.join(this.docsDir, doc.filePath);
 
-      // 检查 1: 文件夹存在且是目录
+      // Check 1: Folder exists and is a directory
       let folderExists = false;
       try {
         const stats = await stat(docFolder);
@@ -146,8 +146,8 @@ class DocumentContentValidator {
             type: "INVALID_DOCUMENT_FOLDER",
             path: doc.path,
             filePath: docFolder,
-            message: `路径不是文件夹: ${doc.path}`,
-            suggestion: "请确保 path 指向文件夹",
+            message: `Path is not a folder: ${doc.path}`,
+            suggestion: "Please ensure path points to a folder",
           });
           continue;
         }
@@ -157,24 +157,24 @@ class DocumentContentValidator {
           type: "MISSING_DOCUMENT_FOLDER",
           path: doc.path,
           filePath: docFolder,
-          message: `文档文件夹缺失: ${doc.path}`,
-          suggestion: `请生成此文档文件夹，按指定格式生成文档`,
+          message: `Document folder missing: ${doc.path}`,
+          suggestion: `Please generate this document folder in the specified format`,
         });
         continue;
       }
 
-      // 检查 2: .meta.yaml 存在且格式正确
+      // Check 2: .meta.yaml exists and has correct format
       if (folderExists) {
         await this.validateMetaFile(docFolder, doc);
 
-        // 检查 3: 至少有一个语言文件
+        // Check 3: At least one language file exists
         await this.validateLanguageFiles(docFolder, doc);
       }
     }
   }
 
   /**
-   * 校验 .meta.yaml
+   * Validate .meta.yaml
    */
   async validateMetaFile(docFolder, doc) {
     const metaPath = path.join(docFolder, ".meta.yaml");
@@ -186,18 +186,18 @@ class DocumentContentValidator {
         type: "MISSING_META_FILE",
         path: doc.path,
         filePath: metaPath,
-        message: `.meta.yaml 缺失: ${doc.path}`,
-        suggestion: "请在文档文件夹中创建 .meta.yaml",
+        message: `.meta.yaml missing: ${doc.path}`,
+        suggestion: "Please create .meta.yaml in the document folder",
       });
       return;
     }
 
-    // 读取并校验内容
+    // Read and validate content
     try {
       const content = await readFile(metaPath, "utf8");
       const meta = yamlParse(content);
 
-      // 必需字段校验
+      // Required field validation
       const requiredFields = ["kind", "source", "default"];
       for (const field of requiredFields) {
         if (!meta[field]) {
@@ -205,24 +205,24 @@ class DocumentContentValidator {
             type: "INVALID_META",
             path: doc.path,
             field,
-            message: `.meta.yaml 缺少必需字段 "${field}": ${doc.path}`,
-            suggestion: `添加 ${field} 字段到 .meta.yaml`,
+            message: `.meta.yaml missing required field "${field}": ${doc.path}`,
+            suggestion: `Add ${field} field to .meta.yaml`,
           });
         }
       }
 
-      // kind 值校验
+      // kind value validation
       if (meta.kind && meta.kind !== "doc") {
         this.errors.fatal.push({
           type: "INVALID_META",
           path: doc.path,
           field: "kind",
-          message: `.meta.yaml 的 kind 应为 "doc"，当前为 "${meta.kind}"`,
-          suggestion: "修改为 kind: doc",
+          message: `.meta.yaml kind should be "doc", currently "${meta.kind}"`,
+          suggestion: "Change to kind: doc",
         });
       }
 
-      // source 与项目 locale 一致性校验
+      // source and project locale consistency validation
       if (meta.source) {
         const config = await this.loadWorkspaceConfig();
         const projectLocale = config?.locale;
@@ -232,8 +232,8 @@ class DocumentContentValidator {
             path: doc.path,
             source: meta.source,
             locale: projectLocale,
-            message: `文档 source (${meta.source}) 与项目 locale (${projectLocale}) 不一致: ${doc.path}`,
-            suggestion: `修改文档的 source 为 "${projectLocale}"，或重新生成该文档的主语言版本`,
+            message: `Document source (${meta.source}) does not match project locale (${projectLocale}): ${doc.path}`,
+            suggestion: `Change document source to "${projectLocale}", or regenerate the main language version of this document`,
           });
         }
       }
@@ -241,14 +241,14 @@ class DocumentContentValidator {
       this.errors.fatal.push({
         type: "INVALID_META",
         path: doc.path,
-        message: `.meta.yaml 格式错误: ${error.message}`,
-        suggestion: "检查 YAML 语法是否正确",
+        message: `.meta.yaml format error: ${error.message}`,
+        suggestion: "Check if YAML syntax is correct",
       });
     }
   }
 
   /**
-   * 校验语言文件
+   * Validate language files
    */
   async validateLanguageFiles(docFolder, doc) {
     try {
@@ -261,13 +261,13 @@ class DocumentContentValidator {
         this.errors.fatal.push({
           type: "MISSING_LANGUAGE_FILE",
           path: doc.path,
-          message: `没有语言版本文件: ${doc.path}`,
-          suggestion: "请生成至少一个语言版本文件（如 zh.md, en.md）",
+          message: `No language version files: ${doc.path}`,
+          suggestion: "Please generate at least one language version file (e.g. zh.md, en.md)",
         });
         return;
       }
 
-      // 检查 default 和 source 语言文件是否存在
+      // Check if default and source language files exist
       const metaPath = path.join(docFolder, ".meta.yaml");
       try {
         const metaContent = await readFile(metaPath, "utf8");
@@ -280,8 +280,8 @@ class DocumentContentValidator {
               type: "MISSING_DEFAULT_LANGUAGE",
               path: doc.path,
               defaultLang: meta.default,
-              message: `默认语言文件缺失: ${defaultFile}`,
-              suggestion: `生成 ${defaultFile} 或修改 .meta.yaml 中的 default 字段`,
+              message: `Default language file missing: ${defaultFile}`,
+              suggestion: `Generate ${defaultFile} or modify the default field in .meta.yaml`,
             });
           }
         }
@@ -293,17 +293,17 @@ class DocumentContentValidator {
               type: "MISSING_SOURCE_LANGUAGE",
               path: doc.path,
               sourceLang: meta.source,
-              message: `源语言文件缺失: ${sourceFile}`,
-              suggestion: `生成 ${sourceFile} 或修改 .meta.yaml 中的 source 字段`,
+              message: `Source language file missing: ${sourceFile}`,
+              suggestion: `Generate ${sourceFile} or modify the source field in .meta.yaml`,
             });
           }
         }
 
-        // 检查 translateLanguages 中配置的目标语言文件是否存在
+        // Check if target language files configured in translateLanguages exist
         const translateLanguages = await this.loadTranslateLanguages();
         if (translateLanguages.length > 0) {
           for (const lang of translateLanguages) {
-            // 跳过源语言（源语言不需要作为翻译目标）
+            // Skip source language (source language doesn't need to be a translation target)
             if (lang === meta.source) continue;
 
             const langFile = `${lang}.md`;
@@ -312,72 +312,72 @@ class DocumentContentValidator {
                 type: ERROR_CODES.MISSING_TRANSLATE_LANGUAGE,
                 path: doc.path,
                 lang,
-                message: `翻译语言文件缺失: ${langFile}`,
-                suggestion: `请翻译文档到 ${lang} 语言，或从 config.yaml 的 translateLanguages 中移除 ${lang}`,
+                message: `Translation language file missing: ${langFile}`,
+                suggestion: `Please translate document to ${lang} language, or remove ${lang} from translateLanguages in config.yaml`,
               });
             }
           }
         }
       } catch (_error) {
-        // .meta.yaml 错误已在 validateMetaFile 中报告
+        // .meta.yaml errors already reported in validateMetaFile
       }
     } catch (error) {
       this.errors.fatal.push({
         type: "READ_FOLDER_ERROR",
         path: doc.path,
-        message: `无法读取文档文件夹: ${error.message}`,
+        message: `Cannot read document folder: ${error.message}`,
       });
     }
   }
 
   /**
-   * Layer 2-4: 验证单个文档内容
+   * Layer 2-4: Validate single document content
    */
   async validateDocument(doc, checkRemoteImages) {
     const docFolder = path.join(this.docsDir, doc.filePath);
 
     try {
-      // 读取 .meta.yaml 获取语言列表
+      // Read .meta.yaml to get language list
       const metaPath = path.join(docFolder, ".meta.yaml");
       const metaContent = await readFile(metaPath, "utf8");
       const _meta = yamlParse(metaContent);
 
-      // 获取所有语言文件
+      // Get all language files
       const files = await readdir(docFolder);
       const langFiles = files.filter((f) => f.endsWith(".md") && !f.startsWith("."));
 
-      // 检查每个语言版本
+      // Check each language version
       for (const langFile of langFiles) {
         const fullPath = path.join(docFolder, langFile);
         const content = await readFile(fullPath, "utf8");
 
         this.stats.checkedDocs++;
 
-        // Layer 2: 内容解析和检查
+        // Layer 2: Content parsing and checking
         this.checkEmptyDocument(content, doc, langFile);
         this.checkHeadingHierarchy(content, doc, langFile);
 
-        // Layer 3: 链接和图片验证
+        // Layer 3: Link and image validation
         await this.validateLinks(content, doc, langFile);
         await this.validateImages(content, doc, langFile, checkRemoteImages);
 
-        // Layer 5: AFS image slot 校验（当 checkSlots 启用时）
+        // Layer 5: AFS image slot validation (when checkSlots is enabled)
         if (this.checkSlots) {
           await this.validateImageSlots(content, doc, langFile);
         }
       }
     } catch (_error) {
-      // 错误已在 Layer 1 报告
+      // Errors already reported in Layer 1
     }
   }
 
   /**
-   * Layer 4: 空文档检测
+   * Layer 4: Empty document detection
    */
   checkEmptyDocument(content, doc, langFile) {
-    // 移除所有标题
+    // Remove all headings
     let cleaned = content.replace(/^#{1,6}\s+.+$/gm, "");
-    // 移除空白字符
+    // Remove whitespace characters
     cleaned = cleaned.replace(/\s+/g, "");
 
     if (cleaned.length < 50) {
@@ -385,17 +385,17 @@ class DocumentContentValidator {
         type: "EMPTY_DOCUMENT",
         path: doc.path,
         langFile,
-        message: `空文档: ${doc.path} (${langFile})`,
-        suggestion: `文档内容不足（少于50字符），请补充实质内容或从结构中移除`,
+        message: `Empty document: ${doc.path} (${langFile})`,
+        suggestion: `Document content insufficient (less than 50 characters), please add substantial content or remove from structure`,
       });
     }
   }
 
   /**
-   * Layer 4: 标题层级检查
+   * Layer 4: Heading hierarchy check
    */
   checkHeadingHierarchy(content, doc, langFile) {
-    // 先移除代码块中的内容，避免误判
+    // First remove content in code blocks to avoid false positives
     const contentWithoutCodeBlocks = this.removeCodeBlocks(content);
 
     const headingRegex = /^(#{1,6})\s+(.+)$/gm;
@@ -413,41 +413,41 @@ class DocumentContentValidator {
       const prev = headings[i - 1];
       const curr = headings[i];
 
-      // 检查是否跳级
+      // Check for level skipping
       if (curr.level > prev.level + 1) {
         this.errors.fatal.push({
           type: "HEADING_SKIP",
           path: doc.path,
           langFile,
           line: curr.line,
-          message: `标题从 H${prev.level} 跳到 H${curr.level}`,
-          suggestion: `考虑将 "${"#".repeat(curr.level)} ${curr.text}" 改为 "${"#".repeat(prev.level + 1)} ${curr.text}"`,
+          message: `Heading skipped from H${prev.level} to H${curr.level}`,
+          suggestion: `Consider changing "${"#".repeat(curr.level)} ${curr.text}" to "${"#".repeat(prev.level + 1)} ${curr.text}"`,
         });
       }
     }
   }
 
   /**
-   * 移除 Markdown 代码块中的内容
+   * Remove content in Markdown code blocks
    */
   removeCodeBlocks(content) {
-    // 移除围栏代码块（```...```）
+    // Remove fenced code blocks (```...```)
     let result = content.replace(/^```[\s\S]*?^```$/gm, "");
 
-    // 移除缩进代码块（4个空格或1个tab开头的行）
+    // Remove indented code blocks (lines starting with 4 spaces or 1 tab)
     result = result.replace(/^( {4}|\t).+$/gm, "");
 
     return result;
   }
 
   /**
-   * 获取代码块的位置范围
-   * @returns {Array<{start: number, end: number}>} 代码块的起止位置数组
+   * Get code block position ranges
+   * @returns {Array<{start: number, end: number}>} Array of code block start/end positions
    */
   getCodeBlockRanges(content) {
     const ranges = [];
 
-    // 匹配围栏代码块（```...```）
+    // Match fenced code blocks (```...```)
     const fencedCodeRegex = /^```[\s\S]*?^```$/gm;
 
     for (const match of content.matchAll(fencedCodeRegex)) {
@@ -457,7 +457,7 @@ class DocumentContentValidator {
       });
     }
 
-    // 匹配行内代码块（`...`）
+    // Match inline code blocks (`...`)
     const inlineCodeRegex = /`[^`\n]+`/g;
     for (const match of content.matchAll(inlineCodeRegex)) {
       ranges.push({
@@ -466,7 +466,7 @@ class DocumentContentValidator {
       });
     }
 
-    // 匹配缩进代码块（4个空格或1个tab开头的行）
+    // Match indented code blocks (lines starting with 4 spaces or 1 tab)
     const indentedCodeRegex = /^( {4}|\t).+$/gm;
     for (const match of content.matchAll(indentedCodeRegex)) {
       ranges.push({
@@ -479,26 +479,26 @@ class DocumentContentValidator {
   }
 
   /**
-   * 检查位置是否在代码块中
-   * @param {number} position - 要检查的位置
-   * @param {Array<{start: number, end: number}>} ranges - 代码块范围数组
-   * @returns {boolean} 是否在代码块中
+   * Check if position is inside a code block
+   * @param {number} position - Position to check
+   * @param {Array<{start: number, end: number}>} ranges - Code block range array
+   * @returns {boolean} Whether inside a code block
    */
   isInCodeBlock(position, ranges) {
     return ranges.some((range) => position >= range.start && position < range.end);
   }
 
   /**
-   * Layer 3: 验证内部链接
+   * Layer 3: Validate internal links
    */
   async validateLinks(content, doc, langFile) {
-    // 获取代码块位置范围
+    // Get code block position ranges
     const codeBlockRanges = this.getCodeBlockRanges(content);
 
     const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
 
     for (const match of content.matchAll(linkRegex)) {
-      // 检查链接是否在代码块中，如果是则跳过
+      // Check if link is inside code block, skip if so
       if (this.isInCodeBlock(match.index, codeBlockRanges)) {
         continue;
       }
@@ -508,7 +508,7 @@ class DocumentContentValidator {
 
       this.stats.totalLinks++;
 
-      // 忽略外部链接和锚点链接
+      // Ignore external links and anchor links
       if (
         linkUrl.startsWith("http://") ||
         linkUrl.startsWith("https://") ||
@@ -517,18 +517,18 @@ class DocumentContentValidator {
         continue;
       }
 
-      // 忽略资源文件链接
+      // Ignore resource file links
       if (this.isResourceFile(linkUrl)) {
         continue;
       }
 
-      // 所有其他链接都视为内部文档链接
+      // All other links are treated as internal document links
       await this.validateInternalLink(linkUrl, doc, linkText, langFile);
     }
   }
 
   /**
-   * 检查链接是否指向资源文件（非文档）
+   * Check if link points to a resource file (non-document)
    */
   isResourceFile(url) {
     // 移除查询参数和锚点
@@ -583,21 +583,21 @@ class DocumentContentValidator {
   }
 
   /**
-   * 验证内部链接
+   * Validate internal link
    */
   async validateInternalLink(linkUrl, doc, linkText, langFile) {
     let targetPath;
 
-    // 移除锚点部分用于格式检查
+    // Remove anchor part for format checking
     const urlWithoutAnchor = linkUrl.split("#")[0];
 
-    // 检查链接格式是否正确：内部链接不应包含 .md 后缀
-    const langSuffixPattern = /\/[a-z]{2}(-[A-Z]{2})?\.md$/; // 匹配 /en.md, /zh.md, /en-US.md
+    // Check if link format is correct: internal links should not contain .md suffix
+    const langSuffixPattern = /\/[a-z]{2}(-[A-Z]{2})?\.md$/; // Match /en.md, /zh.md, /en-US.md
     const mdSuffixPattern = /\.md$/;
 
     if (mdSuffixPattern.test(urlWithoutAnchor)) {
-      // 链接包含 .md 后缀，这是格式错误
-      // 如果是语言后缀模式，去掉整个 /xx.md 部分；否则只去掉 .md
+      // Link contains .md suffix, this is a format error
+      // If it's a language suffix pattern, remove the entire /xx.md part; otherwise just remove .md
       const isLangSuffix = langSuffixPattern.test(urlWithoutAnchor);
       const suggestedLink = isLangSuffix
         ? urlWithoutAnchor.replace(langSuffixPattern, "")
@@ -610,28 +610,28 @@ class DocumentContentValidator {
         langFile,
         link: linkUrl,
         linkText,
-        message: `内部链接格式错误: [${linkText}](${linkUrl})`,
-        suggestion: `链接不应包含 .md 后缀，建议改为: ${suggestedLink}`,
+        message: `Internal link format error: [${linkText}](${linkUrl})`,
+        suggestion: `Link should not contain .md suffix, suggest changing to: ${suggestedLink}`,
       });
       return;
     }
 
-    // 链接格式正确，继续验证目标是否存在
+    // Link format is correct, continue to validate if target exists
     const cleanLinkUrl = urlWithoutAnchor;
 
-    // 如果链接只是锚点（如 #section），cleanLinkUrl 会是空字符串，跳过检查
+    // If link is only anchor (like #section), cleanLinkUrl will be empty string, skip check
     if (!cleanLinkUrl) {
       return;
     }
 
     if (cleanLinkUrl.startsWith("/")) {
-      // 绝对路径
+      // Absolute path
       targetPath = cleanLinkUrl;
     } else {
-      // 相对路径：基于文档的"所在目录"
-      // 文档 /getting-started/claude-code 的所在目录是 /getting-started
-      // 例如：文档 /getting-started/claude-code，链接 ../getting-started -> /getting-started
-      // 例如：文档 /getting-started，链接 ./claude-code -> /getting-started/claude-code
+      // Relative path: based on document's "parent directory"
+      // Document /getting-started/claude-code's parent directory is /getting-started
+      // Example: document /getting-started/claude-code, link ../getting-started -> /getting-started
+      // Example: document /getting-started, link ./claude-code -> /getting-started/claude-code
       const docDir = path.dirname(doc.path); // /getting-started/claude-code -> /getting-started
       const upLevels = (cleanLinkUrl.match(/\.\.\//g) || []).length;
       const currentDepth = docDir === "/" ? 0 : docDir.split("/").filter((p) => p).length;
@@ -644,13 +644,13 @@ class DocumentContentValidator {
           langFile,
           link: linkUrl,
           linkText,
-          message: `内部链接路径超出根目录: [${linkText}](${linkUrl})`,
-          suggestion: `链接向上 ${upLevels} 级，但当前文档所在目录只在第 ${currentDepth} 层`,
+          message: `Internal link path exceeds root directory: [${linkText}](${linkUrl})`,
+          suggestion: `Link goes up ${upLevels} levels, but current document's directory is only at level ${currentDepth}`,
         });
         return;
       }
 
-      // 将文档所在目录和相对链接合并
+      // Merge document's parent directory with relative link
       targetPath = path.posix.normalize(path.posix.join(docDir, cleanLinkUrl));
       if (!targetPath.startsWith("/")) {
         targetPath = `/${targetPath}`;
@@ -666,23 +666,23 @@ class DocumentContentValidator {
         link: linkUrl,
         linkText,
         targetPath,
-        message: `内部链接死链: [${linkText}](${linkUrl})`,
-        suggestion: `目标文档 ${targetPath} 不存在`,
+        message: `Internal broken link: [${linkText}](${linkUrl})`,
+        suggestion: `Target document ${targetPath} does not exist`,
       });
     }
   }
 
   /**
-   * Layer 3: 验证图片
+   * Layer 3: Validate images
    */
   async validateImages(content, doc, langFile, checkRemoteImages) {
-    // 获取代码块位置范围
+    // Get code block position ranges
     const codeBlockRanges = this.getCodeBlockRanges(content);
 
     const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
 
     for (const match of content.matchAll(imageRegex)) {
-      // 检查图片是否在代码块中，如果是则跳过
+      // Check if image is inside code block, skip if so
       if (this.isInCodeBlock(match.index, codeBlockRanges)) {
         continue;
       }
@@ -692,15 +692,15 @@ class DocumentContentValidator {
 
       this.stats.totalImages++;
 
-      // 分类：本地 vs 远程
+      // Categorize: local vs remote
       if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-        // 远程图片
+        // Remote image
         this.stats.remoteImages++;
         if (checkRemoteImages) {
           await this.validateRemoteImage(imageUrl, doc, altText, langFile);
         }
       } else {
-        // 本地图片
+        // Local image
         this.stats.localImages++;
         await this.validateLocalImage(imageUrl, doc, altText, langFile);
       }
@@ -708,11 +708,11 @@ class DocumentContentValidator {
   }
 
   /**
-   * 验证本地图片
-   * 只允许相对路径，不允许绝对路径（如 /sources/...）
+   * Validate local image
+   * Only relative paths allowed, absolute paths (like /sources/...) not allowed
    */
   async validateLocalImage(imageUrl, doc, altText, langFile) {
-    // 检查是否为绝对路径（以 / 开头）- 不允许使用
+    // Check if absolute path (starts with /) - not allowed
     if (imageUrl.startsWith("/")) {
       this.stats.missingImages++;
       this.errors.fatal.push({
@@ -721,23 +721,23 @@ class DocumentContentValidator {
         langFile,
         imageUrl,
         altText,
-        message: `图片不允许使用绝对路径: ${imageUrl}`,
-        suggestion: `请使用相对路径访问图片，根据文档位置计算正确的相对路径`,
+        message: `Image absolute path not allowed: ${imageUrl}`,
+        suggestion: `Please use relative path to access image, calculate correct relative path based on document location`,
       });
       return;
     }
 
-    // 相对路径处理：基于文档位置解析
+    // Relative path handling: resolve based on document location
     const fullDocPath = path.join(doc.filePath, langFile);
     const docDir = path.dirname(path.join(this.docsDir, fullDocPath));
     const imagePath = path.resolve(docDir, imageUrl);
 
-    // 检查文件是否存在
+    // Check if file exists
     try {
       await access(imagePath, constants.F_OK);
-      // 图片存在，相对路径正确
+      // Image exists, relative path is correct
 
-      // 当 checkSlots 启用时，验证 assets 目录中的图片路径
+      // When checkSlots is enabled, validate image paths in assets directory
       if (this.checkSlots) {
         await this.validateAssetImagePath(imageUrl, doc, langFile);
       }
@@ -749,17 +749,17 @@ class DocumentContentValidator {
         langFile,
         imageUrl,
         altText,
-        message: `本地图片不存在: ${imageUrl}`,
-        suggestion: `检查图片路径或删除图片引用`,
+        message: `Local image not found: ${imageUrl}`,
+        suggestion: `Check image path or remove image reference`,
       });
     }
   }
 
   /**
-   * 验证远程图片
+   * Validate remote image
    */
   async validateRemoteImage(imageUrl, doc, altText, langFile) {
-    // 检查缓存
+    // Check cache
     if (this.remoteImageCache.has(imageUrl)) {
       const cached = this.remoteImageCache.get(imageUrl);
       if (!cached.accessible) {
@@ -772,14 +772,14 @@ class DocumentContentValidator {
           altText,
           statusCode: cached.statusCode,
           error: cached.error,
-          message: `远程图片无法访问: ${imageUrl}`,
-          suggestion: `检查 URL 是否正确，或替换为可访问的图片`,
+          message: `Remote image inaccessible: ${imageUrl}`,
+          suggestion: `Check if URL is correct, or replace with accessible image`,
         });
       }
       return;
     }
 
-    // 检查远程图片可访问性
+    // Check remote image accessibility
     const result = await this.checkRemoteImage(imageUrl);
     this.remoteImageCache.set(imageUrl, result);
 
@@ -793,14 +793,14 @@ class DocumentContentValidator {
         altText,
         statusCode: result.statusCode,
         error: result.error,
-        message: `远程图片无法访问: ${imageUrl}`,
-        suggestion: `检查 URL 是否正确，或替换为可访问的图片`,
+        message: `Remote image inaccessible: ${imageUrl}`,
+        suggestion: `Check if URL is correct, or replace with accessible image`,
       });
     }
   }
 
   /**
-   * 检查远程图片（HTTP HEAD 请求）
+   * Check remote image (HTTP HEAD request)
    */
   async checkRemoteImage(url, timeout = 3000) {
     const controller = new AbortController();
@@ -834,18 +834,18 @@ class DocumentContentValidator {
   }
 
   /**
-   * 验证 AFS image slots（当 checkSlots 启用时）
-   * 检查文档中是否存在未替换的占位符
+   * Validate AFS image slots (when checkSlots is enabled)
+   * Check if document contains unreplaced placeholders
    */
   async validateImageSlots(content, doc, langFile) {
-    // 获取代码块位置范围
+    // Get code block position ranges
     const codeBlockRanges = this.getCodeBlockRanges(content);
 
-    // 匹配所有 slot: <!-- afs:image id="xxx" ... -->
+    // Match all slots: <!-- afs:image id="xxx" ... -->
     const slotRegex = /<!--\s*afs:image\s+id="([^"]+)"(?:\s+key="([^"]+)")?(?:\s+desc="([^"]+)")?\s*-->/g;
 
     for (const match of content.matchAll(slotRegex)) {
-      // 跳过代码块中的 slot
+      // Skip slots inside code blocks
       if (this.isInCodeBlock(match.index, codeBlockRanges)) {
         continue;
       }
@@ -858,26 +858,26 @@ class DocumentContentValidator {
         path: doc.path,
         langFile,
         slotId,
-        message: `AFS image slot 未替换: ${slotId}`,
-        suggestion: `请使用 generate-slot-image 生成图片`,
+        message: `AFS image slot not replaced: ${slotId}`,
+        suggestion: `Please use generate-slot-image to generate image`,
       });
     }
   }
 
   /**
-   * 验证图片路径层级是否正确（针对 assets 目录中的图片）
-   * @param {string} imageUrl - 图片 URL
-   * @param {Object} doc - 文档对象
-   * @param {string} langFile - 语言文件名
+   * Validate image path level is correct (for images in assets directory)
+   * @param {string} imageUrl - Image URL
+   * @param {Object} doc - Document object
+   * @param {string} langFile - Language file name
    */
   async validateAssetImagePath(imageUrl, doc, langFile) {
-    // 只检查指向 assets 目录的图片
+    // Only check images pointing to assets directory
     if (!imageUrl.includes(`/${ASSETS_DIR_NAME}/`)) {
       return;
     }
 
-    // 从 imageUrl 中提取 key 和文件名
-    // 格式: ../../assets/{key}/images/{locale}.png 或 ../../../assets/{key}/images/{locale}.png
+    // Extract key and filename from imageUrl
+    // Format: ../../assets/{key}/images/{locale}.png or ../../../assets/{key}/images/{locale}.png
     const assetsMatch = imageUrl.match(/(?:\.\.\/)+assets\/([^/]+)\/images\/([^/]+)$/);
     if (!assetsMatch) {
       return;
@@ -886,22 +886,22 @@ class DocumentContentValidator {
     const key = assetsMatch[1];
     const imageName = assetsMatch[2];
 
-    // 计算文档深度
-    // 文档路径格式: /overview 或 /api/auth
-    // 实际文件路径: docs/overview/zh.md 或 docs/api/auth/zh.md
-    // 从语言文件访问 assets 需要考虑语言文件本身的层级
+    // Calculate document depth
+    // Document path format: /overview or /api/auth
+    // Actual file path: docs/overview/zh.md or docs/api/auth/zh.md
+    // Accessing assets from language file needs to consider the language file's own level
     const docPathParts = doc.path.split("/").filter((p) => p);
     const docPathDepth = docPathParts.length;
-    // +1 是因为语言文件（如 zh.md）本身占一层
+    // +1 because language file (like zh.md) itself occupies one level
     const totalDepth = docPathDepth + 1;
 
-    // 计算期望的相对路径层级
-    // 深度 1（如 /overview）文件 docs/overview/zh.md: ../../assets/...
-    // 深度 2（如 /api/auth）文件 docs/api/auth/zh.md: ../../../assets/...
+    // Calculate expected relative path level
+    // Depth 1 (like /overview) file docs/overview/zh.md: ../../assets/...
+    // Depth 2 (like /api/auth) file docs/api/auth/zh.md: ../../../assets/...
     const expectedPrefix = "../".repeat(totalDepth);
     const expectedPath = `${expectedPrefix}${ASSETS_DIR_NAME}/${key}/images/${imageName}`;
 
-    // 检查实际路径是否与期望路径一致
+    // Check if actual path matches expected path
     if (imageUrl !== expectedPath) {
       this.stats.invalidSlotPaths++;
       this.errors.fatal.push({
@@ -910,13 +910,13 @@ class DocumentContentValidator {
         langFile,
         imageUrl,
         expectedPath,
-        message: `图片路径层级错误: ${imageUrl}`,
-        suggestion: `期望路径: ${expectedPath}`,
+        message: `Image path level error: ${imageUrl}`,
+        suggestion: `Expected path: ${expectedPath}`,
       });
       return;
     }
 
-    // 检查图片文件是否存在
+    // Check if image file exists
     const assetsDir = path.join(this.PATHS.WORKSPACE_BASE, ASSETS_DIR_NAME);
     const imagePath = path.join(assetsDir, key, "images", imageName);
 
@@ -930,14 +930,14 @@ class DocumentContentValidator {
         langFile,
         imageUrl,
         imagePath,
-        message: `图片文件缺失: ${imageUrl}`,
-        suggestion: `生成图片或移除引用`,
+        message: `Image file missing: ${imageUrl}`,
+        suggestion: `Generate image or remove reference`,
       });
     }
   }
 
   /**
-   * 获取校验结果
+   * Get validation result
    */
   getResult() {
     const hasErrors = this.errors.fatal.length > 0 || this.errors.fixable.length > 0;
@@ -951,35 +951,35 @@ class DocumentContentValidator {
 }
 
 /**
- * 格式化输出
- * @param {Object} result - 校验结果
- * @param {Object} options - 格式化选项
- * @param {boolean} options.checkSlots - 是否检查了 AFS image slots
+ * Format output
+ * @param {Object} result - Validation result
+ * @param {Object} options - Format options
+ * @param {boolean} options.checkSlots - Whether AFS image slots were checked
  */
 function formatOutput(result, options = {}) {
   const { checkSlots = false } = options;
   let output = "";
 
   if (result.valid) {
-    output += "✅ PASS: 文档内容检查通过\n\n";
-    output += "统计信息:\n";
-    output += `  总文档数: ${result.stats.totalDocs}\n`;
-    output += `  已检查: ${result.stats.checkedDocs}\n`;
-    output += `  内部链接: ${result.stats.totalLinks}\n`;
-    output += `  本地图片: ${result.stats.localImages}\n`;
-    output += `  远程图片: ${result.stats.remoteImages}\n`;
+    output += "✅ PASS: Document content check passed\n\n";
+    output += "Statistics:\n";
+    output += `  Total documents: ${result.stats.totalDocs}\n`;
+    output += `  Checked: ${result.stats.checkedDocs}\n`;
+    output += `  Internal links: ${result.stats.totalLinks}\n`;
+    output += `  Local images: ${result.stats.localImages}\n`;
+    output += `  Remote images: ${result.stats.remoteImages}\n`;
 
     if (checkSlots) {
-      output += `  AFS Image Slot 检查: 已启用\n`;
+      output += `  AFS Image Slot check: Enabled\n`;
     }
 
     if (result.errors.warnings.length > 0) {
-      output += `\n警告: ${result.errors.warnings.length}\n\n`;
+      output += `\nWarnings: ${result.errors.warnings.length}\n\n`;
       result.errors.warnings.forEach((warn, idx) => {
         output += `${idx + 1}. ${warn.message}\n`;
-        if (warn.path) output += `   文档: ${warn.path}\n`;
-        if (warn.langFile) output += `   语言文件: ${warn.langFile}\n`;
-        if (warn.suggestion) output += `   建议: ${warn.suggestion}\n`;
+        if (warn.path) output += `   Document: ${warn.path}\n`;
+        if (warn.langFile) output += `   Language file: ${warn.langFile}\n`;
+        if (warn.suggestion) output += `   Suggestion: ${warn.suggestion}\n`;
         output += "\n";
       });
     }
@@ -987,51 +987,51 @@ function formatOutput(result, options = {}) {
     return output;
   }
 
-  output += "❌ FAIL: 文档内容存在错误\n\n";
-  output += "统计信息:\n";
-  output += `  总文档数: ${result.stats.totalDocs}\n`;
-  output += `  已检查: ${result.stats.checkedDocs}\n`;
-  output += `  致命错误: ${result.errors.fatal.length}\n`;
-  output += `  可修复错误: ${result.errors.fixable.length}\n`;
-  output += `  警告: ${result.errors.warnings.length}\n`;
+  output += "❌ FAIL: Document content has errors\n\n";
+  output += "Statistics:\n";
+  output += `  Total documents: ${result.stats.totalDocs}\n`;
+  output += `  Checked: ${result.stats.checkedDocs}\n`;
+  output += `  Fatal errors: ${result.errors.fatal.length}\n`;
+  output += `  Fixable errors: ${result.errors.fixable.length}\n`;
+  output += `  Warnings: ${result.errors.warnings.length}\n`;
 
   if (checkSlots) {
-    output += `  未替换的 slot: ${result.stats.unreplacedSlots}\n`;
-    output += `  路径层级错误: ${result.stats.invalidSlotPaths}\n`;
-    output += `  缺失的图片: ${result.stats.missingSlotImages}\n`;
+    output += `  Unreplaced slots: ${result.stats.unreplacedSlots}\n`;
+    output += `  Path level errors: ${result.stats.invalidSlotPaths}\n`;
+    output += `  Missing images: ${result.stats.missingSlotImages}\n`;
   }
 
   output += "\n";
 
-  // FATAL 错误
+  // FATAL errors
   if (result.errors.fatal.length > 0) {
-    output += "致命错误（必须修复）:\n\n";
+    output += "Fatal errors (must fix):\n\n";
     result.errors.fatal.forEach((err, idx) => {
       output += `${idx + 1}. ${err.message}\n`;
-      if (err.path) output += `   文档: ${err.path}\n`;
-      if (err.langFile) output += `   语言文件: ${err.langFile}\n`;
+      if (err.path) output += `   Document: ${err.path}\n`;
+      if (err.langFile) output += `   Language file: ${err.langFile}\n`;
       if (err.slotId) output += `   Slot ID: ${err.slotId}\n`;
-      if (err.link) output += `   链接: ${err.link}\n`;
-      if (err.imageUrl) output += `   图片: ${err.imageUrl}\n`;
-      if (err.expectedPath) output += `   期望路径: ${err.expectedPath}\n`;
-      if (err.suggestion) output += `   操作: ${err.suggestion}\n`;
+      if (err.link) output += `   Link: ${err.link}\n`;
+      if (err.imageUrl) output += `   Image: ${err.imageUrl}\n`;
+      if (err.expectedPath) output += `   Expected path: ${err.expectedPath}\n`;
+      if (err.suggestion) output += `   Action: ${err.suggestion}\n`;
       output += "\n";
     });
   }
 
-  // FIXABLE 错误
+  // FIXABLE errors
   if (result.errors.fixable.length > 0) {
-    output += "可修复错误（已自动修复）:\n";
-    output += "（已应用修复，文件已更新）\n\n";
+    output += "Fixable errors (auto-fixed):\n";
+    output += "(Fixes applied, files updated)\n\n";
   }
 
-  // WARNING
+  // WARNINGS
   if (result.errors.warnings.length > 0) {
-    output += "警告（不阻断）:\n\n";
+    output += "Warnings (non-blocking):\n\n";
     result.errors.warnings.forEach((warn, idx) => {
       output += `${idx + 1}. ${warn.message}\n`;
-      if (warn.path) output += `   文档: ${warn.path}\n`;
-      if (warn.suggestion) output += `   建议: ${warn.suggestion}\n`;
+      if (warn.path) output += `   Document: ${warn.path}\n`;
+      if (warn.suggestion) output += `   Suggestion: ${warn.suggestion}\n`;
       output += "\n";
     });
   }
@@ -1040,14 +1040,14 @@ function formatOutput(result, options = {}) {
 }
 
 /**
- * 主函数 - Function Agent
+ * Main function - Function Agent
  * @param {Object} params
- * @param {string} params.yamlPath - 文档结构 YAML 文件路径
- * @param {string} params.docsDir - 文档目录路径
- * @param {string[]} params.docs - 要检查的文档路径数组，如 ['/overview', '/api/introduction']，如果不提供则检查所有文档
- * @param {boolean} params.checkRemoteImages - 是否检查远程图片
- * @param {boolean} params.checkSlots - 是否检查 AFS image slot 已替换
- * @returns {Promise<Object>} - 校验结果
+ * @param {string} params.yamlPath - Document structure YAML file path
+ * @param {string} params.docsDir - Document directory path
+ * @param {string[]} params.docs - Array of document paths to check, e.g. ['/overview', '/api/introduction'], check all documents if not provided
+ * @param {boolean} params.checkRemoteImages - Whether to check remote images
+ * @param {boolean} params.checkSlots - Whether to check AFS image slots are replaced
+ * @returns {Promise<Object>} - Validation result
  */
 export default async function validateDocumentContent({
   yamlPath,
@@ -1079,5 +1079,5 @@ export default async function validateDocumentContent({
   }
 }
 
-// 注意：此函数仅供内部使用，不直接暴露为 skill
-// 外部通过 content-checker.mjs 的 checkContent 函数调用
+// Note: This function is for internal use only, not directly exposed as skill
+// External calls through checkContent function in content-checker.mjs

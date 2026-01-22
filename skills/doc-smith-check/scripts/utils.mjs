@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 /**
- * 获取基础路径（基于执行目录下的 .aigne/doc-smith 目录）
+ * Get base paths (based on .aigne/doc-smith directory under execution directory)
  */
 export function getPaths() {
   const workspaceBase = resolve(process.cwd(), ".aigne/doc-smith");
@@ -18,7 +18,7 @@ export function getPaths() {
 }
 
 /**
- * 错误代码常量
+ * Error code constants
  */
 export const ERROR_CODES = {
   FILE_NOT_FOUND: "FILE_NOT_FOUND",
@@ -36,9 +36,9 @@ export const ERROR_CODES = {
 };
 
 /**
- * 解析命令行参数
- * @param {string[]} args - 命令行参数数组
- * @returns {Object} - 解析后的参数对象
+ * Parse command line arguments
+ * @param {string[]} args - Command line argument array
+ * @returns {Object} - Parsed argument object
  */
 export function parseCliArgs(args = process.argv.slice(2)) {
   const { values } = parseArgs({
@@ -65,10 +65,10 @@ export function parseCliArgs(args = process.argv.slice(2)) {
 }
 
 /**
- * 递归收集文档路径
- * @param {Array} docs - 文档数组
- * @param {Object} options - 收集选项
- * @returns {Set|Array} - 路径集合或路径对象数组
+ * Recursively collect document paths
+ * @param {Array} docs - Document array
+ * @param {Object} options - Collection options
+ * @returns {Set|Array} - Path set or path object array
  */
 export function collectDocumentPaths(docs, options = {}) {
   const { includeBothFormats = false, collectMetadata = false } = options;
@@ -106,9 +106,9 @@ export function collectDocumentPaths(docs, options = {}) {
 }
 
 /**
- * 加载文档结构中的所有路径
- * @param {Object} options - 加载选项
- * @returns {Promise<Set|Array>} - 所有有效路径的集合
+ * Load all paths from document structure
+ * @param {Object} options - Load options
+ * @returns {Promise<Set|Array>} - Set of all valid paths
  */
 export async function loadDocumentPaths(options = {}) {
   const PATHS = getPaths();
@@ -138,8 +138,8 @@ export async function loadDocumentPaths(options = {}) {
 }
 
 /**
- * 加载配置文件
- * @returns {Promise<Object|null>} - 配置对象或 null
+ * Load configuration file
+ * @returns {Promise<Object|null>} - Config object or null
  */
 export async function loadConfigFromFile() {
   const PATHS = getPaths();
@@ -153,8 +153,8 @@ export async function loadConfigFromFile() {
 }
 
 /**
- * 判断是否为 /sources/... 绝对路径
- * @param {string} imagePath - 图片路径
+ * Check if path is /sources/... absolute path
+ * @param {string} imagePath - Image path
  * @returns {boolean}
  */
 export function isSourcesAbsolutePath(imagePath) {
@@ -162,9 +162,9 @@ export function isSourcesAbsolutePath(imagePath) {
 }
 
 /**
- * 解析 /sources/... 绝对路径
- * @param {string} absolutePath - 绝对路径
- * @returns {string | null} - 相对路径
+ * Parse /sources/... absolute path
+ * @param {string} absolutePath - Absolute path
+ * @returns {string | null} - Relative path
  */
 export function parseSourcesPath(absolutePath) {
   const match = absolutePath.match(/^\/sources\/(.+)$/);
@@ -172,7 +172,7 @@ export function parseSourcesPath(absolutePath) {
 
   const relativePath = match[1];
 
-  // 安全检查：拒绝路径遍历
+  // Security check: reject path traversal
   if (relativePath.includes("..")) {
     return null;
   }
@@ -181,10 +181,10 @@ export function parseSourcesPath(absolutePath) {
 }
 
 /**
- * 解析 sources 路径到物理路径
- * @param {string} absolutePath - 虚拟绝对路径
- * @param {Array} sourcesConfig - sources 配置
- * @param {string} workspaceBase - workspace 根目录
+ * Resolve sources path to physical path
+ * @param {string} absolutePath - Virtual absolute path
+ * @param {Array} sourcesConfig - Sources configuration
+ * @param {string} workspaceBase - Workspace root directory
  * @returns {Promise<{physicalPath: string, sourceName: string} | null>}
  */
 export async function resolveSourcesPath(absolutePath, sourcesConfig, workspaceBase) {
