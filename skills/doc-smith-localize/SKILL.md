@@ -60,55 +60,55 @@ description: Translate Doc-Smith generated documentation into multiple languages
 在 `.aigne/doc-smith/cache` 目录创建 `translate_task_plan.md` 文件，如果文件已存在，可以覆盖之前的文件，内容模板：
 
 ```markdown
-# 文档翻译任务计划
+# Document Translation Task Plan
 
-## 目标
-[一句话描述本次任务，例如：将所有文档翻译成英文和日文]
+## Goal
+[One sentence describing this task, e.g., Translate all documents into English and Japanese]
 
-## 配置
-- 源语言: zh
-- 目标语言: en, ja
-- 文档范围: 全部 / 指定路径
-- 强制重新翻译: 否
-- 跳过图片: 否
+## Configuration
+- Source language: zh
+- Target languages: en, ja
+- Document scope: All / Specified paths
+- Force re-translation: No
+- Skip images: No
 
-## 执行阶段
+## Execution Phases
 
-- [ ] 阶段 1: 检测 Workspace
-- [ ] 阶段 2: 读取配置和验证参数
-- [ ] 阶段 3: 加载术语表
-- [ ] 阶段 4: 批量翻译文档
-  - [ ] 文档 1: /overview → en
-  - [ ] 文档 1: /overview → ja
-  - [ ] 文档 2: /api/auth → en
-  - [ ] ...（根据实际文档列表展开）
-- [ ] 阶段 5: 翻译图片（如未跳过）
-  - [ ] 图片 1: arch → en
-  - [ ] 图片 2: flow → en
-  - [ ] ...（根据实际图片列表展开）
-- [ ] 阶段 6: 更新文档中的图片引用
-- [ ] 阶段 7: 更新 config.yaml
-- [ ] 阶段 8: 生成翻译报告
-- [ ] 阶段 9: 提交变更到 Git
+- [ ] Phase 1: Detect Workspace
+- [ ] Phase 2: Read configuration and validate parameters
+- [ ] Phase 3: Load glossary
+- [ ] Phase 4: Batch translate documents
+  - [ ] Document 1: /overview → en
+  - [ ] Document 1: /overview → ja
+  - [ ] Document 2: /api/auth → en
+  - [ ] ... (expand based on actual document list)
+- [ ] Phase 5: Translate images (if not skipped)
+  - [ ] Image 1: arch → en
+  - [ ] Image 2: flow → en
+  - [ ] ... (expand based on actual image list)
+- [ ] Phase 6: Update image references in documents
+- [ ] Phase 7: Update config.yaml
+- [ ] Phase 8: Generate translation report
+- [ ] Phase 9: Commit changes to Git
 
-## 执行统计
-- 文档总数: 0
-- 文档已翻译: 0
-- 文档跳过: 0
-- 文档失败: 0
-- 图片总数: 0
-- 图片已翻译: 0
-- 图片跳过: 0
-- 图片失败: 0
+## Execution Statistics
+- Total documents: 0
+- Documents translated: 0
+- Documents skipped: 0
+- Documents failed: 0
+- Total images: 0
+- Images translated: 0
+- Images skipped: 0
+- Images failed: 0
 
-## 关键决策
-[记录在执行过程中做出的重要决策及其理由]
+## Key Decisions
+[Record important decisions made during execution and their rationale]
 
-## 遇到的错误
-[记录遇到的错误及解决方案，格式：错误描述 -> 解决方案]
+## Errors Encountered
+[Record errors encountered and solutions, format: Error description -> Solution]
 
-## 当前状态
-**正在执行阶段 1** - 检测 Workspace
+## Current Status
+**Executing Phase 1** - Detecting Workspace
 ```
 
 **规划文件使用规则**：

@@ -51,47 +51,47 @@ DocSmith 分析数据源内容（代码、文件、媒体）并生成：
 在 `.aigne/doc-smith/cache`目录创建 `.aigne/doc-smithtask_plan.md` 文件，如果文件已存在，可以覆盖之前的文件，内容模板：
 
 ```markdown
-# DocSmith 任务计划
+# DocSmith Task Plan
 
-## 目标
-[一句话描述本次任务的最终目标，例如：为 XXX 项目生成完整的中文技术文档]
+## Goal
+[One sentence describing the final goal of this task, e.g., Generate complete Chinese technical documentation for XXX project]
 
-## 执行阶段(识别是新生成还是更新文档，参考不同的模板)
+## Execution Phases (Identify whether generating new or updating docs, refer to the appropriate template)
 
-生成新文档参考模板:
-- [ ] 阶段 0: Workspace 检查，阅读参考文件，确保 config.yaml 和 sources 数据完整
-- [ ] 阶段 1: 分析数据源
-- [ ] 阶段 2: 推断用户意图，并向用户确认
-- [ ] 阶段 3: 规划文档结构
-- [ ] 阶段 4: 生成 document-structure.yaml
-- [ ] 阶段 5: 确认文档结构
-- [ ] 阶段 6: 生成文档内容
-- [ ] 阶段 7: 检查是否存在 `AFS Image Slot`，如果存在调用 `generate-slot-image` SubAgent 生成图片
-- [ ] 阶段 7.5: 校验图片 slot 已替换
-- [ ] 阶段 9: 结束前确认任务都已完成
-- [ ] 阶段 10: (用户提出的其他要求，根据要求扩展这个列表)
+New Document Generation Template:
+- [ ] Phase 0: Workspace check, read reference files, ensure config.yaml and sources data are complete
+- [ ] Phase 1: Analyze data sources
+- [ ] Phase 2: Infer user intent and confirm with user
+- [ ] Phase 3: Plan document structure
+- [ ] Phase 4: Generate document-structure.yaml
+- [ ] Phase 5: Confirm document structure
+- [ ] Phase 6: Generate document content
+- [ ] Phase 7: Check for `AFS Image Slot`, if exists call `generate-slot-image` SubAgent to generate images
+- [ ] Phase 7.5: Verify image slots have been replaced
+- [ ] Phase 9: Confirm all tasks are completed before finishing
+- [ ] Phase 10: (Additional user requirements, extend this list as needed)
 
 
-更新文档参考模板:
-- [ ] 阶段 0: Workspace 检查，阅读参考文件，确保 config.yaml 和 sources 数据完整
-- [ ] 阶段 1: 分析更新需求（识别 changeset 文件、PATCH 标记或自然语言请求）
-- [ ] 阶段 2: 检查是否需要修改文档结构，如需要则更新 document-structure.yaml 并校验
-- [ ] 阶段 3: 应用文档内容更新
-- [ ] 阶段 4: 处理文档中的 PATCH 标记
-- [ ] 阶段 5: 只要文档有新增或更新，就需要检查是否新增了 `AFS Image Slot`，如果新增了则调用 `generate-slot-image` 生成图片
-- [ ] 阶段 5.5: 校验图片 slot 已替换
-- [ ] 阶段 6: 执行文档结构和内容校验
-- [ ] 阶段 7: 确认所有更新任务完成
-- [ ] 阶段 8: (用户提出的其他要求，根据要求扩展这个列表)
+Document Update Template:
+- [ ] Phase 0: Workspace check, read reference files, ensure config.yaml and sources data are complete
+- [ ] Phase 1: Analyze update requirements (identify changeset files, PATCH markers, or natural language requests)
+- [ ] Phase 2: Check if document structure needs modification, if so update document-structure.yaml and validate
+- [ ] Phase 3: Apply document content updates
+- [ ] Phase 4: Process PATCH markers in documents
+- [ ] Phase 5: Whenever documents are added or updated, check for new `AFS Image Slot`, if exists call `generate-slot-image` to generate images
+- [ ] Phase 5.5: Verify image slots have been replaced
+- [ ] Phase 6: Execute document structure and content validation
+- [ ] Phase 7: Confirm all update tasks are completed
+- [ ] Phase 8: (Additional user requirements, extend this list as needed)
 
-## 关键决策
-[记录在执行过程中做出的重要决策及其理由]
+## Key Decisions
+[Record important decisions made during execution and their rationale]
 
-## 遇到的错误
-[记录遇到的错误及解决方案，格式：错误描述 -> 解决方案]
+## Errors Encountered
+[Record errors encountered and solutions, format: Error description -> Solution]
 
-## 当前状态
-**正在执行阶段 0** - 准备初始化 workspace
+## Current Status
+**Executing Phase 0** - Preparing to initialize workspace
 ```
 
 **规划文件使用规则**：
