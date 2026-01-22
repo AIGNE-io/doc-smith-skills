@@ -4,7 +4,7 @@ description: Publish documents to online platforms, supports publishing to exist
 
 # Document Publishing Command
 
-Invoke the doc-smith-publish skill to execute document publishing tasks.
+Invoke the `doc-smith:doc-smith-publish` skill to execute document publishing tasks.
 
 ## Usage
 
@@ -17,6 +17,6 @@ Invoke the doc-smith-publish skill to execute document publishing tasks.
 
 ## Execution
 
-Immediately invoke the `/doc-smith-publish` skill to begin document publishing.
+Immediately invoke the `doc-smith:doc-smith-publish` skill to begin document publishing.
 
 If the user provides additional arguments: "$ARGUMENTS", pass them as task description to the skill.
