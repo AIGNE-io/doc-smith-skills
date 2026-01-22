@@ -38,7 +38,7 @@ npx add-skill AIGNE-io/doc-smith-skills
 
 ```bash
 # 安装指定插件
-/plugin install doc-smith-skills@doc-smith
+/plugin install doc-smith@doc-smith-skills
 ```
 
 **方式三：让 Agent 帮你安装**

@@ -38,7 +38,7 @@ Run the following command in Claude Code:
 
 ```bash
 # Install specific plugin
-/plugin install doc-smith-skills@doc-smith
+/plugin install doc-smith@doc-smith-skills
 ```
 
 **Option 3: Ask the Agent**
