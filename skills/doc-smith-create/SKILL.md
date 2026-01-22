@@ -1,6 +1,6 @@
 ---
 name: doc-smith-create
-description: "从工作区数据源生成和更新全面的文档，包括代码仓库、文本文件和媒体资源。当用户请求以下操作时使用此技能：(1) 从代码或文件创建或生成文档，(2) 构建文档结构或文档详情，(3) 更新、修改或改进已有文档，(4) 重写文档的特定章节或段落，(5) 处理 changeset 文件或 PATCH 标记的修改请求。支持技术文档、用户指南、API 参考和一般文档需求的生成与维护。"
+description: "Generate and update comprehensive documentation from workspace data sources, including code repositories, text files, and media assets. Use this skill when the user requests to: (1) create or generate documentation from code or files, (2) build document structure or details, (3) update, modify, or improve existing documentation, (4) rewrite specific sections or paragraphs, (5) process changeset files or PATCH-marked modification requests. Supports technical documentation, user guides, API references, and general documentation needs."
 ---
 
 # DocSmith

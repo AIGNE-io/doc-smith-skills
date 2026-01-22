@@ -1,7 +1,6 @@
 ---
 name: doc-smith-check
-description: 检查 Doc-Smith 文档的结构和内容完整性。当需要校验文档结构 YAML、检查文档内容、验证链接和图片路径时使用此技能。也可被其他 doc-smith 技能调用进行校验。
-context: fork
+description: Validate the structure and content integrity of Doc-Smith documentation. Use this skill to verify document structure YAML, check document content, and validate links and image paths. Can also be invoked by other doc-smith skills for validation.
 ---
 
 # Doc-Smith 文档检查

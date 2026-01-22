@@ -1,6 +1,6 @@
 ---
 name: doc-smith-images
-description: 使用 AI 生成图片。当需要生成技术图表、架构图、流程图，或更新已有图片时使用此技能。这是一个通用的图片生成能力，可用于任何场景。
+description: Generate images using AI. Use this skill to create technical diagrams, architecture diagrams, flowcharts, or update existing images. This is a general-purpose image generation capability for any scenario.
 ---
 
 # Doc-Smith 图片生成

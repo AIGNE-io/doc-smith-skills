@@ -1,6 +1,6 @@
 ---
 name: doc-smith-clear
-description: 清除 Doc-Smith 的站点授权和部署配置。当用户要求清除授权、重置配置、清除部署信息时使用此技能。
+description: Clear Doc-Smith site authorization and deployment configuration. Use this skill when the user requests to clear authorization, reset configuration, or remove deployment settings.
 ---
 
 # Doc-Smith 清除配置

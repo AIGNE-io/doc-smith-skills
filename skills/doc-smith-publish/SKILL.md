@@ -1,6 +1,6 @@
 ---
 name: doc-smith-publish
-description: 将 Doc-Smith 生成的文档发布到在线平台。当用户要求发布文档、上线、部署文档时使用此技能。
+description: Publish Doc-Smith generated documentation to online platforms. Use this skill when the user requests to publish, deploy, or release documentation.
 ---
 
 # Doc-Smith 文档发布

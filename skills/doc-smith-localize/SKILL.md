@@ -1,6 +1,6 @@
 ---
 name: doc-smith-localize
-description: 将 Doc-Smith 生成的文档翻译成多种语言。当用户要求翻译文档、本地化、多语言支持时使用此技能。支持批量翻译文档和图片。
+description: Translate Doc-Smith generated documentation into multiple languages. Use this skill when the user requests document translation, localization, or multi-language support. Supports batch translation of documents and images.
 ---
 
 # Doc-Smith 文档翻译
