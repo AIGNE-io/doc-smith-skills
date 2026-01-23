@@ -1,0 +1,54 @@
+type: team
+name: editAndSave
+description: |
+  编辑已有 Logo 并保存到指定路径。
+  支持配色调整、风格修改、重新设计等场景。
+
+mode: sequential
+
+skills:
+  - ./prepare-edit-input.mjs
+  - ./generate-image.yaml
+  - ./save-image.mjs
+
+input_schema:
+  type: object
+  properties:
+    desc:
+      type: string
+      description: 编辑要求/修改说明
+    sourcePath:
+      type: string
+      description: 源 Logo 路径（要编辑的 Logo）
+    savePath:
+      type: string
+      description: 输出文件路径
+    style:
+      type: string
+      description: 目标风格模板
+      enum: ["minimal", "tech", "friendly", "pro", "creative", "gaming", ""]
+      default: ""
+    colorPreference:
+      type: string
+      description: 颜色偏好
+      default: ""
+    aspectRatio:
+      type: string
+      description: 宽高比
+      enum: ["1:1", "5:4", "4:3", "3:2", "16:9"]
+      default: "1:1"
+    size:
+      type: string
+      description: 图片尺寸
+      default: "2K"
+  required:
+    - desc
+    - sourcePath
+    - savePath
+
+output_schema:
+  type: object
+  properties:
+    message:
+      type: string
+      description: 执行结果的自然语言描述
