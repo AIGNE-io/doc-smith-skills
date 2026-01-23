@@ -1,0 +1,77 @@
+type: image
+name: generateLogo
+description: |
+  生成 Logo 图片。专注于品牌标识设计，支持多种风格模板。
+
+image_model:
+  model: google/gemini-3-pro-image-preview
+  imageConfig:
+    imageSize:
+      $get: size
+    aspectRatio:
+      $get: aspectRatio
+
+instructions:
+  - role: system
+    url: ./prompts/system.md
+  - role: user
+    url: ./prompts/user.md
+
+# Support image-to-image generation
+input_file_key: existingImage
+
+input_schema:
+  type: object
+  properties:
+    desc:
+      type: string
+      description: Logo 描述/生成提示词
+    name:
+      type: string
+      description: Logo 名称（如需要显示在设计中）
+      default: ""
+    style:
+      type: string
+      description: 风格模板
+      enum: ["minimal", "tech", "friendly", "pro", "creative", "gaming", ""]
+      default: ""
+    colorPreference:
+      type: string
+      description: 颜色偏好
+      default: ""
+    size:
+      type: string
+      description: 图片尺寸
+      default: "2K"
+    aspectRatio:
+      type: string
+      description: 宽高比
+      enum: ["1:1", "5:4", "4:3", "3:2", "16:9"]
+      default: "1:1"
+    existingImage:
+      type: array
+      nullable: true
+      description: 已有 logo（用于 logo 更新场景）
+      items:
+        type: object
+        properties:
+          type:
+            type: string
+          path:
+            type: string
+          filename:
+            type: string
+          mimeType:
+            type: string
+    useImageToImage:
+      type: boolean
+      description: 是否使用 image-to-image 模式
+      default: false
+    feedback:
+      type: string
+      description: 用户反馈（用于 logo 编辑）
+      default: ""
+  required:
+    - desc
+
+include_input_in_output: true

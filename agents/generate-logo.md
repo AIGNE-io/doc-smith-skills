@@ -19,6 +19,9 @@ model: inherit
 调用时需要提供：
 - **prompt**（必需）：logo 描述/生成提示词
 - **savePath**（必需）：图片保存路径
+- **name**（可选）：品牌名称（如需要显示在 logo 中）
+- **style**（可选）：风格模板（minimal/tech/friendly/pro/creative/gaming）
+- **colorPreference**（可选）：颜色偏好
 - **aspectRatio**（可选）：宽高比，默认 `1:1`
 - **updatePath**（可选）：编辑模式下的源图片路径
 
@@ -74,26 +77,34 @@ Logo design requirements:
 获取当前 skill 所在目录路径，然后执行：
 
 ```bash
-aigne run <skill-directory>/scripts/aigne-generate save \
+aigne run <skill-directory>/scripts/aigne-generate-logo save \
   --desc="$PROMPT" \
+  --name="$NAME" \
+  --style="$STYLE" \
+  --colorPreference="$COLOR_PREFERENCE" \
   --aspectRatio="$ASPECT_RATIO" \
   --savePath="$SAVE_PATH"
 ```
 
-其中 `<skill-directory>` 是 `skills/doc-smith-images` 目录的绝对路径。
+其中 `<skill-directory>` 是 `skills/logo-smith` 目录的绝对路径。
 
 **AIGNE CLI 参数**：
 - `--desc` logo 描述/生成提示词
+- `--name` 品牌名称（可选，如需显示在 logo 中）
+- `--style` 风格模板（可选）
+- `--colorPreference` 颜色偏好（可选）
 - `--aspectRatio` 宽高比（默认 1:1）
 - `--savePath` 图片保存路径
 
 **模式 B：编辑现有 logo**
 
 ```bash
-aigne run <skill-directory>/scripts/aigne-generate edit \
+aigne run <skill-directory>/scripts/aigne-generate-logo edit \
   --desc="$EDIT_INSTRUCTION" \
   --sourcePath="$UPDATE_PATH" \
   --savePath="$SAVE_PATH" \
+  --style="$STYLE" \
+  --colorPreference="$COLOR_PREFERENCE" \
   --aspectRatio="$ASPECT_RATIO"
 ```
 
@@ -101,6 +112,8 @@ aigne run <skill-directory>/scripts/aigne-generate edit \
 - `--desc` 编辑要求/修改说明
 - `--sourcePath` 源图片路径（要编辑的 logo）
 - `--savePath` 输出文件路径
+- `--style` 目标风格模板（可选）
+- `--colorPreference` 颜色偏好（可选）
 - `--aspectRatio` 宽高比（默认保持原图比例）
 
 ### 5. 验证生成结果
