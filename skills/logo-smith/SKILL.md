@@ -163,13 +163,13 @@ Logo 名称 'SmartBot' 需要清晰可读地展示在设计中。
 要求：图形清晰、辨识度高，适合各种尺寸，背景简洁，构图平衡。"
 ```
 
-### 步骤 5：调用 generate-logo sub-agent 生成图片
+### 步骤 5：调用 doc-smith:generate-logo sub-agent 生成图片
 
 根据 `--count` 参数决定调用方式：
 
 **单个生成**：
 ```
-使用 generate-logo sub-agent 生成 logo：
+使用 doc-smith:generate-logo sub-agent 生成 logo：
 - prompt: {组装后的完整提示词}
 - savePath: {保存路径}
 - aspectRatio: 1:1
@@ -177,7 +177,7 @@ Logo 名称 'SmartBot' 需要清晰可读地展示在设计中。
 
 **多个并行生成**：
 ```
-使用 generate-logo sub-agent 并行生成以下 logo：
+使用 doc-smith:generate-logo sub-agent 并行生成以下 logo：
 
 Sub-agent 1:
 - prompt: "{基础提示词}... 方案1：侧重图形符号表达"
@@ -194,7 +194,7 @@ Sub-agent 3:
 
 **编辑模式**（使用 `--update`）：
 ```
-使用 generate-logo sub-agent 编辑现有 logo：
+使用 doc-smith:generate-logo sub-agent 编辑现有 logo：
 - prompt: {修改要求}
 - savePath: {保存路径}
 - updatePath: {源图片路径}

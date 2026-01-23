@@ -1,8 +1,8 @@
 ---
-name: generate-logo
+name: doc-smith:generate-logo
 description: |
-  为 logo-smith 生成单个 logo 图片。使用场景：
-  - 被 logo-smith 主 Skill 调用生成新 logo
+  为 doc-smith:logo-smith 生成单个 logo 图片。使用场景：
+  - 被 doc-smith:logo-smith 主 Skill 调用生成新 logo
   - 支持新建和编辑两种模式
   - 可并行调用多个实例生成多个方案
   每个 sub-agent 独立处理一个 logo 生成任务。
@@ -12,7 +12,13 @@ model: inherit
 
 # Logo 生成代理
 
-为 logo-smith 生成单个 logo 图片。
+为 `doc-smith:logo-smith` 生成单个 logo 图片。
+
+## 所属 Skill
+
+- **Plugin**: `doc-smith`
+- **Skill**: `logo-smith`
+- **Skill 路径**: `skills/logo-smith/SKILL.md`
 
 ## 输入参数
 
