@@ -63,7 +63,7 @@
 
 | 功能 | 文档 | 状态 |
 |------|------|------|
-| - | - | - |
+| HTML 输出 | [intent](../docs/plans/html-output-intent.md) / [overview](../docs/plans/html-output-overview.md) | draft |
 
 ## 非目标
 
