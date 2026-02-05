@@ -28,8 +28,10 @@ dist/
     ├── docsmith.css       # 内置（稳定）
     └── theme.css          # AI 生成（可改）
         ↓
-/doc-smith-publish --preview   # 本地预览
-/doc-smith-publish --static    # 静态托管
+用户自行选择部署方式:
+- 浏览器直接打开
+- npx serve dist/
+- GitHub Pages / Vercel / ...
 ```
 
 ## 架构
@@ -73,25 +75,17 @@ dist/
 
 **这是唯一的"主题系统"。**
 
-## 可选注入点
-
-```
-head.html       → 字体、analytics
-body-end.html   → highlight.js、mermaid
-```
-
-有就拼，没有就跳过。
-
 ## 关键决策
 
 | 问题 | 决策 | 原因 |
 |------|------|------|
 | 渲染器职责？ | 极简 | 复杂度交给 AI |
+| 构建脚本？ | 单文件 build.mjs | MVP 足够，膨胀后再拆 |
 | HTML 标记？ | `data-ds` 属性 | 稳定锚点，不与内容冲突 |
 | 主题机制？ | 单文件 theme.css | AI 直接改，无需主题系统 |
 | 样式分层？ | docsmith.css + theme.css | 基础稳定，主题可改 |
 | AI 职责？ | 只改 theme.css | 输出落点固定 |
-| 扩展？ | 可选注入点 | 不需要就不加载 |
+| 部署方式？ | 用户自选 | 不限制托管平台 |
 
 ## 为什么这么设计
 
@@ -122,11 +116,16 @@ body-end.html   → highlight.js、mermaid
 ## 范围
 
 **包含**
-- 极简渲染器
+- `/doc-smith-build` Skill
+- 单文件 build.mjs 渲染器
 - 内置 docsmith.css + 单文件 theme.css
-- AI 生成/迭代主题
-- 可选注入点
-- 多语言、本地预览、静态发布
+- AI 创建/修改主题
+- 多语言独立路径
+
+**延后**
+- 可选注入点（head.html + body-end.html）
+- --preview 本地预览
+- --static 静态发布
 
 **不包含**
 - 主题继承/扩展
@@ -136,6 +135,5 @@ body-end.html   → highlight.js、mermaid
 ## 下一步
 
 1. 创建 `/doc-smith-build` Skill
-2. 实现极简渲染器
+2. 实现单文件 build.mjs 渲染器
 3. 设计 docsmith.css 基础样式
-4. 添加 --preview 和 --static
