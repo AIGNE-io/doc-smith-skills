@@ -807,15 +807,16 @@ async function build(options) {
     // 创建语言首页（重定向到第一篇文档）
     if (documents.length > 0) {
       const firstDoc = documents[0];
+      const firstDocUrl = `/${lang}/docs${firstDoc.path}.html`;
       const langIndexHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=docs${firstDoc.path}.html">
+  <meta http-equiv="refresh" content="0; url=${firstDocUrl}">
   <title>Redirecting...</title>
 </head>
 <body>
-  <p>Redirecting to <a href="docs${firstDoc.path}.html">${escapeHtml(firstDoc.title)}</a>...</p>
+  <p>Redirecting to <a href="${firstDocUrl}">${escapeHtml(firstDoc.title)}</a>...</p>
 </body>
 </html>`;
       await writeFile(join(output, lang, "index.html"), langIndexHtml);
@@ -824,16 +825,18 @@ async function build(options) {
     console.log(`  Generated ${stats[lang]} pages`);
   }
 
-  // 7. 创建根目录 index.html（重定向到主语言）
+  // 7. 创建根目录 index.html（重定向到主语言首页）
+  const firstDoc = documents[0];
+  const defaultUrl = `/${locale}/docs${firstDoc.path}.html`;
   const rootIndexHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=${locale}/index.html">
+  <meta http-equiv="refresh" content="0; url=${defaultUrl}">
   <title>Redirecting...</title>
 </head>
 <body>
-  <p>Redirecting to <a href="${locale}/index.html">${locale.toUpperCase()}</a>...</p>
+  <p>Redirecting to <a href="${defaultUrl}">${locale.toUpperCase()}</a>...</p>
 </body>
 </html>`;
   await writeFile(join(output, "index.html"), rootIndexHtml);
