@@ -1,5 +1,6 @@
 # Doc-Smith HTML 输出规格
 
+::: locked {reason="核心架构"}
 ## 1. 概述
 
 ### 产品定位
@@ -25,7 +26,9 @@ DocSmith 的 HTML 输出不是"网站框架"，而是**文档产物生成器 + A
 - **新增** `/doc-smith-build` Skill（MD → HTML 构建，输出 dist/）
 - **不改造** `doc-smith-publish`（用户可自行选择部署方式）
 - 渐进迁移，保留 Discuss Kit 发布能力
+:::
 
+::: reviewed {by="lban" date="2026-02-05"}
 ## 2. 架构
 
 ### 整体流程
@@ -160,7 +163,9 @@ HTML 里只固定极少量语义锚点，供 CSS 使用：
 │  └── 任何自定义样式                                             │
 └─────────────────────────────────────────────────────────────────┘
 ```
+:::
 
+::: reviewed {by="lban" date="2026-02-05"}
 ## 3. 详细行为
 
 ### 3.1 /doc-smith-build 工作流程
@@ -316,7 +321,9 @@ dist/
     └── docs/
         └── ...
 ```
+:::
 
+::: reviewed {by="lban" date="2026-02-05"}
 ## 4. 用户体验
 
 ### 4.1 完整工作流
@@ -378,7 +385,9 @@ AI: 好的，删除 theme.css，重新构建。
 
     ✓ 已恢复默认样式
 ```
+:::
 
+::: reviewed {by="lban" date="2026-02-05"}
 ## 5. 技术实现指南
 
 ### 5.1 改动范围
@@ -468,7 +477,9 @@ body { min-height: 100vh; }
 [data-ds="sidebar"] ul { list-style: none; }
 [data-ds="sidebar"] a { display: block; padding: 0.5rem 1rem; }
 ```
+:::
 
+::: reviewed {by="lban" date="2026-02-05"}
 ## 6. 决策总结
 
 | 决策 | 选择 | 理由 |
@@ -482,7 +493,9 @@ body { min-height: 100vh; }
 | AI 职责 | 只改 `theme.css` | 输出落点固定，不扩散复杂度 |
 | 多语言 | 独立路径 /zh/, /en/ | 结构清晰 |
 | 部署方式 | 用户自行选择 | 不限制托管平台，保持灵活 |
+:::
 
+::: reviewed {by="lban" date="2026-02-05"}
 ## 7. MVP 范围
 
 ### 包含
@@ -512,14 +525,18 @@ body { min-height: 100vh; }
 - [ ] 评论系统
 - [ ] 版本切换
 - [ ] PDF 导出
+:::
 
+::: reviewed {by="lban" date="2026-02-05"}
 ## 8. 风险
 
 | 风险 | 影响 | 缓解措施 |
 |------|------|---------|
 | AI 生成的 CSS 质量不稳定 | 样式问题 | 删除 theme.css 即恢复默认 |
 | 用户需要复杂布局 | 可能超出 CSS 能力 | data-ds 锚点不限制布局自由度 |
+:::
 
+::: reviewed {by="lban" date="2026-02-05"}
 ## 9. 为什么这么设计
 
 ### AI-first 而不是 framework-first
@@ -565,3 +582,4 @@ body { min-height: 100vh; }
 - 输出：文件 patch（theme.css）
 - 可审查、可回滚、可 diff
 - 不需要复杂 planner / schema / 合并逻辑
+:::
