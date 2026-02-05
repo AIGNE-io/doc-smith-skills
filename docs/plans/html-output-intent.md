@@ -3,11 +3,11 @@
 ## 1. 概述
 
 ### 产品定位
-将 doc-smith-create 的输出格式从 Markdown 改为静态 HTML，实现更轻量的文档发布。
+新增构建步骤，将 doc-smith 生成的 Markdown 文档编译为静态 HTML 站点，实现更轻量的发布。
 
 ### 核心概念
-- **直接生成 HTML**：AI 直接输出 HTML 而非 Markdown，避免双重转换消耗
-- **CSS 类名约束**：通过预定义 CSS 类名保证样式一致性
+- **MD → HTML 构建**：保持现有 MD 生成流程不变，新增构建步骤编译为 HTML
+- **程序 + AI 混合**：AI 负责交互和主题决策，程序负责确定性的转换执行
 - **多页面静态站点**：生成完整的文档站点，含导航、多语言、深色模式
 
 ### 优先级
@@ -17,8 +17,9 @@
 使用 doc-smith 生成技术文档的开发者
 
 ### 项目范围
-- 改造 `doc-smith-create` 支持 HTML 输出
-- 改造 `doc-smith-publish` 支持静态托管
+- **不改造** `doc-smith-create`（继续生成 MD）
+- **新增** `/doc-smith-build` Skill（MD → HTML 构建）
+- **改造** `doc-smith-publish` 支持静态托管
 - 渐进迁移，保留 Discuss Kit 发布能力
 
 ## 2. 架构
@@ -27,45 +28,85 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    doc-smith-create                             │
+│  doc-smith-create（保持不变）                                    │
 │                                                                 │
-│  数据源分析 → 结构规划 → AI 生成 HTML 内容 → 组装站点           │
+│  数据源分析 → 结构规划 → AI 生成 MD 内容                          │
 │                              ↓                                  │
-│                      ┌──────────────────┐                       │
-│                      │ CSS 类名约束系统  │                       │
-│                      │ (theme.css)      │                       │
-│                      └──────────────────┘                       │
+│                 .aigne/doc-smith/docs/*.md                      │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                    输出: 静态 HTML 站点                          │
+│  doc-smith-build（新增 Skill）                                   │
 │                                                                 │
-│  .aigne/doc-smith/                                             │
-│  └── site/                                                      │
-│      ├── index.html          # 首页                             │
-│      ├── guide/              # 按导航分组                        │
-│      │   └── intro.html                                        │
-│      ├── zh/                 # 中文版本                          │
-│      │   ├── index.html                                        │
-│      │   └── guide/                                            │
-│      ├── en/                 # 英文版本                          │
-│      │   └── ...                                               │
-│      └── assets/                                                │
-│          ├── css/theme.css   # 全局样式                         │
-│          └── images/         # 图片资源                         │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ AI 职责                                                  │   │
+│  │ 1. 分析 workspace，检查主题配置                          │   │
+│  │ 2. 与用户沟通确认模板和主题偏好                           │   │
+│  │ 3. 将配置写入 config.yaml                               │   │
+│  │ 4. 调用构建脚本                                          │   │
+│  │ 5. 报告构建结果                                          │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                              ↓                                  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ 程序职责（Node 脚本）                                    │   │
+│  │ - 读取 docs/*.md 文件                                   │   │
+│  │ - markdown-it 解析转换                                  │   │
+│  │ - 注入 HTML 模板                                        │   │
+│  │ - 生成导航                                              │   │
+│  │ - 复制资源                                              │   │
+│  │ - 输出 HTML 文件                                        │   │
+│  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                    doc-smith-publish                            │
+│  输出: 静态 HTML 站点                                            │
 │                                                                 │
-│  ├── 静态托管（新）: 上传 site/ 到任意静态服务                    │
-│  └── Discuss Kit（保留）: 转换为 Discuss Kit 格式               │
+│  .aigne/doc-smith/site/                                        │
+│  ├── index.html                                                 │
+│  ├── zh/                    # 中文版本                          │
+│  │   ├── index.html                                            │
+│  │   └── guide/intro.html                                      │
+│  ├── en/                    # 英文版本                          │
+│  │   └── ...                                                   │
+│  └── assets/                                                    │
+│      ├── css/theme.css                                         │
+│      ├── js/highlight.min.js                                   │
+│      └── images/                                                │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  doc-smith-publish                                              │
+│                                                                 │
+│  ├── --static    : 上传 site/ 到静态托管（新）                   │
+│  ├── --preview   : 本地预览服务器（新）                          │
+│  └── --url       : 发布到 Discuss Kit（保留）                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### CSS 类名约束系统
+### 构建脚本架构
 
-AI 生成 HTML 时必须使用预定义的 CSS 类名：
+```
+skills/doc-smith-build/
+├── SKILL.md                    # Skill 定义（AI 交互逻辑）
+├── scripts/
+│   ├── build.mjs               # 构建入口
+│   ├── lib/
+│   │   ├── markdown.mjs        # MD 解析（markdown-it）
+│   │   ├── template.mjs        # 模板渲染
+│   │   ├── navigation.mjs      # 导航生成
+│   │   └── assets.mjs          # 资源处理
+│   └── package.json
+└── templates/
+    ├── shell.html              # 页面模板
+    └── themes/
+        └── docs-default/
+            ├── theme.css       # 默认主题
+            └── variables.css   # CSS 变量（用户可覆盖）
+```
+
+### CSS 类名系统
+
+构建脚本在 MD→HTML 转换时自动添加 CSS 类名：
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -75,7 +116,7 @@ AI 生成 HTML 时必须使用预定义的 CSS 类名：
 │  ├── .ds-content         # 内容区域                             │
 │  └── .ds-toc             # 目录（Table of Contents）            │
 ├─────────────────────────────────────────────────────────────────┤
-│  Content Classes                                                │
+│  Content Classes（由 markdown-it 渲染器添加）                    │
 │  ├── .ds-prose           # 正文容器                             │
 │  ├── .ds-heading-1/2/3   # 标题层级                             │
 │  ├── .ds-paragraph       # 段落                                 │
@@ -95,8 +136,7 @@ AI 生成 HTML 时必须使用预定义的 CSS 类名：
 ├─────────────────────────────────────────────────────────────────┤
 │  UI Classes                                                     │
 │  ├── .ds-lang-switcher   # 语言切换器                           │
-│  ├── .ds-theme-toggle    # 深色/浅色切换                         │
-│  └── .ds-search          # 搜索框（预留）                        │
+│  └── .ds-theme-toggle    # 深色/浅色切换                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -109,7 +149,7 @@ AI 生成 HTML 时必须使用预定义的 CSS 类名：
 │  ├── 深色模式: 跟随系统 (prefers-color-scheme)                   │
 │  └── 响应式: 移动端侧边栏折叠                                    │
 ├─────────────────────────────────────────────────────────────────┤
-│  CSS 变量 (用户可覆盖)                                          │
+│  CSS 变量（用户可通过自然语言让 AI 调整）                         │
 │  ├── --ds-color-primary                                        │
 │  ├── --ds-color-bg / --ds-color-bg-dark                        │
 │  ├── --ds-color-text / --ds-color-text-dark                    │
@@ -120,33 +160,96 @@ AI 生成 HTML 时必须使用预定义的 CSS 类名：
 
 ## 3. 详细行为
 
-### 3.1 HTML 生成流程
+### 3.1 /doc-smith-build 工作流程
 
 ```
-输入: document-structure.yaml + 数据源
-          ↓
-    ┌─────────────────┐
-    │ 生成页面模板     │  ← 包含 head, nav, footer
-    │ (shell.html)    │
-    └────────┬────────┘
-             ↓
-    ┌─────────────────┐
-    │ AI 生成内容区域  │  ← 使用 CSS 类名约束
-    │ (per document)  │     输出 <main class="ds-content">...</main>
-    └────────┬────────┘
-             ↓
-    ┌─────────────────┐
-    │ 注入到模板      │  ← shell + content = 完整页面
-    └────────┬────────┘
-             ↓
-    ┌─────────────────┐
-    │ 生成导航数据     │  ← 从 structure.yaml 自动推断
-    └────────┬────────┘
-             ↓
-输出: 完整 HTML 文件
+用户执行 /doc-smith-build
+              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 1: 检测 Workspace                                        │
+│  - 检查 .aigne/doc-smith/docs/ 是否存在                         │
+│  - 检查 document-structure.yaml 是否有效                        │
+│  - 如果不存在，提示先运行 /doc-smith-create                      │
+└─────────────────────────────────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 2: 确认主题配置                                           │
+│  - 读取 config.yaml 中的 theme 配置                             │
+│  - 如果没有配置，询问用户主题偏好                                 │
+│  - 如果用户有自定义要求，AI 调整 CSS 变量                        │
+│  - 将配置写入 config.yaml                                       │
+└─────────────────────────────────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 3: 执行构建                                               │
+│  调用: node scripts/build.mjs                                   │
+│  参数:                                                          │
+│    --workspace .aigne/doc-smith                                │
+│    --output .aigne/doc-smith/site                              │
+│    --theme docs-default                                        │
+│    --variables config.yaml#theme.variables                     │
+└─────────────────────────────────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 4: 报告结果                                               │
+│  - 构建成功：展示输出路径和文件数量                               │
+│  - 提示：可使用 /doc-smith-publish --preview 预览               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 导航生成
+### 3.2 构建脚本执行流程
+
+```javascript
+// scripts/build.mjs 伪代码
+
+async function build(options) {
+  const { workspace, output, theme, variables } = options;
+
+  // 1. 读取文档结构
+  const structure = await readYaml(`${workspace}/planning/document-structure.yaml`);
+
+  // 2. 读取主题
+  const themeCSS = await loadTheme(theme, variables);
+
+  // 3. 生成导航数据
+  const navigation = generateNavigation(structure);
+
+  // 4. 遍历每个语言版本
+  for (const lang of structure.languages) {
+
+    // 5. 遍历每个文档
+    for (const doc of structure.documents) {
+      const mdPath = `${workspace}/docs/${doc.path}/${lang}.md`;
+      const mdContent = await readFile(mdPath);
+
+      // 6. MD → HTML 转换
+      const htmlContent = markdownIt.render(mdContent, {
+        // 自定义渲染器，添加 CSS 类名
+      });
+
+      // 7. 注入模板
+      const fullPage = renderTemplate('shell.html', {
+        lang,
+        title: doc.title,
+        content: htmlContent,
+        navigation: renderNavigation(navigation, doc.path, lang),
+        toc: generateTOC(htmlContent),
+      });
+
+      // 8. 写入文件
+      await writeFile(`${output}/${lang}/${doc.path}.html`, fullPage);
+    }
+  }
+
+  // 9. 复制资源
+  await copyAssets(workspace, output);
+
+  // 10. 写入主题 CSS
+  await writeFile(`${output}/assets/css/theme.css`, themeCSS);
+}
+```
+
+### 3.3 导航生成
 
 从 `document-structure.yaml` 自动推断导航结构：
 
@@ -171,99 +274,143 @@ documents:
 #   - 认证 API
 ```
 
-### 3.3 多语言处理
+### 3.4 多语言处理
+
+各语言独立构建，输出到独立路径：
 
 ```
-输出结构:
+输入:
+docs/
+├── overview/
+│   ├── zh.md
+│   └── en.md
+└── guide/
+    └── intro/
+        ├── zh.md
+        └── en.md
+
+输出:
 site/
-├── index.html        # 默认语言首页（重定向到主语言）
-├── zh/               # 中文版本
+├── index.html        # 重定向到主语言
+├── zh/
 │   ├── index.html
+│   ├── overview.html
 │   └── guide/
 │       └── intro.html
-└── en/               # 英文版本
+└── en/
     ├── index.html
+    ├── overview.html
     └── guide/
         └── intro.html
-
-URL 示例:
-- /zh/guide/intro.html  → 中文版
-- /en/guide/intro.html  → 英文版
 ```
 
-### 3.4 深色模式
+### 3.5 深色模式
 
 ```html
-<!-- 自动检测系统偏好 -->
+<!-- 在 shell.html 模板中 -->
 <script>
+  // 自动检测系统偏好
   if (matchMedia('(prefers-color-scheme: dark)').matches) {
     document.documentElement.classList.add('dark');
   }
+  // 监听变化
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    document.documentElement.classList.toggle('dark', e.matches);
+  });
 </script>
-
-<!-- CSS 响应 -->
-<style>
-  :root { --ds-color-bg: #ffffff; }
-  :root.dark { --ds-color-bg: #1a1a1a; }
-</style>
 ```
 
-### 3.5 静态资源处理
-
+```css
+/* theme.css */
+:root {
+  --ds-color-bg: #ffffff;
+  --ds-color-text: #1a1a1a;
+}
+:root.dark {
+  --ds-color-bg: #1a1a1a;
+  --ds-color-text: #e5e5e5;
+}
 ```
-源位置 → 目标位置
-.aigne/doc-smith/assets/xxx/images/*.png
-        ↓
-site/assets/images/xxx.png
 
-HTML 引用:
-<img src="../assets/images/xxx.png" class="ds-image">
+### 3.6 代码高亮
+
+使用 highlight.js via CDN：
+
+```html
+<!-- 在 shell.html 模板中 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
 ```
 
 ## 4. 用户体验
 
-### 4.1 生成流程（改造后）
+### 4.1 完整工作流
 
 ```bash
-# 用户执行（与现在相同）
+# Step 1: 生成文档（现有流程不变）
 /doc-smith-create
+# → 输出: .aigne/doc-smith/docs/*.md
 
-# AI 执行（内部变化）
-1. 检测 workspace
-2. 分析数据源
-3. 规划文档结构
-4. 生成 HTML 内容（新：直接输出 HTML）
-5. 组装静态站点（新）
-6. 完成
-```
+# Step 2: 构建 HTML（新增）
+/doc-smith-build
+# → AI: "检测到 15 篇文档，使用默认主题？或者你有什么偏好？"
+# → 用户: "主色调用蓝色"
+# → AI: "好的，使用蓝色主题构建中..."
+# → 输出: .aigne/doc-smith/site/
 
-### 4.2 发布流程（新增静态托管）
-
-```bash
-# 发布到静态托管
-/doc-smith-publish --static
-
-# 本地预览
+# Step 3: 预览（新增）
 /doc-smith-publish --preview
-# → 启动本地 HTTP 服务器
-# → 打开浏览器 http://localhost:3000
+# → 启动本地服务器 http://localhost:3000
 
-# 保留原有 Discuss Kit 发布
-/doc-smith-publish --url https://xxx.com
+# Step 4: 发布
+/doc-smith-publish --static
+# → 上传到静态托管服务
 ```
 
-### 4.3 主题配置
+### 4.2 主题定制流程
+
+```
+用户: /doc-smith-build
+
+AI: 检测到 workspace，准备构建 HTML 站点。
+    当前使用默认主题 (docs-default)。
+    你有什么样式偏好吗？比如：
+    - 主色调
+    - 字体偏好
+    - 布局调整
+
+用户: 主色调用绿色，代码块背景深一点
+
+AI: 好的，我来调整主题配置：
+    - 主色调: #22c55e (绿色)
+    - 代码块背景: #1e293b (深色)
+
+    开始构建...
+
+    ✓ 构建完成
+    - 输出路径: .aigne/doc-smith/site/
+    - 中文页面: 15 个
+    - 英文页面: 15 个
+
+    使用 `/doc-smith-publish --preview` 预览效果。
+```
+
+### 4.3 config.yaml 主题配置
 
 ```yaml
-# config.yaml 新增
-theme:
-  name: docs-default  # 内置主题
-  # 或
-  custom: ./my-theme.css  # 自定义主题
+# config.yaml
+projectName: My Project
+locale: zh
+translateLanguages: [en]
 
-  # 颜色覆盖（可选）
-  colors:
-    primary: "#3b82f6"
+# 新增主题配置
+theme:
+  name: docs-default
+  variables:
+    primary: "#22c55e"
+    code-bg: "#1e293b"
 ```
 
 ## 5. 技术实现指南
@@ -272,64 +419,49 @@ theme:
 
 | 组件 | 改动类型 | 说明 |
 |------|---------|------|
-| `doc-smith-create/SKILL.md` | 修改 | 增加 HTML 生成逻辑 |
-| `agents/doc-smith-content.md` | 修改 | 输出 HTML 而非 Markdown |
-| `doc-smith-publish/SKILL.md` | 修改 | 增加静态托管和预览 |
-| `skills/doc-smith-create/templates/` | 新增 | HTML 模板和 CSS |
-| `skills/doc-smith-publish/scripts/preview.mjs` | 新增 | 本地预览服务器 |
+| `doc-smith-create` | **不改动** | 继续生成 MD 文件 |
+| `skills/doc-smith-build/` | **新增** | 新 Skill：MD → HTML 构建 |
+| `doc-smith-publish/SKILL.md` | 修改 | 增加 --static 和 --preview |
+| `doc-smith-publish/scripts/preview.mjs` | 新增 | 本地预览服务器 |
 
 ### 5.2 Workspace 结构变化
 
 ```
 .aigne/doc-smith/
-├── config.yaml
+├── config.yaml                 # 新增 theme 配置
 ├── planning/
 │   └── document-structure.yaml
-├── docs/                    # 保留，供 Discuss Kit 发布使用
+├── docs/                       # 保留：MD 文件
+│   ├── overview/
+│   │   ├── .meta.yaml
+│   │   ├── zh.md
+│   │   └── en.md
 │   └── ...
-├── site/                    # 新增：静态 HTML 站点
+├── site/                       # 新增：HTML 站点输出
 │   ├── index.html
 │   ├── zh/
 │   ├── en/
 │   └── assets/
-│       ├── css/
+│       ├── css/theme.css
+│       ├── js/
 │       └── images/
+├── assets/                     # 保留：源图片
+│   └── ...
 └── cache/
 ```
 
-### 5.3 CSS 类名约束 Prompt
+### 5.3 构建脚本依赖
 
-给 AI 的 prompt 中需要包含：
-
-```markdown
-## HTML 输出规范
-
-你必须使用以下 CSS 类名生成 HTML，不要使用其他类名：
-
-### 内容类名
-- `.ds-prose` - 包裹所有正文内容
-- `.ds-heading-1`, `.ds-heading-2`, `.ds-heading-3` - 标题
-- `.ds-paragraph` - 段落
-- `.ds-code-block` - 代码块，需包含 `<pre><code>`
-- `.ds-code-inline` - 行内代码
-- `.ds-list` - 列表（ul/ol）
-- `.ds-table` - 表格
-- `.ds-blockquote` - 引用
-- `.ds-callout-info`, `.ds-callout-warning`, `.ds-callout-error` - 提示框
-- `.ds-image` - 图片
-
-### 示例
-
-```html
-<article class="ds-prose">
-  <h1 class="ds-heading-1">标题</h1>
-  <p class="ds-paragraph">这是一段文字。</p>
-  <pre class="ds-code-block"><code>const x = 1;</code></pre>
-  <div class="ds-callout-info">
-    <p>这是一个提示。</p>
-  </div>
-</article>
-```
+```json
+// skills/doc-smith-build/scripts/package.json
+{
+  "dependencies": {
+    "markdown-it": "^14.0.0",
+    "markdown-it-anchor": "^8.6.0",
+    "gray-matter": "^4.0.3",
+    "glob": "^10.0.0"
+  }
+}
 ```
 
 ### 5.4 模板结构
@@ -337,7 +469,7 @@ theme:
 ```html
 <!-- templates/shell.html -->
 <!DOCTYPE html>
-<html lang="{{lang}}" class="{{darkClass}}">
+<html lang="{{lang}}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -346,6 +478,9 @@ theme:
   <meta property="og:title" content="{{title}}">
   <meta property="og:description" content="{{description}}">
   <link rel="stylesheet" href="{{assetPath}}/css/theme.css">
+  <!-- highlight.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
   <script>
     if (matchMedia('(prefers-color-scheme: dark)').matches) {
       document.documentElement.classList.add('dark');
@@ -355,16 +490,18 @@ theme:
 <body class="ds-layout">
   <nav class="ds-sidebar">
     {{navigation}}
+    <div class="ds-lang-switcher">{{langSwitcher}}</div>
   </nav>
   <main class="ds-content">
-    {{content}}
+    <article class="ds-prose">
+      {{content}}
+    </article>
   </main>
   <aside class="ds-toc">
     {{toc}}
   </aside>
-  <footer class="ds-footer">
-    <div class="ds-lang-switcher">{{langSwitcher}}</div>
-  </footer>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
 </body>
 </html>
 ```
@@ -373,36 +510,35 @@ theme:
 
 | 决策 | 选择 | 理由 |
 |------|------|------|
-| 输出格式 | 直接生成 HTML | 避免 MD→HTML 双重转换消耗 |
-| 样式一致性 | CSS 类名约束 | 简单灵活，AI 易于遵循 |
+| 实现路径 | MD → HTML 构建 | 保持现有 MD 生成不变，改动最小 |
+| 构建触发 | 独立 Skill `/doc-smith-build` | 职责清晰，用户显式调用 |
+| 构建方式 | 程序 + AI 混合 | AI 负责交互决策，程序负责确定性执行 |
+| 转换工具 | markdown-it (Node) | 成熟稳定，可自定义渲染器 |
+| 主题定制 | 自然语言修改 | 用户向 AI 描述，AI 调整 CSS 变量 |
 | 主题风格 | 文档风（侧边栏导航） | 适合技术文档阅读 |
 | 深色模式 | 跟随系统 | 尊重用户偏好 |
-| 多语言 | 独立路径 | /zh/, /en/ 结构清晰 |
+| 多语言 | 各语言独立构建到独立路径 | /zh/, /en/ 结构清晰 |
 | 导航生成 | 自动推断 | 从 structure.yaml 推断，减少配置 |
-| 静态资源 | 复制到输出 | 便于独立部署 |
+| 代码高亮 | highlight.js via CDN | 无需本地打包 |
+| 图片懒加载 | 不需要 | 保持简单 |
 | 预览服务 | 简单静态服务器 | 够用且简单 |
 | 发布兼容 | 渐进迁移 | 保留 Discuss Kit，新增静态托管 |
 | SEO | 基础支持 | title/description/OG tags |
-| Skill 归属 | 改造 doc-smith-create | 保持用户习惯 |
-| Workspace | 保持不变 | 兼容现有工作流 |
-| 自定义主题 | 自然语言修改 | 用户向 AI 描述修改要求，AI 调整 CSS |
-| 代码高亮 | CDN JS 库 | highlight.js 或 Prism.js |
-| 图片懒加载 | 不需要 | 保持简单 |
 
 ## 7. MVP 范围
 
 ### 包含
 
-- [x] HTML 内容生成（AI 直接输出）
-- [x] CSS 类名约束系统
+- [x] 新增 `/doc-smith-build` Skill
+- [x] MD → HTML 构建脚本
 - [x] 内置默认主题（docs-default）
-- [x] 主题自然语言修改（用户描述 → AI 调整）
+- [x] 主题自然语言定制（AI 调整 CSS 变量）
 - [x] 代码高亮（highlight.js via CDN）
-- [x] 多语言独立路径
+- [x] 多语言独立路径构建
 - [x] 深色模式（跟随系统）
 - [x] 自动导航生成
-- [x] 本地预览服务器
-- [x] 静态文件托管发布
+- [x] 本地预览服务器（--preview）
+- [x] 静态文件托管发布（--static）
 - [x] 基础 SEO（title/desc/OG）
 - [x] 保留 Discuss Kit 发布
 
@@ -418,8 +554,8 @@ theme:
 
 | 风险 | 影响 | 缓解措施 |
 |------|------|---------|
-| AI 生成 HTML 不遵循类名约束 | 样式不一致 | Prompt 明确约束 + 校验检查 |
-| HTML 生成质量不稳定 | 页面结构混乱 | 提供示例 + 校验工具 |
+| markdown-it 自定义渲染器复杂 | 开发成本 | 参考现有开源实现 |
+| 主题 CSS 变量不够灵活 | 定制受限 | 设计足够的 CSS 变量覆盖点 |
 | 渐进迁移期两套输出维护成本 | 开发负担 | 明确时间表，尽快完成迁移 |
 
 ## 9. 已确认问题
@@ -427,5 +563,8 @@ theme:
 | 问题 | 决策 | 说明 |
 |------|------|------|
 | 自定义 CSS | 不支持上传 | 用户通过自然语言向 AI 提出主题修改要求 |
-| 代码高亮 | CDN JS 库 | 使用 highlight.js 或 Prism.js via CDN |
+| 代码高亮 | CDN JS 库 | 使用 highlight.js via CDN |
 | 图片懒加载 | 不需要 | 保持简单 |
+| 实现路径 | MD → HTML 构建 | 保持现有 MD 生成流程不变，新增构建步骤 |
+| 构建触发 | 独立 Skill | `/doc-smith-build` 显式调用 |
+| 构建分工 | AI 主导 + 程序执行 | AI 负责交互和主题决策，程序执行确定性转换 |

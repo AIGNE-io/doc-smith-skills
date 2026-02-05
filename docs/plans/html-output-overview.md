@@ -1,61 +1,68 @@
 # Doc-Smith HTML 输出
 
-> 将文档输出从 Markdown 改为静态 HTML，实现更轻量的发布
+> 新增构建步骤，将 MD 文档编译为静态 HTML 站点
 
 ## 为什么？
 
-当前发布平台 Discuss Kit 太重，每次发布都需要完整的 Discuss Kit 运行环境。改为生成静态 HTML 后，可以部署到任意静态托管服务（如 GitHub Pages、Vercel、Nginx）。
+当前发布平台 Discuss Kit 太重。改为生成静态 HTML 后，可以部署到任意静态托管服务（GitHub Pages、Vercel、Nginx 等）。
 
 ## 核心体验
 
 ```
-用户执行 /doc-smith-create
+/doc-smith-create          # 现有流程不变，生成 MD
         ↓
-AI 分析数据源，规划文档结构
+.aigne/doc-smith/docs/*.md
         ↓
-AI 直接生成 HTML 内容（使用预定义 CSS 类名）
+/doc-smith-build           # 新增：MD → HTML 构建
         ↓
-组装为完整静态站点
+AI: "使用默认主题？或者你有什么偏好？"
+用户: "主色调用蓝色"
+AI: "好的，构建中..."
         ↓
 .aigne/doc-smith/site/
-├── index.html
 ├── zh/guide/intro.html
 ├── en/guide/intro.html
 └── assets/css/theme.css
         ↓
-/doc-smith-publish --preview  → 本地预览
-/doc-smith-publish --static   → 上传到静态托管
+/doc-smith-publish --preview   # 本地预览
+/doc-smith-publish --static    # 静态托管发布
 ```
 
 ## 架构
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                  doc-smith-create                       │
+│  doc-smith-create（不变）                                │
+│  数据源 → AI 生成 MD → docs/*.md                        │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│  doc-smith-build（新增 Skill）                          │
 │                                                         │
-│  ┌─────────┐    ┌─────────────────┐    ┌─────────────┐ │
-│  │数据源   │ →  │AI 生成 HTML 内容 │ →  │组装静态站点 │ │
-│  │分析    │     │(CSS 类名约束)    │     │            │ │
-│  └─────────┘    └─────────────────┘    └─────────────┘ │
-│                         ↑                               │
-│                  ┌──────────────┐                       │
-│                  │ theme.css    │                       │
-│                  │ (全局样式)    │                       │
-│                  └──────────────┘                       │
+│  AI 职责:                                               │
+│  - 与用户沟通主题偏好                                    │
+│  - 调整 CSS 变量                                        │
+│  - 调用构建脚本                                          │
+│                                                         │
+│  程序职责 (Node 脚本):                                   │
+│  - markdown-it 转换                                     │
+│  - 模板注入                                             │
+│  - 导航生成                                             │
+│  - 资源复制                                             │
 └─────────────────────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────┐
-│                    输出: site/                          │
-│  ├── zh/guide/intro.html  (中文)                       │
-│  ├── en/guide/intro.html  (英文)                       │
-│  └── assets/css/theme.css (样式)                       │
+│  输出: site/                                            │
+│  ├── zh/*.html                                         │
+│  ├── en/*.html                                         │
+│  └── assets/css/theme.css                              │
 └─────────────────────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────┐
-│                 doc-smith-publish                       │
-│  ├── --preview  → 本地预览 (http://localhost:3000)     │
-│  ├── --static   → 静态托管发布                          │
-│  └── --url      → Discuss Kit (保留兼容)               │
+│  doc-smith-publish                                      │
+│  ├── --preview   → 本地预览 (localhost:3000)           │
+│  ├── --static    → 静态托管发布                         │
+│  └── --url       → Discuss Kit (保留)                  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -63,23 +70,24 @@ AI 直接生成 HTML 内容（使用预定义 CSS 类名）
 
 | 问题 | 决策 | 原因 |
 |------|------|------|
-| 如何保证样式一致？ | CSS 类名约束 | AI 使用预定义类名，全局 CSS 控制样式 |
-| Markdown 还是 HTML？ | 直接 HTML | 省去 MD→HTML 转换消耗 |
-| 多语言如何组织？ | 独立路径 /zh/, /en/ | 结构清晰，便于 SEO |
+| 实现路径？ | MD → HTML 构建 | 保持现有 MD 生成不变，改动最小 |
+| 构建触发？ | 独立 Skill | `/doc-smith-build` 显式调用 |
+| 谁做转换？ | 程序 (markdown-it) | 确定性执行，AI 负责交互和主题决策 |
+| 主题定制？ | 自然语言修改 | 用户向 AI 描述，AI 调整 CSS 变量 |
+| 多语言？ | 独立路径 /zh/, /en/ | 各语言独立构建 |
 | 深色模式？ | 跟随系统 | 尊重用户偏好 |
-| 与 Discuss Kit 兼容？ | 渐进迁移 | 保留旧发布方式，逐步切换 |
-| 自定义主题？ | 自然语言修改 | 用户向 AI 描述，AI 调整 |
-| 代码高亮？ | CDN JS 库 | highlight.js via CDN |
+| 代码高亮？ | highlight.js CDN | 无需本地打包 |
+| 与 Discuss Kit？ | 渐进迁移 | 保留旧发布方式，逐步切换 |
 
 ## 范围
 
 **包含**
-- HTML 内容生成
-- 内置文档风主题 + 自然语言修改
+- 新增 `/doc-smith-build` Skill
+- MD → HTML 构建脚本
+- 内置文档风主题 + 自然语言定制
 - 代码高亮 (highlight.js CDN)
 - 多语言、深色模式
-- 本地预览
-- 静态托管发布
+- 本地预览 + 静态托管发布
 
 **不包含**
 - 站内搜索
@@ -89,12 +97,12 @@ AI 直接生成 HTML 内容（使用预定义 CSS 类名）
 
 | 风险 | 缓解 |
 |------|------|
-| AI 不遵循 CSS 类名 | Prompt 明确 + 校验工具 |
-| HTML 质量不稳定 | 提供示例模板 |
+| markdown-it 渲染器定制复杂 | 参考现有开源实现 |
+| CSS 变量不够灵活 | 设计足够的变量覆盖点 |
 
 ## 下一步
 
-1. 设计 CSS 类名规范和默认主题
-2. 改造 `doc-smith-content` agent 输出 HTML
-3. 新增 `--preview` 本地预览功能
-4. 实现静态托管发布
+1. 创建 `/doc-smith-build` Skill 框架
+2. 实现 markdown-it 自定义渲染器
+3. 设计默认主题 CSS
+4. 添加 `--preview` 和 `--static` 到 publish
