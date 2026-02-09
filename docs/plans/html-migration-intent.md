@@ -27,6 +27,8 @@
 - **改造** `doc-smith-content` agent：先生成 Markdown（中间产物），再转换为 HTML，只保留 HTML
 - **适配** `build.mjs`：适配新的转换流程，构建后清理中间 .md 文件
 - **改造** `doc-smith-create`：集成构建步骤，发布指引改为 MyVibe
+- **改造** `doc-smith-images` skill：AIGNE CLI 不再维护，改为直接调用 AIGNE Hub API，自行处理授权
+- **改造** `generate-slot-image` agent：适配新的生图接口，更新错误处理
 - **不改造** `doc-smith-publish`：使用 `/myvibe-publish` 替代
 - **不改造** 站点导航代码：Blocklet 后台配置导航入口
 
@@ -228,7 +230,34 @@ Phase 9: 校验 + 结束（改造）
    新增: doc-smith-build 作为内部调用步骤
    ```
 
-### 3.4 站点集成
+### 3.4 图片生成（改造）
+
+AIGNE CLI 不再维护，生图能力需要从 AIGNE CLI 迁移到直接调用 AIGNE Hub API。
+
+**当前流程（依赖 AIGNE CLI）：**
+```
+generate-slot-image agent → /doc-smith-images skill → aigne run ... → AIGNE CLI → Gemini API
+```
+
+**改造后流程（直接调 AIGNE Hub）：**
+```
+generate-slot-image agent → /doc-smith-images skill → 直接 HTTP 调用 AIGNE Hub API → Gemini API
+```
+
+**改造要点：**
+- `doc-smith-images` skill：去掉 `aigne run` 命令，改为直接调用 AIGNE Hub HTTP API
+- `scripts/aigne-generate/` 目录：AIGNE YAML agent 定义（`generate-image.yaml`、`generate-and-save.yaml`、`edit-and-save.yaml`）替换为直接 HTTP 调用脚本
+- 授权：自行处理 AIGNE Hub 授权（不再依赖 `aigne hub connect`）
+- `generate-slot-image` agent：接口不变（仍然调用 `/doc-smith-images`），但需要更新错误处理和依赖说明
+- 保留能力：新图生成（text-to-image）、已有图片编辑（image-to-image）、图片翻译
+
+**不变的部分：**
+- AFS Image Slot 占位符格式（`<!-- afs:image ... -->`）
+- `generate-slot-image` agent 的调用接口和参数
+- 图片保存目录结构（`.aigne/doc-smith/assets/{key}/images/`）
+- `.meta.yaml` 元信息格式
+
+### 3.5 站点集成
 
 | 方面 | 方案 | 操作 |
 |------|------|------|
@@ -296,6 +325,9 @@ AI: → 重新生成 Markdown → 重新构建 HTML → 提示发布
 | `skills/doc-smith-build/scripts/build.mjs` | **适配** | 适配新流程，构建后清理中间 .md 文件 |
 | `skills/doc-smith-build/assets/docsmith.css` | **不变** | 直接复用 |
 | `skills/doc-smith-build/SKILL.md` | **不变** | 作为 create 流程的构建步骤调用 |
+| `skills/doc-smith-images/SKILL.md` | **改造** | 去掉 AIGNE CLI，直接调用 AIGNE Hub API |
+| `skills/doc-smith-images/scripts/aigne-generate/` | **替换** | AIGNE YAML 定义替换为直接 HTTP 调用 |
+| `agents/generate-slot-image.md` | **适配** | 适配新的生图接口，更新错误处理和依赖说明 |
 | `doc-smith-publish` | **不改动** | 用 `/myvibe-publish` 替代 |
 
 ### 5.2 Workspace 结构变化
@@ -365,7 +397,7 @@ AI: → 重新生成 Markdown → 重新构建 HTML → 提示发布
 | 发布方式 | `/myvibe-publish` | 现成可用 |
 | 导航集成 | Blocklet 后台配置 | 不改代码 |
 | 版本管理 | Git + MyVibe | 不自己实现 |
-| 图片处理 | AFS Image Slot（不变） | 现有流程已完善 |
+| 图片处理 | AFS Image Slot（流程不变） | 占位符格式不变，底层从 AIGNE CLI 改为直接调 AIGNE Hub |
 
 ## 7. MVP 范围
 
@@ -397,6 +429,7 @@ AI: → 重新生成 Markdown → 重新构建 HTML → 提示发布
 | AI 生成的 Markdown 质量波动 | 高 | 文档内容不理想 | 首轮不追求完美，MyVibe 版本回退 |
 | 主站与文档站风格不一致 | 中 | 体验割裂 | theme.css 可随时让 AI 调整 |
 | build.mjs 构建失败 | 低 | 无法输出 HTML | 已验证可用，构建步骤是确定性的 |
+| AIGNE Hub API 调用失败 | 中 | 图片无法生成 | 授权流程需要验证，失败时保留占位符不阻塞文档发布 |
 
 **回滚方案**：
 1. MyVibe 版本回退 → 恢复上一个正常版本

@@ -32,6 +32,8 @@
 | doc-smith-content 改造 | `agents/doc-smith-content.md` | 先生成 MD（中间产物），再转换为 HTML，只保留 HTML |
 | build.mjs 适配 | `skills/doc-smith-build/scripts/build.mjs` | 适配新流程，构建后清理中间 .md 文件 |
 | doc-smith-create 增加构建步骤 | `skills/doc-smith-create/SKILL.md` | 集成构建步骤，发布指引改为 MyVibe |
+| doc-smith-images 去掉 AIGNE CLI | `skills/doc-smith-images/` | AIGNE CLI 不再维护，改为直接调用 AIGNE Hub API，自行处理授权 |
+| generate-slot-image 适配 | `agents/generate-slot-image.md` | 适配新的生图接口，更新错误处理 |
 | 实现简单前端搜索 | 构建期生成索引 | 先简单版本 |
 | 对齐主站主题 | `theme.css` | AI 根据主站风格生成 |
 
@@ -118,6 +120,14 @@ doc-smith-create → AI 生成 MD（中间产物）→ build.mjs 构建 HTML + �
 - [ ] 更新相关技能表：新增 doc-smith-build、/myvibe-publish，移除 doc-smith-publish
 - [ ] 更新任务规划模板：增加 Phase 8
 
+**doc-smith-images（改造）**：
+- [ ] 去掉 `aigne run` 命令调用，改为直接调用 AIGNE Hub HTTP API
+- [ ] 替换 `scripts/aigne-generate/` 中的 AIGNE YAML agent 定义为直接 HTTP 调用脚本
+- [ ] 自行处理 AIGNE Hub 授权（不再依赖 `aigne hub connect`）
+
+**generate-slot-image（适配）**：
+- [ ] 更新错误处理和依赖说明（去掉 AIGNE CLI 相关提示）
+
 ### Phase 2：端到端验证
 
 - [ ] 用 `doc-smith-create` 在一个真实项目上生成 Markdown + 构建 HTML
@@ -157,4 +167,4 @@ doc-smith-create → AI 生成 MD（中间产物）→ build.mjs 构建 HTML + �
 
 ## 一句话总结
 
-AI 先生成 Markdown（中间产物，token 低、输出稳定）→ build.mjs 构建 HTML + 清理 MD（核心逻辑复用）→ `/myvibe-publish` 发布到 MyVibe → Blocklet 后台配置导航入口 → MyVibe 提供版本回退。需要改造三个组件：doc-smith-content（MD→HTML 转换流程）、build.mjs（适配 + 清理 MD）、doc-smith-create（集成构建步骤 + 发布指引）。
+AI 先生成 Markdown（中间产物，token 低、输出稳定）→ build.mjs 构建 HTML + 清理 MD（核心逻辑复用）→ `/myvibe-publish` 发布到 MyVibe → Blocklet 后台配置导航入口 → MyVibe 提供版本回退。需要改造的组件：doc-smith-content（MD→HTML 转换流程）、build.mjs（适配 + 清理 MD）、doc-smith-create（集成构建步骤 + 发布指引）、doc-smith-images（去掉 AIGNE CLI，直接调 AIGNE Hub）。

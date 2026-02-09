@@ -65,6 +65,7 @@ Blocklet 后台配置导航入口 → 站点接入完成
 | 导航怎么接？ | Blocklet 后台配置 | 不改代码 |
 | 版本管理？ | Git + MyVibe | 不自己实现 |
 | 主题一致？ | AI 修改 theme.css | 单文件主题，随时可调 |
+| 生图怎么做？ | 直接调 AIGNE Hub API | AIGNE CLI 不再维护，自行处理授权 |
 
 ## 改动范围
 
@@ -73,6 +74,8 @@ Blocklet 后台配置导航入口 → 站点接入完成
 | `agents/doc-smith-content.md` | **改造** | 先生成 MD（中间产物），再转为 HTML |
 | `skills/doc-smith-build/scripts/build.mjs` | **适配** | 适配新流程，构建后清理 .md |
 | `skills/doc-smith-create/SKILL.md` | **改造** | 集成构建步骤 + 发布指引改为 MyVibe |
+| `skills/doc-smith-images/` | **改造** | 去掉 AIGNE CLI，直接调 AIGNE Hub API |
+| `agents/generate-slot-image.md` | **适配** | 适配新生图接口，更新错误处理 |
 | `skills/doc-smith-build/assets/docsmith.css` | 不变 | 直接复用 |
 | `doc-smith-publish` | 不改 | 用 `/myvibe-publish` 替代 |
 
@@ -82,6 +85,7 @@ Blocklet 后台配置导航入口 → 站点接入完成
 - doc-smith-content 改造：先生成 MD（中间产物），再转为 HTML
 - build.mjs 适配：适配新流程，构建后清理 .md
 - doc-smith-create 改造：集成构建步骤 + 发布指引改为 /myvibe-publish
+- doc-smith-images 改造：去掉 AIGNE CLI，直接调 AIGNE Hub API
 - 简单前端搜索（标题级别）
 
 **不包含**
@@ -102,6 +106,6 @@ Blocklet 后台配置导航入口 → 站点接入完成
 ## 执行步骤
 
 1. ~~验证前置条件（MyVibe 发布 + 导航配置 + build.mjs）~~ ✅ 已完成
-2. 改造三个组件：doc-smith-content + build.mjs + doc-smith-create
+2. 改造组件：doc-smith-content + build.mjs + doc-smith-create + doc-smith-images
 3. 端到端验证：生成 MD → 构建 HTML → 发布 MyVibe → 访问
 4. 简单搜索 + 旧文档切换
