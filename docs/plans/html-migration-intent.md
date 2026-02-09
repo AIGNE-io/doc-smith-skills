@@ -4,7 +4,7 @@
 
 ### 产品定位
 
-在 DocSmith 现有 Markdown 生成流程基础上，集成 HTML 构建步骤，将产物发布到 MyVibe，替换当前 Discuss Kit 文档站点。
+在 DocSmith 现有 Markdown 生成流程基础上，集成 HTML 构建步骤，将产物发布到 MyVibe 或 DocSmith 站点，替换当前 Discuss Kit 文档站点。
 
 ### 核心思想
 
@@ -12,7 +12,8 @@
 - Markdown 只是生成过程中的中间产物，不作为最终管理对象
 - `doc-smith-content` 改造：生成 MD 后转换为 HTML，只保留 HTML
 - `build.mjs` 适配：支持新的转换流程
-- 发布目标从 Discuss Kit 切换到 MyVibe
+- 发布目标从 Discuss Kit 切换到 MyVibe 或 DocSmith 站点（精简版 MyVibe）
+- MyVibe 精简改造：复用静态资源托管能力，去掉 MyVibe 前端页面，只通过 Skill 发布
 
 ### 优先级
 
@@ -26,10 +27,11 @@
 
 - **改造** `doc-smith-content` agent：先生成 Markdown（中间产物），再转换为 HTML，只保留 HTML
 - **适配** `build.mjs`：适配新的转换流程，构建后清理中间 .md 文件
-- **改造** `doc-smith-create`：集成构建步骤，发布指引改为 MyVibe
+- **改造** `doc-smith-create`：集成构建步骤，支持发布到 MyVibe 或 DocSmith 站点
 - **改造** `doc-smith-images` skill：AIGNE CLI 不再维护，改为直接调用 AIGNE Hub API，自行处理授权
 - **改造** `generate-slot-image` agent：适配新的生图接口，更新错误处理
-- **不改造** `doc-smith-publish`：使用 `/myvibe-publish` 替代
+- **改造** MyVibe：精简为纯静态托管，去掉前端页面，只保留 Skill 发布能力，支持 DocSmith 站点
+- **改造** `doc-smith-publish`：适配新的发布目标（MyVibe / DocSmith 站点）
 - **不改造** 站点导航代码：Blocklet 后台配置导航入口
 
 ## 2. 架构
@@ -76,10 +78,13 @@
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  发布到 MyVibe（新增步骤）                                       │
+│  发布（两种目标）                                                │
 │                                                                 │
-│  /myvibe-publish → 发布 dist/ 目录 → 线上可访问                  │
-│  MyVibe 提供版本管理和版本回退                                    │
+│  方式 A: /myvibe-publish → 发布到 MyVibe → 线上可访问            │
+│  方式 B: /doc-smith-publish → 发布到 DocSmith 站点               │
+│          （精简版 MyVibe：复用静态托管，无前端页面）                │
+│                                                                 │
+│  两者都支持版本管理和版本回退                                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -257,18 +262,39 @@ generate-slot-image agent → /doc-smith-images skill → 直接 HTTP 调用 AIG
 - 图片保存目录结构（`.aigne/doc-smith/assets/{key}/images/`）
 - `.meta.yaml` 元信息格式
 
-### 3.5 站点集成
+### 3.5 发布与托管（改造）
+
+**两种发布目标：**
+
+| 目标 | 方式 | 说明 |
+|------|------|------|
+| MyVibe | `/myvibe-publish` | 发布到 MyVibe，文档作为 MyVibe 内容类型 |
+| DocSmith 站点 | `/doc-smith-publish` | 发布到精简版 MyVibe，纯静态 HTML 托管 |
+
+**DocSmith 站点 = 精简版 MyVibe：**
+- 复用 MyVibe 的静态资源托管能力（文件存储、CDN、版本管理）
+- 去掉 MyVibe 的前端页面（不需要 MyVibe 的编辑器、画廊等 UI）
+- 只通过 Skill 发布，不通过 UI 操作
+- 本质是对 MyVibe 的精简改造，抽取其托管核心能力
+
+**MyVibe 改造要点：**
+- 抽取静态资源托管为独立能力（API 层）
+- 支持通过 Skill/API 直接发布静态 HTML 目录
+- 保留版本管理和回退能力
+- DocSmith 站点作为一种"无 UI 的 MyVibe 实例"
+
+### 3.6 站点集成
 
 | 方面 | 方案 | 操作 |
 |------|------|------|
-| 导航入口 | 指向 MyVibe 文档地址 | Blocklet 后台配置，不改代码 |
+| 导航入口 | 指向文档托管地址 | Blocklet 后台配置，不改代码 |
 | 主题一致 | theme.css 对齐主站 | AI 根据主站风格生成/修改 |
 | 搜索 | 前端搜索 | 首轮简单版本（标题匹配），后续迭代 |
-| 版本 | Git + MyVibe | MyVibe 提供多版本和回退 |
+| 版本 | Git + 托管平台 | 托管平台提供多版本和回退 |
 
-### 3.5 旧文档处理
+### 3.7 旧文档处理
 
-- 切换导航入口到 MyVibe 文档
+- 切换导航入口到新文档站点
 - Discuss Kit 文档暂时保留
 - 新文档稳定后再下线旧文档
 
@@ -288,13 +314,14 @@ generate-slot-image agent → /doc-smith-images skill → 直接 HTTP 调用 AIG
 # Step 2: 预览
 npx serve .aigne/doc-smith/dist
 
-# Step 3: 发布到 MyVibe
-/myvibe-publish
-# → 发布 dist/ 目录到 MyVibe
+# Step 3: 发布（二选一）
+/myvibe-publish          # → 发布到 MyVibe
+# 或
+/doc-smith-publish       # → 发布到 DocSmith 站点（精简版 MyVibe）
 # → 返回访问 URL
 
 # Step 4: 配置导航（手动，一次性）
-# → Blocklet 后台配置导航入口指向 MyVibe 文档地址
+# → Blocklet 后台配置导航入口指向文档站点地址
 ```
 
 ### 4.2 主题迭代（不变）
@@ -320,7 +347,7 @@ AI: → 重新生成 Markdown → 重新构建 HTML → 提示发布
 
 | 组件 | 改动类型 | 说明 |
 |------|---------|------|
-| `skills/doc-smith-create/SKILL.md` | **改造** | 增加构建步骤 + 发布指引改为 MyVibe |
+| `skills/doc-smith-create/SKILL.md` | **改造** | 增加构建步骤 + 支持发布到 MyVibe 或 DocSmith 站点 |
 | `agents/doc-smith-content.md` | **改造** | 先生成 MD（中间产物），再转换为 HTML |
 | `skills/doc-smith-build/scripts/build.mjs` | **适配** | 适配新流程，构建后清理中间 .md 文件 |
 | `skills/doc-smith-build/assets/docsmith.css` | **不变** | 直接复用 |
@@ -328,7 +355,8 @@ AI: → 重新生成 Markdown → 重新构建 HTML → 提示发布
 | `skills/doc-smith-images/SKILL.md` | **改造** | 去掉 AIGNE CLI，直接调用 AIGNE Hub API |
 | `skills/doc-smith-images/scripts/aigne-generate/` | **替换** | AIGNE YAML 定义替换为直接 HTTP 调用 |
 | `agents/generate-slot-image.md` | **适配** | 适配新的生图接口，更新错误处理和依赖说明 |
-| `doc-smith-publish` | **不改动** | 用 `/myvibe-publish` 替代 |
+| `doc-smith-publish` | **改造** | 适配新发布目标，支持发布到 DocSmith 站点 |
+| MyVibe | **精简改造** | 抽取静态托管核心能力，支持 DocSmith 站点（无 UI 发布） |
 
 ### 5.2 Workspace 结构变化
 
@@ -374,13 +402,12 @@ AI: → 重新生成 Markdown → 重新构建 HTML → 提示发布
 2. **Phase 9 结束提示改造**：
    - 报告 dist/ 输出路径和各语言页面数量
    - 提示使用 `npx serve` 预览
-   - 提示使用 `/myvibe-publish` 发布
-   - 移除 `doc-smith-publish` 相关引用
+   - 提示使用 `/myvibe-publish` 或 `/doc-smith-publish` 发布
 
 3. **相关技能表更新**：
    - 新增 `doc-smith-build`（内部调用）
-   - 新增 `/myvibe-publish`（用户按需调用）
-   - 移除 `doc-smith-publish`
+   - 保留 `/myvibe-publish`（发布到 MyVibe）
+   - 改造 `doc-smith-publish`（发布到 DocSmith 站点）
 
 4. **任务规划模板更新**：
    - 新文档生成模板中增加 Phase 8: Build HTML
@@ -393,10 +420,10 @@ AI: → 重新生成 Markdown → 重新构建 HTML → 提示发布
 | MD→HTML 转换 | build.mjs（适配） | 核心逻辑复用，适配新流程 |
 | HTML 锚点 | `data-ds` 属性（不变） | 稳定契约 |
 | 主题机制 | 单文件 theme.css（不变） | AI 直接改 |
-| 托管平台 | MyVibe | 文档作为 MyVibe 内容类型 |
-| 发布方式 | `/myvibe-publish` | 现成可用 |
+| 托管平台 | MyVibe 或 DocSmith 站点 | DocSmith 站点 = 精简版 MyVibe，复用静态托管能力 |
+| 发布方式 | `/myvibe-publish` 或 `/doc-smith-publish` | 两种发布目标，都通过 Skill 发布 |
 | 导航集成 | Blocklet 后台配置 | 不改代码 |
-| 版本管理 | Git + MyVibe | 不自己实现 |
+| 版本管理 | Git + 托管平台 | 不自己实现 |
 | 图片处理 | AFS Image Slot（流程不变） | 占位符格式不变，底层从 AIGNE CLI 改为直接调 AIGNE Hub |
 
 ## 7. MVP 范围
@@ -404,7 +431,9 @@ AI: → 重新生成 Markdown → 重新构建 HTML → 提示发布
 ### 包含
 
 - [ ] doc-smith-create 增加 HTML 构建步骤（调用 build.mjs）
-- [ ] doc-smith-create 发布指引改为 /myvibe-publish
+- [ ] doc-smith-create 发布指引支持 /myvibe-publish 和 /doc-smith-publish
+- [ ] doc-smith-publish 改造：支持发布到 DocSmith 站点
+- [ ] MyVibe 精简改造：抽取静态托管能力，支持无 UI 发布
 - [ ] 简单前端搜索（标题级别）
 
 ### 不包含（延后）
