@@ -237,7 +237,7 @@ grep -l 'nav.js' .aigne/doc-smith/dist/zh/docs/*.html | wc -l  # 应 > 0
 - [x] doc-smith-content.md 已更新（per-doc build + MD 清理）
 - [x] doc-smith-create SKILL.md 已更新（--nav 编排 + 移除批量构建）
 - [x] doc-smith-check 已更新（校验 HTML）
-- [ ] 代码已提交
+- [x] 代码已提交
 
 ---
 
