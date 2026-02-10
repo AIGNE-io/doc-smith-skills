@@ -9,7 +9,7 @@
  *   node build.mjs --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
  */
 
-import { readFile, writeFile, mkdir, copyFile, access, readdir, stat } from "node:fs/promises";
+import { readFile, writeFile, mkdir, copyFile, access, readdir, stat, unlink } from "node:fs/promises";
 import { constants, realpathSync } from "node:fs";
 import { join, dirname, basename, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -167,6 +167,29 @@ function isPathSafe(targetPath) {
   const homeDir = process.env.HOME || process.env.USERPROFILE || "/";
   // 只要在用户主目录下就是安全的
   return resolvedTarget.startsWith(homeDir);
+}
+
+/**
+ * Recursively delete .md files in docs/ directory, preserving .meta.yaml
+ */
+async function cleanupMarkdownFiles(docsDir) {
+  if (!(await exists(docsDir))) return 0;
+
+  let count = 0;
+  const entries = await readdir(docsDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = join(docsDir, entry.name);
+
+    if (entry.isDirectory()) {
+      count += await cleanupMarkdownFiles(fullPath);
+    } else if (entry.name.endsWith(".md")) {
+      await unlink(fullPath);
+      count++;
+    }
+  }
+
+  return count;
 }
 
 // ============================================
@@ -841,6 +864,12 @@ async function build(options) {
 </html>`;
   await writeFile(join(output, "index.html"), rootIndexHtml);
 
+  // 8. Cleanup intermediate .md files
+  const docsDir = join(workspace, "docs");
+  console.log("Cleaning up intermediate .md files...");
+  const cleanedCount = await cleanupMarkdownFiles(docsDir);
+  console.log(`  Removed ${cleanedCount} .md files`);
+
   console.log();
   console.log("Build complete!");
   console.log();
@@ -848,10 +877,6 @@ async function build(options) {
   for (const [lang, count] of Object.entries(stats)) {
     console.log(`  ${lang}: ${count} pages`);
   }
-  console.log();
-  console.log("Preview:");
-  console.log(`  open ${output}/index.html`);
-  console.log(`  npx serve ${output}`);
 
   return { success: true, stats };
 }
