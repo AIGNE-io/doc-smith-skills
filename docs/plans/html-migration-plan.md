@@ -2,7 +2,7 @@
 
 ## Overview
 
-在 DocSmith 现有 Markdown 生成流程基础上，集成 HTML 构建步骤，使文档生成的最终产物为静态 HTML 站点。同时将图片生成从 AIGNE CLI 迁移到直接调用 AIGNE Hub API。
+在 DocSmith 现有 Markdown 生成流程基础上，集成 HTML 构建步骤，使文档生成的最终产物为静态 HTML 站点。采用 per-doc build 模式：每篇文档生成后立即构建为 HTML，导航外置为 nav.js。同时将图片生成从 AIGNE CLI 迁移到直接调用 AIGNE Hub API。
 
 ## Prerequisites
 
@@ -11,60 +11,90 @@
 - [x] docsmith.css 基础样式已实现
 - [ ] 需要 AIGNE Hub API 的授权凭证和接口文档
 
-## 关键约束（来自 intent-review 反馈）
+## 关键约束
 
-- 构建步骤集成到内容生成流程中，不作为独立 Phase
+- per-doc build：MD 仅在单篇文档生成瞬间存在，生成 → 构建 → 删除
+- 导航外置：侧边栏和语言切换由 nav.js 驱动，使用 `<script src>` 加载（兼容 file://）
+- 构建集成到 doc-smith-content 中，doc-smith-create 只负责编排和 nav.js 生成
 - 发布方式待定，不在本次改造中处理发布提示
 - 不处理预览，只输出 HTML
 
 ---
 
-## Phase 0: build.mjs 适配
+## Phase 0: build.mjs 改造（双模式）
 
 ### Description
 
-适配 build.mjs 构建脚本，新增构建后清理中间 .md 文件的能力。这是所有后续 Phase 的基础。
+将 build.mjs 从全站批量构建改造为支持两种模式：`--doc` 单篇构建 + `--nav` 导航生成。这是所有后续 Phase 的基础。
 
 ### 涉及文件
 
-- `skills/doc-smith-build/scripts/build.mjs`（适配）
+- `skills/doc-smith-build/scripts/build.mjs`（改造：双模式）
 - `skills/doc-smith-build/SKILL.md`（更新说明）
+- `skills/doc-smith-build/assets/docsmith.css`（不变）
+
+### 改造要点
+
+**模式 1：`--doc <md-file> --path <doc-path>` 单篇构建**
+- 输入：单篇 MD 文件路径 + 文档 path + workspace/output 路径
+- 输出：对应的 HTML 文件到 dist/{lang}/docs/{path}.html
+- 职责：
+  - Markdown → HTML 转换（markdown-it）
+  - 套 HTML 骨架（data-ds 锚点）
+  - 生成 TOC（页面内联）
+  - 处理图片占位符
+  - 拼接静态资源引用（CSS + nav.js）
+- 不负责：导航渲染（nav.js 客户端完成）、MD 清理（调用方负责）
+
+**模式 2：`--nav` 导航生成**
+- 输入：document-structure.yaml + config.yaml
+- 输出：assets/nav.js、assets/docsmith.css、assets/theme.css、index.html 重定向
+- nav.js 格式：`window.__DS_NAV__ = { ... }` 数据对象（使用 script src 加载）
+
+**HTML 模板变化：**
+- `data-ds="sidebar"` 改为空容器，由 nav.js 在客户端渲染
+- `data-ds="toc"` 保持构建时内联
+- 新增 `<script src="{assetPath}/nav.js">` 和内联渲染脚本
+- 移除：批量构建模式、`cleanupMarkdownFiles` 函数（MD 清理由 doc-smith-content 负责）
 
 ### Tests
 
 #### Happy Path
-- [ ] build.mjs 正常构建：输入 MD 文档目录，输出完整 HTML 站点到 dist/
-- [ ] 构建后清理：docs/ 中的 .md 文件被删除，.meta.yaml 保留
-- [ ] 多语言构建：zh/ 和 en/ 目录各自生成对应 HTML 页面
-- [ ] 资源复制：docsmith.css 正确复制到 dist/assets/
-- [ ] theme.css 存在时正确复制，不存在时不报错
+- [ ] `--doc` 模式：输入单篇 MD，输出对应 HTML 到正确路径
+- [ ] `--doc` 模式：HTML 包含正确的 nav.js script 引用
+- [ ] `--doc` 模式：TOC 正确内联生成
+- [ ] `--doc` 模式：sidebar 为空容器（不含内联导航）
+- [ ] `--nav` 模式：从 structure.yaml 生成 nav.js 数据文件
+- [ ] `--nav` 模式：复制 docsmith.css 到 assets/
+- [ ] `--nav` 模式：theme.css 存在时复制，不存在时不报错
+- [ ] `--nav` 模式：生成 index.html 重定向
+- [ ] 多语言支持：zh/ 和 en/ 目录各自正确输出
 
 #### Bad Path
-- [ ] docs/ 目录为空时：构建脚本优雅退出，输出警告而非崩溃
-- [ ] document-structure.yaml 缺失时：报告明确错误信息
-- [ ] MD 文件格式异常（无标题、空文件）时：跳过并警告，不中断构建
-- [ ] 输出目录已存在时：覆盖而非追加
-- [ ] workspace 路径不存在时：报告明确错误
+- [ ] `--doc` 无 MD 文件路径：报告明确错误
+- [ ] `--doc` MD 文件不存在：报告明确错误
+- [ ] `--nav` 无 structure.yaml：报告明确错误
+- [ ] MD 文件格式异常（无标题、空文件）：跳过并警告
+- [ ] workspace 路径不存在：报告明确错误
 
 #### Edge Cases
-- [ ] 只有一种语言的文档：正常构建，不生成其他语言目录
-- [ ] 深层嵌套文档路径（如 /guides/advanced/deployment/config）：目录结构正确
+- [ ] 深层嵌套文档路径（/guides/advanced/deployment/config）：目录结构正确
 - [ ] 文档标题包含特殊字符（引号、尖括号）：HTML 正确转义
-- [ ] 超长文档（>1000 行 MD）：正常构建，不超时
+- [ ] 超长文档（>1000 行 MD）：正常构建
+- [ ] 只有一种语言的文档：正常处理
 
 #### Security
-- [ ] MD 内容中的 `<script>` 标签：构建后被转义，不执行
+- [ ] MD 内容中的 `<script>` 标签：构建后被转义
 - [ ] MD 内容中的 HTML 注入：被 markdown-it 安全处理
 - [ ] 文件路径中的 `../` 穿越：不泄露 workspace 外的文件
 
 #### Data Leak
 - [ ] 构建日志不包含文件系统绝对路径
-- [ ] 错误信息不暴露 workspace 外部的目录结构
+- [ ] nav.js 不包含绝对路径
 
 #### Data Damage
-- [ ] 清理 .md 只删除 docs/ 下的 .md 文件，不误删 .meta.yaml
-- [ ] 清理 .md 不影响 assets/ 目录中的任何文件
-- [ ] 构建失败时不删除已有的 dist/ 内容（先构建到临时目录，成功后替换）
+- [ ] `--doc` 模式不影响其他已有 HTML 文件
+- [ ] `--nav` 模式不影响 docs/ 目录中的内容
 
 ### E2E Gate
 
@@ -73,7 +103,6 @@
 mkdir -p /tmp/test-docsmith/.aigne/doc-smith/docs/overview
 mkdir -p /tmp/test-docsmith/.aigne/doc-smith/planning
 
-# 创建最小配置
 cat > /tmp/test-docsmith/.aigne/doc-smith/config.yaml << 'EOF'
 locale: zh
 EOF
@@ -101,72 +130,85 @@ cat > /tmp/test-docsmith/.aigne/doc-smith/docs/overview/zh.md << 'EOF'
 - 特性 2
 EOF
 
-# 执行构建
+# 测试 --nav 模式
 cd /tmp/test-docsmith && node skills/doc-smith-build/scripts/build.mjs \
-  --workspace .aigne/doc-smith \
-  --output .aigne/doc-smith/dist
+  --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
 
-# 验证输出
-test -f .aigne/doc-smith/dist/zh/docs/overview.html && echo "✓ HTML generated"
+test -f .aigne/doc-smith/dist/assets/nav.js && echo "✓ nav.js generated"
 test -f .aigne/doc-smith/dist/assets/docsmith.css && echo "✓ CSS copied"
 test -f .aigne/doc-smith/dist/index.html && echo "✓ Index redirect generated"
-# 验证 MD 已清理
-test ! -f .aigne/doc-smith/docs/overview/zh.md && echo "✓ MD cleaned up"
-# 验证 meta 保留
-test -f .aigne/doc-smith/docs/overview/.meta.yaml && echo "✓ Meta preserved"
+
+# 测试 --doc 模式
+cd /tmp/test-docsmith && node skills/doc-smith-build/scripts/build.mjs \
+  --doc .aigne/doc-smith/docs/overview/zh.md --path /overview \
+  --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
+
+test -f .aigne/doc-smith/dist/zh/docs/overview.html && echo "✓ HTML generated"
+grep 'nav.js' .aigne/doc-smith/dist/zh/docs/overview.html && echo "✓ nav.js referenced"
+grep 'data-ds="toc"' .aigne/doc-smith/dist/zh/docs/overview.html && echo "✓ TOC inlined"
+
+# 验证 MD 未被删除（--doc 模式不负责清理）
+test -f .aigne/doc-smith/docs/overview/zh.md && echo "✓ MD not deleted (caller's job)"
 ```
 
 ### Acceptance Criteria
 
 - [ ] 所有 6 类测试通过
 - [ ] E2E Gate 验证通过
-- [ ] build.mjs 新增 .md 清理逻辑
+- [ ] `--doc` 模式可正常构建单篇 HTML
+- [ ] `--nav` 模式可生成 nav.js + 复制资源
+- [ ] HTML 模板包含 nav.js script 引用
 - [ ] 代码已提交
 
 ---
 
-## Phase 1: doc-smith-content + doc-smith-create 流程改造
+## Phase 1: doc-smith-content + doc-smith-create + doc-smith-check 流程改造
 
 ### Description
 
-改造文档生成流程：doc-smith-content 明确 MD 为中间产物；doc-smith-create 在内容和图片生成完毕后调用 build.mjs 构建 HTML，构建后清理中间 .md 文件。构建步骤集成到现有流程中，不作为独立 Phase。
+改造文档生成流程：doc-smith-content 生成 MD 后立即调用 `build.mjs --doc` 构建 HTML 并删除 MD；doc-smith-create 在开始生成前调用 `build.mjs --nav` 生成导航和资源；doc-smith-check 从校验 MD 改为校验 HTML。
 
 ### 涉及文件
 
-- `agents/doc-smith-content.md`（改造：明确 MD 为中间产物）
-- `skills/doc-smith-create/SKILL.md`（改造：集成构建步骤到流程末尾）
+- `agents/doc-smith-content.md`（改造：生成 MD → build --doc → 删除 MD）
+- `skills/doc-smith-create/SKILL.md`（改造：编排 --nav 和 per-doc 构建流程）
+- `skills/doc-smith-check/SKILL.md`（改造：校验 HTML 而非 MD）
+- `skills/doc-smith-check/scripts/check-content.mjs`（改造：检查 HTML 文件）
+- `skills/doc-smith-check/scripts/validate-content.mjs`（改造：检查 HTML 文件）
 - `skills/doc-smith-build/SKILL.md`（适配：更新说明）
 
 ### Tests
 
 #### Happy Path
-- [ ] doc-smith-content 生成 MD 文件到 docs/ 目录：格式正确，.meta.yaml 同步创建
-- [ ] doc-smith-create 完整流程：分析 → 结构 → 内容 → 图片 → 构建 HTML → 清理 MD
-- [ ] 构建完成后 dist/ 包含完整 HTML 站点
-- [ ] docs/ 中 .md 文件已清理，.meta.yaml 保留
-- [ ] theme.css 不存在时询问用户，用户选择默认则跳过
+- [ ] doc-smith-content 生成 MD → 调用 build --doc → HTML 生成成功 → MD 被删除
+- [ ] doc-smith-create 新建流程：结构确定 → build --nav → 并行 content → check HTML
+- [ ] doc-smith-create 更新流程：content 生成/更新 → build --nav（如结构变更）→ check HTML
+- [ ] doc-smith-check --content：检查 dist/{lang}/docs/{path}.html 而非 docs/{path}/{lang}.md
+- [ ] doc-smith-check --content：验证 nav.js 存在且包含所有文档条目
+- [ ] workspace 中无 .md 文件残留，只有 .meta.yaml
 
 #### Bad Path
-- [ ] build.mjs 执行失败时：报告错误，保留 .md 文件不清理（可重试）
-- [ ] doc-smith-content 生成空文档时：构建跳过该文档并警告
+- [ ] build --doc 执行失败：doc-smith-content 报告错误，保留 MD 不删除
+- [ ] build --nav 执行失败：doc-smith-create 报告错误，不开始内容生成
 - [ ] npm 依赖未安装时：自动执行 npm install 后重试
-- [ ] workspace 不完整（缺少 config.yaml）时：在构建前检测并报错
+- [ ] workspace 不完整（缺少 config.yaml）时：在 --nav 前检测并报错
 
 #### Edge Cases
-- [ ] 只生成单篇文档（独立调用 doc-smith-content）时：不触发全站构建
-- [ ] 更新已有文档时：增量构建，不影响其他已有 HTML
-- [ ] 用户选择自定义主题时：先生成 theme.css 再构建
+- [ ] 更新已有文档时：只重建该文档的 HTML，不影响其他 HTML
+- [ ] 新增文档后：重新调用 --nav 更新导航数据
+- [ ] 并行生成多篇文档时：各 doc-smith-content 独立构建，不冲突
+- [ ] 用户选择自定义主题时：先生成 theme.css 再调用 --nav
 
 #### Security
-- [ ] 用户自定义主题中的 JS 注入：theme.css 只允许 CSS，不允许 `<script>`
+- [ ] theme.css 只允许 CSS，不允许 `<script>`
 - [ ] document-structure.yaml 中的路径注入：验证路径格式
 
 #### Data Leak
-- [ ] 构建结果报告不暴露绝对路径，使用相对路径
+- [ ] 构建结果报告不暴露绝对路径
 - [ ] 错误信息不暴露系统信息
 
 #### Data Damage
-- [ ] 构建失败不会破坏已有的 dist/ 内容
+- [ ] 单篇构建失败不影响其他已有 HTML
 - [ ] 更新文档时不丢失未修改的文档
 
 ### E2E Gate
@@ -176,20 +218,25 @@ test -f .aigne/doc-smith/docs/overview/.meta.yaml && echo "✓ Meta preserved"
 # 验证最终输出
 test -d .aigne/doc-smith/dist && echo "✓ dist/ exists"
 ls .aigne/doc-smith/dist/zh/docs/ | wc -l  # 应有多个 HTML 文件
-test ! "$(find .aigne/doc-smith/docs -name '*.md' 2>/dev/null)" && echo "✓ MD files cleaned"
-find .aigne/doc-smith/docs -name '.meta.yaml' | wc -l  # meta 文件应保留
+test -f .aigne/doc-smith/dist/assets/nav.js && echo "✓ nav.js exists"
 
-# 验证 HTML 页面可访问
-grep -l 'data-ds="content"' .aigne/doc-smith/dist/zh/docs/*.html | wc -l  # 应 > 0
+# 验证无 MD 残留
+test ! "$(find .aigne/doc-smith/docs -name '*.md' 2>/dev/null)" && echo "✓ No MD files"
+
+# 验证 meta 文件保留
+find .aigne/doc-smith/docs -name '.meta.yaml' | wc -l  # 应 > 0
+
+# 验证 HTML 页面包含 nav.js 引用
+grep -l 'nav.js' .aigne/doc-smith/dist/zh/docs/*.html | wc -l  # 应 > 0
 ```
 
 ### Acceptance Criteria
 
 - [ ] 所有 6 类测试通过
 - [ ] E2E Gate 验证通过
-- [ ] doc-smith-content.md 已更新（明确 MD 中间产物定位）
-- [ ] doc-smith-create SKILL.md 已更新（集成构建步骤）
-- [ ] 任务规划模板已更新（包含构建步骤）
+- [ ] doc-smith-content.md 已更新（per-doc build + MD 清理）
+- [ ] doc-smith-create SKILL.md 已更新（--nav 编排 + 移除批量构建）
+- [ ] doc-smith-check 已更新（校验 HTML）
 - [ ] 代码已提交
 
 ---
@@ -287,16 +334,17 @@ test -f /tmp/test-image-en.png && echo "✓ Image edited"
 # 全流程端到端验证（在真实项目上）
 
 # 1. 执行 /doc-smith-create 生成文档
-#    预期：分析 → 结构 → 内容(MD) → 图片 → 构建(HTML) → 清理(MD)
+#    预期：分析 → 结构 → --nav → 并行 content(MD→HTML→删MD) → 图片 → check HTML
 
 # 2. 验证 HTML 站点完整性
 test -d .aigne/doc-smith/dist && echo "✓ dist/ 存在"
 test -f .aigne/doc-smith/dist/index.html && echo "✓ 首页重定向存在"
+test -f .aigne/doc-smith/dist/assets/nav.js && echo "✓ nav.js 存在"
 ls .aigne/doc-smith/dist/zh/docs/*.html | wc -l  # 验证页面数量
 grep 'data-ds="content"' .aigne/doc-smith/dist/zh/docs/*.html | wc -l  # 验证 HTML 骨架
 
-# 3. 验证中间 MD 已清理
-test ! "$(find .aigne/doc-smith/docs -name '*.md' 2>/dev/null)" && echo "✓ MD 已清理"
+# 3. 验证无 MD 残留
+test ! "$(find .aigne/doc-smith/docs -name '*.md' 2>/dev/null)" && echo "✓ 无 MD 文件"
 
 # 4. 验证 meta 文件保留
 find .aigne/doc-smith/docs -name '.meta.yaml' | wc -l  # 应 > 0
@@ -306,15 +354,19 @@ ls .aigne/doc-smith/assets/*/images/*.png 2>/dev/null | wc -l  # 应 > 0
 
 # 6. 验证资源文件
 test -f .aigne/doc-smith/dist/assets/docsmith.css && echo "✓ CSS 存在"
+
+# 7. 验证导航数据
+grep -q '__DS_NAV__' .aigne/doc-smith/dist/assets/nav.js && echo "✓ nav.js 有效"
 ```
 
 ## Risk Mitigation
 
 | Risk | Mitigation | Contingency |
 |------|------------|-------------|
-| build.mjs 清理 MD 误删文件 | 只删除 docs/ 下的 .md 文件，白名单 .meta.yaml | git 恢复 |
+| build.mjs 双模式改造复杂度 | 保留核心转换逻辑，只拆分入口和导航生成 | 分步实现 --doc 和 --nav |
+| nav.js 客户端渲染兼容性 | 使用 script src（非 fetch），兼容 file:// | 退回内联导航 |
+| per-doc 并发构建冲突 | 各 doc 写入不同路径，无共享状态 | 串行构建降级 |
 | AIGNE Hub API 接口变更 | 封装 API 调用层，便于适配 | 回退到 AIGNE CLI |
-| 构建步骤拖慢生成流程 | build.mjs 是确定性、快速的操作 | 可设为可选步骤 |
 | 并发图片生成 API 限流 | 控制并发数，添加重试逻辑 | 串行执行降级 |
 
 ## References

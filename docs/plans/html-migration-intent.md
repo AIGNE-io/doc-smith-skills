@@ -11,10 +11,11 @@
 
 ### 核心思想
 
-- AI 先生成 Markdown（token 消耗低、输出稳定），再转换为 HTML
-- Markdown 只是生成过程中的中间产物，不作为最终管理对象
-- `doc-smith-content` 改造：生成 MD 后转换为 HTML，只保留 HTML
-- `build.mjs` 适配：支持新的转换流程
+- AI 先生成 Markdown（token 消耗低、输出稳定），每篇生成后立即构建为 HTML
+- Markdown 仅在单篇文档生成的瞬间存在，生成 → 构建 → 删除，workspace 中始终只有 HTML
+- `doc-smith-content` 改造：生成单篇 MD → 调用 build.mjs 构建为 HTML → 删除 MD
+- `build.mjs` 改造：支持单篇构建模式（`--doc`）；导航从内联改为外置 nav.js
+- 导航外置：侧边栏和语言切换由 nav.js 驱动，更新结构只需重新生成 nav.js，无需重建所有 HTML
 - 发布统一使用 `/myvibe-publish`（已支持 `--hub` 参数指定目标站点）
 - 项目级发布配置：doc-smith-create 生成时写入 `publish.yaml`，`/myvibe-publish` 自动读取目标
 
@@ -28,9 +29,10 @@
 
 ### 项目范围
 
-- **改造** `doc-smith-content` agent：先生成 Markdown（中间产物），再转换为 HTML，只保留 HTML
-- **适配** `build.mjs`：适配新的转换流程，构建后清理中间 .md 文件
-- **改造** `doc-smith-create`：集成构建步骤，生成发布配置（publish.yaml）
+- **改造** `doc-smith-content` agent：生成单篇 MD → 调用 build.mjs --doc 构建 HTML → 删除 MD
+- **改造** `build.mjs`：支持 `--doc` 单篇构建 + `--nav` 导航生成（nav.js）两种模式
+- **改造** `doc-smith-create`：结构确定后生成 nav.js，文档构建由 doc-smith-content 各自完成
+- **改造** `doc-smith-check`：内容检查从校验 MD 改为校验 HTML
 - **改造** `doc-smith-images` skill：AIGNE CLI 不再维护，改为直接调用 AIGNE Hub API，自行处理授权
 - **改造** `generate-slot-image` agent：适配新的生图接口，更新错误处理
 - **不改造** MyVibe：`/myvibe-publish` 已支持静态 HTML 发布和 `--hub` 参数
@@ -41,6 +43,7 @@
 
 - 全文搜索（pagefind / lunr.js）
 - 可选注入点（head.html + body-end.html）
+- 站点集成（导航入口、搜索、版本管理）和旧文档下线
 
 ### 不包含（不做）
 
@@ -60,29 +63,40 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  doc-smith-create（改造）                                        │
+│  doc-smith-create（编排）                                        │
 │                                                                 │
-│  数据源分析 → 结构规划 → AI 生成 Markdown（中间产物）             │
-│                              ↓                                  │
-│                 .aigne/doc-smith/docs/**/*.md（临时）             │
+│  数据源分析 → 结构规划 → build.mjs --nav → 并行 doc-smith-content │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  build.mjs（适配）                                               │
+│  doc-smith-content（per-doc，可并行）                             │
 │                                                                 │
+│  AI 生成 Markdown → build.mjs --doc 构建 HTML → 删除 MD         │
+│  （MD 仅在此步骤内瞬间存在）                                      │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  build.mjs（两种模式）                                           │
+│                                                                 │
+│  --doc 单篇构建:                                                 │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │ 渲染器职责（极简、确定性）                                │   │
 │  │ 1. Markdown → HTML（markdown-it）                       │   │
-│  │ 2. 套固定 HTML 骨架（data-ds 锚点）                      │   │
-│  │ 3. 注入导航 + TOC                                       │   │
-│  │ 4. 拼接静态资源（CSS）                                   │   │
-│  │ 5. 处理图片占位符                                        │   │
-│  │ 6. 清理中间 .md 文件（新增）                              │   │
+│  │ 2. 套 HTML 骨架（data-ds 锚点）                          │   │
+│  │ 3. 生成 TOC（页面内联）                                   │   │
+│  │ 4. 处理图片占位符                                        │   │
+│  │ 5. 拼接静态资源引用（CSS + nav.js）                       │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  --nav 导航生成:                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ 从 structure.yaml 生成 nav.js（侧边栏 + 语言切换）       │   │
+│  │ 复制静态资源（docsmith.css、theme.css）                   │   │
+│  │ 生成 index.html 重定向                                   │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  输出: 纯静态 HTML 站点                                          │
+│  输出: 静态 HTML 站点（导航由 nav.js 驱动）                       │
 │                                                                 │
 │  .aigne/doc-smith/dist/                                        │
 │  ├── index.html              # 重定向到主语言                    │
@@ -94,6 +108,7 @@
 │  └── assets/                                                    │
 │      ├── docsmith.css        # 内置基础样式（稳定）               │
 │      ├── theme.css           # 用户/AI 生成的主题样式             │
+│      ├── nav.js              # 导航数据（侧边栏 + 语言切换）      │
 │      └── images/             # 文档图片                          │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
@@ -120,7 +135,7 @@ skills/doc-smith-build/
     └── docsmith.css            # 内置基础样式
 ```
 
-### HTML 结构契约（不变）
+### HTML 结构契约（适配 nav.js）
 
 ```html
 <!DOCTYPE html>
@@ -136,11 +151,13 @@ skills/doc-smith-build/
 <body>
   <header data-ds="header">{{header}}</header>
   <div data-ds="layout">
-    <aside data-ds="sidebar">{{navigation}}</aside>
+    <aside data-ds="sidebar"><!-- nav.js 渲染 --></aside>
     <main data-ds="content">{{content}}</main>
     <nav data-ds="toc">{{toc}}</nav>
   </div>
   <footer data-ds="footer">{{footer}}</footer>
+  <script src="{{assetPath}}/nav.js"></script>
+  <script>/* 内联：从 nav.js 数据渲染侧边栏和语言切换 */</script>
 </body>
 </html>
 ```
@@ -157,48 +174,68 @@ skills/doc-smith-build/
 
 :::
 
-::: draft {note="§3.3 已压缩，执行细节见 engineering.md"}
+::: reviewed {by=lban date=2026-02-10}
 ## 3. 详细行为
 
 ### 3.1 doc-smith-content agent（改造）
 
-先生成 Markdown（中间产物），再转换为 HTML。Markdown 只是 AI 输出的中间格式，最终只保留 HTML。
+每篇文档生成后立即构建为 HTML。MD 仅在生成瞬间存在，构建完成后立即删除。
 
 **改造要点：**
-- AI 仍然先生成 Markdown（token 消耗低、输出稳定）
-- Markdown 是中间产物，生成后通过 build.mjs 转换为 HTML
-- 最终只保留 HTML，不同时管理 MD 和 HTML
+- AI 先生成 Markdown（token 消耗低、输出稳定）
+- 生成后立即调用 `build.mjs --doc` 构建为 HTML，然后删除 MD
+- MD 仅在 doc-smith-content 执行期间瞬间存在，不会出现在 workspace 中
 - AFS Image Slot 占位符：保持 `<!-- afs:image ... -->` 格式（在 MD 中标记，构建时处理）
-- .meta.yaml：保留（记录文档元信息）
 
-### 3.2 build.mjs（适配）
+### 3.2 build.mjs（改造）
 
-核心能力直接复用，需要适配以支持新的工作流。
+从全站批量构建改为支持两种模式：单篇构建 + 导航生成。
 
-**复用的能力：**
-- Markdown → HTML 转换（markdown-it + markdown-it-anchor）
-- HTML 骨架模板（data-ds 锚点）
-- 导航生成（从 document-structure.yaml）
-- TOC 生成（从 HTML 提取 h2-h4）
-- 多语言处理（独立目录输出）
-- 图片占位符处理
-- 资源复制（docsmith.css + theme.css）
-- index.html 重定向生成
+**模式 1：`--doc <path>` 单篇构建**
+- 输入：单篇 MD 文件路径 + 文档 path
+- 输出：对应的 HTML 文件到 dist/{lang}/docs/{path}.html
+- 职责：Markdown → HTML 转换、HTML 骨架套用、TOC 内联生成、图片占位符处理、CSS + nav.js 引用
+- 不负责：导航渲染（由 nav.js 在客户端完成）、MD 清理（由调用方 doc-smith-content 负责）
 
-**需要适配：**
-- 构建完成后清理 docs/ 中的中间 .md 文件
-- 确保最终 workspace 只保留 HTML 产物
+**模式 2：`--nav` 导航生成**
+- 输入：document-structure.yaml + config.yaml
+- 输出：assets/nav.js（导航数据）、assets/docsmith.css、assets/theme.css、index.html 重定向
+- 调用时机：初始化时、结构变更后
+
+**导航外置 nav.js：**
+- 侧边栏和语言切换由 nav.js 驱动，页面通过 `<script src="{assetPath}/nav.js">` 加载
+- 使用 `<script src>` 而非 fetch，兼容 file:// 和 http:// 协议
+- 更新文档结构只需重新生成 nav.js，无需重建 HTML 页面
+- TOC 仍然在构建时内联生成（页面特有内容）
+
+**HTML 模板变化：**
+- `data-ds="sidebar"` 改为 JS 渲染（从 nav.js 数据）
+- `data-ds="toc"` 保持构建时内联
+- 新增 `<script src="{assetPath}/nav.js">` 和内联渲染脚本
 
 ### 3.3 doc-smith-create 改造
 
 **约束：**
-- 在所有 MD 和图片生成完毕后，调用 build.mjs 构建 HTML
-- 构建命令：`node skills/doc-smith-build/scripts/build.mjs --workspace .aigne/doc-smith --output .aigne/doc-smith/dist`
-- 如果 theme.css 不存在，询问用户是否需要自定义主题
+- 构建不再是独立步骤：doc-smith-content 每生成一篇文档即自动构建为 HTML
+- doc-smith-create 在开始生成文档前，调用 `build.mjs --nav` 生成 nav.js 和静态资源
+- 文档结构变更后（新增/删除文档），需要重新调用 `build.mjs --nav` 更新 nav.js
+- 如果 theme.css 不存在，询问用户是否需要自定义主题（在首次 --nav 之前）
 - 结束时报告构建结果（dist/ 路径、各语言页面数量）
 - 在 workspace 中写入 `publish.yaml`（含目标站点地址）
 
-### 3.4 图片生成（改造）
+### 3.4 doc-smith-check 改造
+
+内容检查从校验 MD 文件改为校验 HTML 文件。
+
+**改造要点：**
+- 文档存在性检查：检查 `dist/{lang}/docs/{path}.html` 而非 `docs/{path}/{lang}.md`
+- .meta.yaml 检查：保持不变（仍在 docs/{path}/ 目录）
+- 内部链接检查：从 HTML 中提取链接并验证
+- 图片检查：从 HTML 中提取图片引用并验证
+- AFS Image Slot 检查：在 HTML 中不应存在未替换的占位符
+- nav.js 检查：验证 nav.js 存在且包含所有文档条目
+
+### 3.5 图片生成（改造）
 
 AIGNE CLI 不再维护，生图能力需要从 AIGNE CLI 迁移到直接调用 AIGNE Hub API。
 
@@ -225,55 +262,30 @@ generate-slot-image agent → /doc-smith-images skill → 直接 HTTP 调用 AIG
 - 图片保存目录结构（`.aigne/doc-smith/assets/{key}/images/`）
 - `.meta.yaml` 元信息格式
 
-### 3.5 发布（统一 `/myvibe-publish`）
+### 3.6 发布（统一 `/myvibe-publish`）
 
-**统一使用 `/myvibe-publish`，不新增发布命令。**
-
-**理由：**
-- `/myvibe-publish` 已支持 `--hub` 参数指定目标站点
-- DocSmith 站点和 MyVibe 站点本质是同一能力（静态托管），同一能力不应有两个命令
-- 发布目标是项目属性，不是每次操作的选择
-
-**项目级发布配置：**
-- doc-smith-create 生成时在 workspace 中写入 `publish.yaml`
-- 配置内容：目标站点地址（`--hub` 参数值）
-- `/myvibe-publish` 读到配置后自动选择目标站点，用户无感
-- 没有配置时走 `/myvibe-publish` 默认行为
+统一使用 `/myvibe-publish`，doc-smith-create 在 workspace 写入 `publish.yaml` 指定目标站点：
 
 ```yaml
 # .aigne/doc-smith/publish.yaml
 hub: https://docs.example.com  # 目标站点地址
 ```
 
-### 3.6 站点集成
-
-| 方面 | 方案 | 操作 |
-|------|------|------|
-| 导航入口 | 指向文档托管地址 | Blocklet 后台配置，不改代码 |
-| 主题一致 | theme.css 对齐主站 | AI 根据主站风格生成/修改 |
-| 搜索 | 前端搜索 | 首轮简单版本（标题匹配），后续迭代 |
-| 版本 | Git + 托管平台 | 托管平台提供多版本和回退 |
-
-### 3.7 旧文档处理
-
-- 切换导航入口到新文档站点
-- Discuss Kit 文档暂时保留
-- 新文档稳定后再下线旧文档
-
 :::
 
-::: draft {note="§4.2 workspace 结构已精简"}
+::: reviewed {by=lban date=2026-02-10}
 ## 4. 技术实现指南
 
 ### 4.1 改动范围
 
 | 组件 | 改动类型 | 说明 |
 |------|---------|------|
-| `skills/doc-smith-create/SKILL.md` | **改造** | 增加构建步骤 + 生成发布配置（publish.yaml） |
-| `agents/doc-smith-content.md` | **改造** | 先生成 MD（中间产物），再转换为 HTML |
-| `skills/doc-smith-build/scripts/build.mjs` | **适配** | 适配新流程，构建后清理中间 .md 文件 |
+| `skills/doc-smith-create/SKILL.md` | **改造** | 结构确定后生成 nav.js，文档构建由 content 各自完成 |
+| `agents/doc-smith-content.md` | **改造** | 生成单篇 MD → build.mjs --doc → 删除 MD |
+| `skills/doc-smith-build/scripts/build.mjs` | **改造** | 支持 `--doc` 单篇构建 + `--nav` 导航生成两种模式 |
+| `skills/doc-smith-check/` | **改造** | 校验 HTML 文件（而非 MD），新增 nav.js 检查 |
 | `skills/doc-smith-build/assets/docsmith.css` | **不变** | 直接复用 |
-| `skills/doc-smith-build/SKILL.md` | **不变** | 作为 create 流程的构建步骤调用 |
+| `skills/doc-smith-build/SKILL.md` | **适配** | 更新说明，反映双模式 |
 | `skills/doc-smith-images/SKILL.md` | **改造** | 去掉 AIGNE CLI，直接调用 AIGNE Hub API |
 | `skills/doc-smith-images/scripts/aigne-generate/` | **替换** | AIGNE YAML 定义替换为直接 HTTP 调用 |
 | `agents/generate-slot-image.md` | **适配** | 适配新的生图接口，更新错误处理和依赖说明 |
@@ -284,8 +296,10 @@ hub: https://docs.example.com  # 目标站点地址
 
 相比现有结构，新增/变化：
 - **新增** `publish.yaml`：发布配置（目标站点地址）
-- **新增** `dist/`：构建输出目录（由 build.mjs 生成，含 HTML + assets）
-- **变化** `docs/**/*.md`：生成时临时存在，构建后清理（MD 是中间产物）
+- **新增** `dist/`：构建输出目录（含 HTML + assets + nav.js）
+- **新增** `dist/assets/nav.js`：导航数据（侧边栏 + 语言切换，由 build.mjs --nav 生成）
+- **变化** `docs/**/*.md`：不再持久存在，仅在 doc-smith-content 执行单篇生成时瞬间存在
+- **变化** `docs/**/`：目录和 .meta.yaml 保留，.md 文件在构建后立即删除
 
 :::
 
@@ -306,4 +320,3 @@ hub: https://docs.example.com  # 目标站点地址
 
 :::
 
-<!-- Gap: doc-smith-content agent 的构建职责边界不清晰。§3.1 说"先生成 MD，再转换为 HTML"，但转换是 build.mjs 的职责。review 反馈"构建步骤应在 doc-smith-content 中"。需要在下一轮 interview 中澄清。 -->
