@@ -60,41 +60,41 @@
 ### Tests
 
 #### Happy Path
-- [ ] `--doc` 模式：输入单篇 MD，输出对应 HTML 到正确路径
-- [ ] `--doc` 模式：HTML 包含正确的 nav.js script 引用
-- [ ] `--doc` 模式：TOC 正确内联生成
-- [ ] `--doc` 模式：sidebar 为空容器（不含内联导航）
-- [ ] `--nav` 模式：从 structure.yaml 生成 nav.js 数据文件
-- [ ] `--nav` 模式：复制 docsmith.css 到 assets/
-- [ ] `--nav` 模式：theme.css 存在时复制，不存在时不报错
-- [ ] `--nav` 模式：生成 index.html 重定向
-- [ ] 多语言支持：zh/ 和 en/ 目录各自正确输出
+- [x] `--doc` 模式：输入单篇 MD，输出对应 HTML 到正确路径
+- [x] `--doc` 模式：HTML 包含正确的 nav.js script 引用
+- [x] `--doc` 模式：TOC 正确内联生成
+- [x] `--doc` 模式：sidebar 为空容器（不含内联导航）
+- [x] `--nav` 模式：从 structure.yaml 生成 nav.js 数据文件
+- [x] `--nav` 模式：复制 docsmith.css 到 assets/
+- [x] `--nav` 模式：theme.css 存在时复制，不存在时不报错
+- [x] `--nav` 模式：生成 index.html 重定向
+- [x] 多语言支持：zh/ 和 en/ 目录各自正确输出
 
 #### Bad Path
-- [ ] `--doc` 无 MD 文件路径：报告明确错误
-- [ ] `--doc` MD 文件不存在：报告明确错误
-- [ ] `--nav` 无 structure.yaml：报告明确错误
-- [ ] MD 文件格式异常（无标题、空文件）：跳过并警告
-- [ ] workspace 路径不存在：报告明确错误
+- [x] `--doc` 无 MD 文件路径：报告明确错误
+- [x] `--doc` MD 文件不存在：报告明确错误
+- [x] `--nav` 无 structure.yaml：报告明确错误
+- [x] MD 文件格式异常（无标题、空文件）：跳过并警告
+- [x] workspace 路径不存在：报告明确错误
 
 #### Edge Cases
-- [ ] 深层嵌套文档路径（/guides/advanced/deployment/config）：目录结构正确
-- [ ] 文档标题包含特殊字符（引号、尖括号）：HTML 正确转义
-- [ ] 超长文档（>1000 行 MD）：正常构建
-- [ ] 只有一种语言的文档：正常处理
+- [x] 深层嵌套文档路径（/guides/advanced/deployment/config）：目录结构正确
+- [x] 文档标题包含特殊字符（引号、尖括号）：HTML 正确转义
+- [x] 超长文档（>1000 行 MD）：正常构建
+- [x] 只有一种语言的文档：正常处理
 
 #### Security
-- [ ] MD 内容中的 `<script>` 标签：构建后被转义
-- [ ] MD 内容中的 HTML 注入：被 markdown-it 安全处理
-- [ ] 文件路径中的 `../` 穿越：不泄露 workspace 外的文件
+- [x] MD 内容中的 `<script>` 标签：构建后被转义
+- [x] MD 内容中的 HTML 注入：被 markdown-it 安全处理
+- [x] 文件路径中的 `../` 穿越：不泄露 workspace 外的文件
 
 #### Data Leak
-- [ ] 构建日志不包含文件系统绝对路径
-- [ ] nav.js 不包含绝对路径
+- [x] 构建日志不包含文件系统绝对路径
+- [x] nav.js 不包含绝对路径
 
 #### Data Damage
-- [ ] `--doc` 模式不影响其他已有 HTML 文件
-- [ ] `--nav` 模式不影响 docs/ 目录中的内容
+- [x] `--doc` 模式不影响其他已有 HTML 文件
+- [x] `--nav` 模式不影响 docs/ 目录中的内容
 
 ### E2E Gate
 
@@ -153,11 +153,11 @@ test -f .aigne/doc-smith/docs/overview/zh.md && echo "✓ MD not deleted (caller
 
 ### Acceptance Criteria
 
-- [ ] 所有 6 类测试通过
-- [ ] E2E Gate 验证通过
-- [ ] `--doc` 模式可正常构建单篇 HTML
-- [ ] `--nav` 模式可生成 nav.js + 复制资源
-- [ ] HTML 模板包含 nav.js script 引用
+- [x] 所有 6 类测试通过
+- [x] E2E Gate 验证通过
+- [x] `--doc` 模式可正常构建单篇 HTML
+- [x] `--nav` 模式可生成 nav.js + 复制资源
+- [x] HTML 模板包含 nav.js script 引用
 - [ ] 代码已提交
 
 ---

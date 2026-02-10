@@ -1,121 +1,81 @@
 ---
 name: doc-smith-build
-description: Build Doc-Smith generated Markdown documentation into static HTML site. Use this skill when the user requests to build, compile, or convert documentation to HTML.
+description: Build Doc-Smith generated Markdown documentation into static HTML site. Supports two modes: --nav for navigation and assets generation, --doc for single document build.
 ---
 
 # Doc-Smith HTML 构建
 
-将 Markdown 文档构建为静态 HTML 站点。
+双模式构建：`--nav` 生成导航和静态资源，`--doc` 构建单篇文档。
 
 ## Usage
 
 ```bash
-# 构建 HTML 站点
-/doc-smith-build
+# 生成 nav.js + 复制资源 + 创建重定向
+node skills/doc-smith-build/scripts/build.mjs \
+  --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
 
-# 指定输出目录
-/doc-smith-build --output ./public
+# 构建单篇文档
+node skills/doc-smith-build/scripts/build.mjs \
+  --doc .aigne/doc-smith/docs/overview/zh.md --path /overview \
+  --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
 ```
 
 ## Options
 
 | Option | Alias | Description |
 |--------|-------|-------------|
-| `--output <path>` | `-o` | 输出目录（默认 `.aigne/doc-smith/dist`） |
+| `--nav` | | 生成 nav.js、复制 CSS、创建重定向页面 |
+| `--doc <file>` | | 构建单篇 MD 文件为 HTML |
+| `--path <path>` | | 文档路径（如 `/overview`），`--doc` 模式必需 |
+| `--workspace <path>` | `-w` | Doc-Smith workspace（默认 `.aigne/doc-smith`） |
+| `--output <path>` | `-o` | 输出目录（默认 `<workspace>/dist`） |
 
-## 工作流程
+## 模式说明
 
-### 1. 检测 Workspace
+### --nav 模式
 
-检查当前目录是否为有效的 Doc-Smith workspace：
-- 存在 `.aigne/doc-smith/docs/` 目录
-- 存在 `.aigne/doc-smith/planning/document-structure.yaml` 文件
+从 `document-structure.yaml` + `config.yaml` 生成导航数据和静态资源。
 
-如果不存在，提示先运行 `/doc-smith-create`。
+**输出：**
+- `assets/nav.js` — 导航数据（`window.__DS_NAV__ = {...}`），侧边栏和语言切换由此驱动
+- `assets/docsmith.css` — 内置基础样式
+- `assets/theme.css` — 用户主题（不存在时创建空文件）
+- `index.html` — 根重定向
+- `{lang}/index.html` — 语言重定向
 
-### 2. 检查主题文件
+**调用时机：** 初始化时、文档结构变更后。
 
-检查 `.aigne/doc-smith/theme.css` 是否存在：
+### --doc 模式
 
-**如果不存在**：使用 AskUserQuestion 询问用户：
-```
-需要自定义主题吗？
-- 使用默认样式（推荐）
-- 生成自定义主题
-```
+构建单篇 MD 文件为完整 HTML 页面。
 
-**如果用户选择生成自定义主题**：
-1. 追问用户描述期望的风格（如 "Stripe 文档风格"、"简洁深色主题"）
-2. 根据用户描述生成 `.aigne/doc-smith/theme.css`
-3. 告知用户后续可随时修改样式，直接描述即可
+**输入：** MD 文件路径 + 文档 path
+**输出：** `dist/{lang}/docs/{path}.html`
 
-**如果用户选择默认样式**：继续构建，不生成 theme.css。
+**职责：**
+- Markdown → HTML 转换（markdown-it）
+- 套 HTML 骨架（data-ds 锚点）
+- 生成 TOC（页面内联）
+- 处理图片占位符（`<!-- afs:image ... -->`）
+- 拼接静态资源引用（CSS + nav.js）
 
-### 3. 执行构建
+**不负责：** 导航渲染（nav.js 客户端完成）、MD 清理（调用方负责）。
 
-调用构建脚本：
+## 导航架构
 
-```bash
-node skills/doc-smith-build/scripts/build.mjs \
-  --workspace .aigne/doc-smith \
-  --output .aigne/doc-smith/dist
-```
-
-### 4. 报告结果
-
-构建完成后报告：
-- 输出路径
-- 生成的页面数量（按语言统计）
-- 预览方式提示
-
-**示例输出**：
-```
-✓ 构建完成
-
-输出路径: .aigne/doc-smith/dist/
-- 中文页面: 15 个
-- 英文页面: 15 个
-
-预览方式:
-- 浏览器直接打开: open .aigne/doc-smith/dist/index.html
-- 本地服务器: npx serve .aigne/doc-smith/dist
-```
-
-## 主题迭代
-
-用户可以随时通过自然语言修改主题：
-
-```
-用户: 侧边栏太窄了，代码块背景深一点
-
-AI: 好的，我来调整 theme.css：
-    - 侧边栏宽度: 240px → 280px
-    - 代码块背景: #f6f8fa → #1e293b
-
-    重新构建中...
-
-    ✓ 构建完成，刷新预览页面查看效果。
-```
-
-**修改主题后需要重新构建才能看到效果。**
-
-## 恢复默认主题
-
-```
-用户: 主题改坏了，恢复默认
-
-AI: 好的，删除 theme.css，重新构建。
-
-    ✓ 已恢复默认样式
-```
+侧边栏和语言切换由 `nav.js` 在客户端渲染：
+- 使用 `<script src>` 加载（兼容 `file://` 和 `http://` 协议）
+- 更新文档结构只需重新生成 nav.js，无需重建所有 HTML 页面
+- TOC 仍在构建时内联生成（页面特有内容）
 
 ## 错误处理
 
 | 错误类型 | 处理方式 |
 |----------|----------|
-| workspace 不存在 | 提示先运行 `/doc-smith-create` |
-| document-structure.yaml 缺失 | 提示先运行 `/doc-smith-create` |
-| 文档文件缺失 | 跳过并警告，继续构建其他文档 |
+| workspace 不存在 | 报告明确错误 |
+| document-structure.yaml 缺失 | 报告明确错误 |
+| MD 文件不存在 | 报告明确错误 |
+| `--doc` 缺少 `--path` | 报告明确错误 |
 | 依赖未安装 | 在 scripts 目录执行 `npm install` |
 
 ### 依赖未安装
@@ -143,5 +103,6 @@ cd skills/doc-smith-build/scripts && npm install
 │       └── ...
 └── assets/
     ├── docsmith.css        # 内置基础样式
-    └── theme.css           # 用户主题（如果存在）
+    ├── theme.css           # 用户主题
+    └── nav.js              # 导航数据（侧边栏 + 语言切换）
 ```
