@@ -50,6 +50,7 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
   const PATHS = getPaths();
   const yamlPath = PATHS.DOCUMENT_STRUCTURE;
   const docsDir = PATHS.DOCS_DIR;
+  const distDir = PATHS.DIST_DIR;
   const autoFix = true;
   const checkRemoteImages = true;
   try {
@@ -70,7 +71,7 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
       };
     }
 
-    // Check if document directory exists
+    // Check if document directory exists (for .meta.yaml files)
     try {
       await access(docsDir, constants.F_OK);
     } catch (_error) {
@@ -80,8 +81,37 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
         message:
           `❌ Document directory not found: ${docsDir}/\n\n` +
           `Possible reasons:\n` +
-          `1. Documents not generated - Please execute step 6.1 to generate document content\n` +
+          `1. Documents not generated - Please generate document content first\n` +
           `2. Directory path error - Confirm document directory is ${docsDir}/\n`,
+      };
+    }
+
+    // Check if dist directory exists (for HTML files)
+    try {
+      await access(distDir, constants.F_OK);
+    } catch (_error) {
+      return {
+        success: false,
+        valid: false,
+        message:
+          `❌ Dist directory not found: ${distDir}/\n\n` +
+          `Possible reasons:\n` +
+          `1. HTML not built - Please run build.mjs --nav and --doc to build HTML\n` +
+          `2. Directory path error - Confirm dist directory is ${distDir}/\n`,
+      };
+    }
+
+    // Check if nav.js exists
+    const navJsPath = `${distDir}/assets/nav.js`;
+    try {
+      await access(navJsPath, constants.F_OK);
+    } catch (_error) {
+      return {
+        success: false,
+        valid: false,
+        message:
+          `❌ nav.js not found: ${navJsPath}\n\n` +
+          `Please run build.mjs --nav to generate navigation data.\n`,
       };
     }
 
@@ -97,6 +127,7 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
     const validationResult = await validateDocumentContent({
       yamlPath,
       docsDir,
+      distDir,
       docs,
       checkRemoteImages,
       checkSlots,
@@ -122,6 +153,7 @@ export default async function checkContent({ docs = undefined, checkSlots = fals
         const revalidation = await validateDocumentContent({
           yamlPath,
           docsDir,
+          distDir,
           docs,
           checkRemoteImages,
           checkSlots,

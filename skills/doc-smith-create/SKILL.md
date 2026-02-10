@@ -163,6 +163,28 @@ Document Update Template:
 5.2: 确认文档结构符合指定的数据结构，参考：`references/document-structure-schema.md`
 5.3: 如果用户提出修改意见，修改之后需要再次调用 `/doc-smith-check --structure` 检查更新后的文档结构。
 
+### 5.5 生成导航和静态资源
+
+**文档结构确认后、生成文档内容前，必须先生成 nav.js 和静态资源。**
+
+使用 Bash 工具执行：
+
+```bash
+node skills/doc-smith-build/scripts/build.mjs \
+  --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
+```
+
+**此步骤会生成：**
+- `dist/assets/nav.js` — 导航数据（侧边栏 + 语言切换）
+- `dist/assets/docsmith.css` — 内置基础样式
+- `dist/assets/theme.css` — 用户主题
+- `dist/index.html` — 根重定向
+- `dist/{lang}/index.html` — 语言重定向
+
+**失败处理：**
+- 如果 `build.mjs --nav` 失败，不要开始内容生成
+- 如果出现依赖未安装错误，先执行 `cd skills/doc-smith-build/scripts && npm install`
+
 ### 6. 生成文档内容
 
 使用 `doc-smith-content` **子代理**为文档结构中的每个文档生成内容。
@@ -186,7 +208,9 @@ Document Update Template:
 - /guides/getting-started
 ```
 
-每个子代理完成后会返回摘要，包含：文档路径、主题概述、章节列表、image slots、校验结果。
+每个子代理完成后会返回摘要，包含：文档路径、主题概述、章节列表、image slots、HTML 构建结果、校验结果。
+
+**注意**：`doc-smith-content` 子代理内部会自动完成 per-doc build（生成 MD → 构建 HTML → 删除 MD），不需要在此步骤额外调用 build 命令。
 
 ### 7. 更新已有文档
 
@@ -201,6 +225,11 @@ Document Update Template:
 **如果涉及文档结构的修改**：
 - 文档结构数据结构参考： `references/document-structure-schema.md`
 - 向用户展示的结构请参考： `references/structure-confirmation-guide.md`
+- **重新生成 nav.js**：结构变更后必须重新执行 `build.mjs --nav` 更新导航数据
+  ```bash
+  node skills/doc-smith-build/scripts/build.mjs \
+    --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
+  ```
 - 新增文档时，使用 `doc-smith-content` 子代理生成内容：
 
 ```
@@ -304,8 +333,12 @@ Document Update Template:
 8.6 **核对完成清单**
 
 - [ ] 文档结构校验通过
-- [ ] 文档内容检查通过
-- [ ] 确认所有生成的文档所在文件夹路径与 `document-structure.yaml` 中的 path 字段一致，并存在 .meta.yaml 文件和主语言文件
+- [ ] `dist/` 目录已生成（`build.mjs --nav` 执行成功）
+- [ ] `dist/assets/nav.js` 存在且包含所有文档条目
+- [ ] 文档内容检查通过（检查 HTML 文件）
+- [ ] 确认所有文档的 `.meta.yaml` 存在且路径与 `document-structure.yaml` 一致
+- [ ] 确认所有文档的 HTML 文件已生成在 `dist/{lang}/docs/{path}.html`
+- [ ] 确认 `docs/` 目录中无 `.md` 文件残留（只有 `.meta.yaml`）
 - [ ] 确认文档内部链接都有效
 - [ ] 确认图片路径正确且文件存在
 - [ ] 检查是否存在 `AFS Image Slot` 并生成图片
@@ -314,7 +347,7 @@ Document Update Template:
 **文档更新的场景**：
 - [ ] 用户要求的变更都已处理
 - [ ] 文档中的 `::: PATCH` 标记都已处理
-- [ ] 如果修改了文档结构，重新执行 YAML 校验
+- [ ] 如果修改了文档结构，重新执行 YAML 校验并重新生成 nav.js
 - [ ] 如果修改了文档内容，重新执行内容检查
 - [ ] 检查是否新生成了 `AFS Image Slot`, 如果存在则生成图片
 - [ ] 图片 slot 替换校验通过
@@ -340,14 +373,24 @@ my-project/                        # 用户的项目目录（cwd）
 │       │   └── user-intent.md     # 用户意图描述
 │       ├── planning/
 │       │   └── document-structure.yaml  # 文档结构计划
-│       ├── docs/                  # 生成的文档
+│       ├── docs/                  # 文档元信息（MD 文件构建后删除）
 │       │   ├── overview/
-│       │   │   ├── .meta.yaml     # 元信息 (kind/source/default)
-│       │   │   └── zh.md          # 语言版本文件
+│       │   │   └── .meta.yaml     # 元信息 (kind/source/default)
 │       │   └── api/
 │       │       └── authentication/
-│       │           ├── .meta.yaml
-│       │           └── zh.md
+│       │           └── .meta.yaml
+│       ├── dist/                  # 构建输出（HTML 站点）
+│       │   ├── index.html         # 根重定向
+│       │   ├── zh/
+│       │   │   ├── index.html     # 中文首页
+│       │   │   └── docs/
+│       │   │       ├── overview.html
+│       │   │       └── api/
+│       │   │           └── authentication.html
+│       │   └── assets/
+│       │       ├── nav.js         # 导航数据（侧边栏 + 语言切换）
+│       │       ├── docsmith.css   # 内置基础样式
+│       │       └── theme.css      # 用户主题
 │       ├── assets/                # 生成的图片资源
 │       │   └── project-architecture/
 │       │       ├── .meta.yaml

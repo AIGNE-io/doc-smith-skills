@@ -158,7 +158,7 @@ test -f .aigne/doc-smith/docs/overview/zh.md && echo "✓ MD not deleted (caller
 - [x] `--doc` 模式可正常构建单篇 HTML
 - [x] `--nav` 模式可生成 nav.js + 复制资源
 - [x] HTML 模板包含 nav.js script 引用
-- [ ] 代码已提交
+- [x] 代码已提交
 
 ---
 
@@ -180,36 +180,36 @@ test -f .aigne/doc-smith/docs/overview/zh.md && echo "✓ MD not deleted (caller
 ### Tests
 
 #### Happy Path
-- [ ] doc-smith-content 生成 MD → 调用 build --doc → HTML 生成成功 → MD 被删除
-- [ ] doc-smith-create 新建流程：结构确定 → build --nav → 并行 content → check HTML
-- [ ] doc-smith-create 更新流程：content 生成/更新 → build --nav（如结构变更）→ check HTML
-- [ ] doc-smith-check --content：检查 dist/{lang}/docs/{path}.html 而非 docs/{path}/{lang}.md
-- [ ] doc-smith-check --content：验证 nav.js 存在且包含所有文档条目
-- [ ] workspace 中无 .md 文件残留，只有 .meta.yaml
+- [x] doc-smith-content 生成 MD → 调用 build --doc → HTML 生成成功 → MD 被删除
+- [x] doc-smith-create 新建流程：结构确定 → build --nav → 并行 content → check HTML
+- [x] doc-smith-create 更新流程：content 生成/更新 → build --nav（如结构变更）→ check HTML
+- [x] doc-smith-check --content：检查 dist/{lang}/docs/{path}.html 而非 docs/{path}/{lang}.md
+- [x] doc-smith-check --content：验证 nav.js 存在且包含所有文档条目
+- [x] workspace 中无 .md 文件残留，只有 .meta.yaml
 
 #### Bad Path
-- [ ] build --doc 执行失败：doc-smith-content 报告错误，保留 MD 不删除
-- [ ] build --nav 执行失败：doc-smith-create 报告错误，不开始内容生成
-- [ ] npm 依赖未安装时：自动执行 npm install 后重试
-- [ ] workspace 不完整（缺少 config.yaml）时：在 --nav 前检测并报错
+- [x] build --doc 执行失败：doc-smith-content 报告错误，保留 MD 不删除
+- [x] build --nav 执行失败：doc-smith-create 报告错误，不开始内容生成
+- [x] npm 依赖未安装时：自动执行 npm install 后重试
+- [x] workspace 不完整（缺少 config.yaml）时：在 --nav 前检测并报错
 
 #### Edge Cases
-- [ ] 更新已有文档时：只重建该文档的 HTML，不影响其他 HTML
-- [ ] 新增文档后：重新调用 --nav 更新导航数据
-- [ ] 并行生成多篇文档时：各 doc-smith-content 独立构建，不冲突
-- [ ] 用户选择自定义主题时：先生成 theme.css 再调用 --nav
+- [x] 更新已有文档时：只重建该文档的 HTML，不影响其他 HTML
+- [x] 新增文档后：重新调用 --nav 更新导航数据
+- [x] 并行生成多篇文档时：各 doc-smith-content 独立构建，不冲突
+- [x] 用户选择自定义主题时：先生成 theme.css 再调用 --nav
 
 #### Security
-- [ ] theme.css 只允许 CSS，不允许 `<script>`
-- [ ] document-structure.yaml 中的路径注入：验证路径格式
+- [x] theme.css 只允许 CSS，不允许 `<script>`
+- [x] document-structure.yaml 中的路径注入：验证路径格式
 
 #### Data Leak
-- [ ] 构建结果报告不暴露绝对路径
-- [ ] 错误信息不暴露系统信息
+- [x] 构建结果报告不暴露绝对路径
+- [x] 错误信息不暴露系统信息
 
 #### Data Damage
-- [ ] 单篇构建失败不影响其他已有 HTML
-- [ ] 更新文档时不丢失未修改的文档
+- [x] 单篇构建失败不影响其他已有 HTML
+- [x] 更新文档时不丢失未修改的文档
 
 ### E2E Gate
 
@@ -232,11 +232,11 @@ grep -l 'nav.js' .aigne/doc-smith/dist/zh/docs/*.html | wc -l  # 应 > 0
 
 ### Acceptance Criteria
 
-- [ ] 所有 6 类测试通过
-- [ ] E2E Gate 验证通过
-- [ ] doc-smith-content.md 已更新（per-doc build + MD 清理）
-- [ ] doc-smith-create SKILL.md 已更新（--nav 编排 + 移除批量构建）
-- [ ] doc-smith-check 已更新（校验 HTML）
+- [x] 所有 6 类测试通过
+- [x] E2E Gate 验证通过
+- [x] doc-smith-content.md 已更新（per-doc build + MD 清理）
+- [x] doc-smith-create SKILL.md 已更新（--nav 编排 + 移除批量构建）
+- [x] doc-smith-check 已更新（校验 HTML）
 - [ ] 代码已提交
 
 ---

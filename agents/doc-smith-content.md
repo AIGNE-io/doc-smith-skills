@@ -283,19 +283,10 @@ Rules:
 ```
 .aigne/doc-smith/docs/
 └── {path}/                    # 根据文档 path 创建目录
-    ├── .meta.yaml             # 元信息文件（首次创建时必须生成）
-    └── {locale}.md            # 语言版本文件（如 zh.md、en.md）
+    └── .meta.yaml             # 元信息文件（首次创建时必须生成）
 ```
 
-**示例**：文档 path 为 `/api/overview`，语言为 `zh`
-
-```
-.aigne/doc-smith/docs/
-└── api/
-    └── overview/
-        ├── .meta.yaml         # 元信息
-        └── zh.md              # 中文内容
-```
+**注意**：MD 文件是临时的，构建为 HTML 后会被删除。`docs/{path}/` 目录只保留 `.meta.yaml`。
 
 #### 6.2 元信息文件 (.meta.yaml)
 
@@ -318,11 +309,47 @@ default: zh                    # 默认语言，从 config.yaml 的 locale 读�
 1. **读取语言配置**：从 `config.yaml` 获取 `locale` 字段（如 `zh`）
 2. **创建文档目录**：根据 path 创建 `docs/{path}/` 目录
 3. **创建元信息文件**：首次保存时创建 `.meta.yaml`
-4. **保存语言文件**：将 Markdown 内容保存为 `{locale}.md`
+4. **保存语言文件**：将 Markdown 内容保存为 `{locale}.md`（临时文件）
 
 **更新已有文档时**：
 - 如果 `.meta.yaml` 已存在，无需重新创建
 - 直接更新对应的语言文件内容
+
+### 6.5 构建 HTML（per-doc build）
+
+**保存 MD 文件后，立即构建为 HTML 页面。**
+
+使用 Bash 工具执行 `build.mjs --doc` 构建当前文档：
+
+```bash
+node skills/doc-smith-build/scripts/build.mjs \
+  --doc .aigne/doc-smith/docs/{path}/{locale}.md \
+  --path /{path} \
+  --workspace .aigne/doc-smith \
+  --output .aigne/doc-smith/dist
+```
+
+**示例**：文档 path 为 `/api/overview`，语言为 `zh`
+
+```bash
+node skills/doc-smith-build/scripts/build.mjs \
+  --doc .aigne/doc-smith/docs/api/overview/zh.md \
+  --path /api/overview \
+  --workspace .aigne/doc-smith \
+  --output .aigne/doc-smith/dist
+```
+
+**构建成功后**：
+- HTML 输出到 `dist/{locale}/docs/{path}.html`（如 `dist/zh/docs/api/overview.html`）
+- **删除临时 MD 文件**：`rm .aigne/doc-smith/docs/{path}/{locale}.md`
+
+**构建失败时**：
+- 报告明确的构建错误信息
+- **保留 MD 文件不删除**（方便排查问题）
+- 在返回摘要中标注构建失败
+
+**依赖未安装时**：
+- 如果出现模块找不到的错误，先执行 `cd skills/doc-smith-build/scripts && npm install`，然后重试构建
 
 ### 7. 校验内容
 
@@ -332,22 +359,24 @@ default: zh                    # 默认语言，从 config.yaml 的 locale 读�
 Skill: doc-smith-check --content --path /api/overview
 ```
 
-校验内容：
-- 格式规范检查
-- 导航链接完整性
-- 代码示例语法
-- AFS image slot 格式
+校验内容（检查 HTML 文件）：
+- HTML 文件存在性（`dist/{lang}/docs/{path}.html`）
+- .meta.yaml 完整性
+- nav.js 存在性
+- 内部链接有效性
+- 图片路径正确性
+- AFS image slot 已替换
 
-**注意**：使用 `--path` 参数只检查本次生成的文档，避免检查整个 docs 目录。
+**注意**：使用 `--path` 参数只检查本次生成的文档，避免检查整个目录。
 
 ### 8. 验证保存结果
 
 **在结束前必须执行以下检查：**
 
-1. **验证目录结构**：检查 `docs/{path}/` 目录是否已创建
-2. **验证元信息文件**：检查 `.meta.yaml` 是否存在且内容正确
-3. **验证语言文件**：检查 `{locale}.md` 是否存在且内容完整
-4. **如果文件缺失**：重新创建缺失的文件
+1. **验证 HTML 文件**：检查 `dist/{locale}/docs/{path}.html` 是否已生成
+2. **验证元信息文件**：检查 `docs/{path}/.meta.yaml` 是否存在且内容正确
+3. **验证无 MD 残留**：检查 `docs/{path}/` 目录中不存在 `{locale}.md` 文件
+4. **如果 HTML 缺失**：重新执行步骤 6（保存 MD）和 6.5（构建 HTML）
 
 ### 9. 返回摘要
 
@@ -359,16 +388,19 @@ Skill: doc-smith-check --content --path /api/overview
 - 文档主题概述（1-2 句话描述文档内容）
 - 主要章节列表
 - 生成的 AFS image slot ID 列表（如有）
+- HTML 构建结果（成功/失败）
 - 校验结果（通过/警告/错误）
-- 保存状态确认
+- 保存状态确认（HTML 已生成、MD 已清理、.meta.yaml 存在）
 
 ## 职责边界
 
 **必须执行**：
 - ✅ 读取 workspace 约定目录中的配置信息
 - ✅ 分析源代码并生成文档内容
-- ✅ 创建文档目录、元信息文件和语言文件
-- ✅ 调用 `/doc-smith-check --content --path <文档路径>` 校验文档
+- ✅ 创建文档目录和元信息文件
+- ✅ 保存 MD 文件（临时）并构建为 HTML（`build.mjs --doc`）
+- ✅ 构建成功后删除临时 MD 文件
+- ✅ 调用 `/doc-smith-check --content --path <文档路径>` 校验 HTML
 - ✅ 返回摘要信息
 
 **不应执行**：
@@ -376,6 +408,7 @@ Skill: doc-smith-check --content --path /api/overview
 - ❌ 不进行 Git 操作
 - ❌ 不生成空洞的占位内容
 - ❌ 不偏离用户意图
+- ❌ 不调用 `build.mjs --nav`（由 doc-smith-create 负责）
 
 ## 成功标准
 
@@ -383,9 +416,10 @@ Skill: doc-smith-check --content --path /api/overview
 2. **准确性**：与源代码一致、技术细节正确
 3. **可读性**：结构清晰、语言流畅、示例恰当
 4. **一致性**：风格符合用户意图、格式遵循 doc-smith 规范
-5. **校验通过**：`/doc-smith-check --content --path <文档路径>` 校验无错误
-6. **保存验证**：文档目录、`.meta.yaml` 和语言文件都已正确创建
-7. **长度适当**：符合下方长度参考标准
+5. **构建成功**：`build.mjs --doc` 成功生成 HTML 文件
+6. **校验通过**：`/doc-smith-check --content --path <文档路径>` 校验无错误
+7. **保存验证**：`.meta.yaml` 存在、HTML 已生成、MD 已清理
+8. **长度适当**：符合下方长度参考标准
 
 ### 长度参考标准
 

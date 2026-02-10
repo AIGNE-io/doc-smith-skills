@@ -62,15 +62,16 @@ node skills/doc-smith-check/scripts/check-structure.mjs
 
 ### 内容检查 (--content)
 
-检查已生成文档的完整性：
+检查已构建 HTML 文档的完整性（检查 `dist/` 中的 HTML 文件和 `docs/` 中的 `.meta.yaml`）：
 
 | 检查项 | 说明 |
 |--------|------|
-| 文档文件 | 是否存在 |
-| .meta.yaml | 元数据文件是否存在 |
-| 内部链接 | 是否有效 |
-| 图片路径 | 是否正确 |
-| AFS image slot | 格式是否正确 |
+| HTML 文件 | `dist/{lang}/docs/{path}.html` 是否存在 |
+| .meta.yaml | `docs/{path}/.meta.yaml` 元数据文件是否存在 |
+| nav.js | `dist/assets/nav.js` 导航数据是否存在 |
+| 内部链接 | HTML 中的链接目标是否有效 |
+| 图片路径 | HTML 中的图片是否可访问 |
+| AFS image slot | 是否已替换（不应残留占位符） |
 
 **执行脚本：**
 ```bash

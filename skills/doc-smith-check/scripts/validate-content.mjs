@@ -1,4 +1,4 @@
-import { readFile, access, readdir, stat } from "node:fs/promises";
+import { readFile, access, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import { parse as yamlParse } from "yaml";
 import path from "node:path";
@@ -13,12 +13,14 @@ const ASSETS_DIR_NAME = "assets";
 
 /**
  * Document content validator class
+ * Validates HTML files in dist/ and .meta.yaml in docs/
  */
 class DocumentContentValidator {
-  constructor(yamlPath, docsDir, docs = undefined, options = {}) {
+  constructor(yamlPath, docsDir, distDir, docs = undefined, options = {}) {
     const PATHS = getPaths();
     this.yamlPath = yamlPath || PATHS.DOCUMENT_STRUCTURE;
     this.docsDir = docsDir || PATHS.DOCS_DIR;
+    this.distDir = distDir || PATHS.DIST_DIR;
     this.PATHS = PATHS;
     this.docsFilter = docs ? new Set(docs) : null;
     this.checkSlots = options.checkSlots || false;
@@ -63,6 +65,31 @@ class DocumentContentValidator {
   async loadTranslateLanguages() {
     const config = await this.loadWorkspaceConfig();
     return config.translateLanguages || [];
+  }
+
+  /**
+   * Get expected languages for a document from .meta.yaml + config
+   */
+  async getExpectedLanguages(docFolder) {
+    const metaPath = path.join(docFolder, ".meta.yaml");
+    let meta;
+    try {
+      const metaContent = await readFile(metaPath, "utf8");
+      meta = yamlParse(metaContent);
+    } catch (_error) {
+      return null;
+    }
+
+    const langs = new Set();
+    if (meta.default) langs.add(meta.default);
+    if (meta.source) langs.add(meta.source);
+
+    const translateLanguages = await this.loadTranslateLanguages();
+    for (const lang of translateLanguages) {
+      if (lang !== meta.source) langs.add(lang);
+    }
+
+    return { langs, meta, translateLanguages };
   }
 
   /**
@@ -132,12 +159,13 @@ class DocumentContentValidator {
 
   /**
    * Layer 1: Validate document file existence
+   * Checks .meta.yaml in docs/ and HTML files in dist/
    */
   async validateDocumentFiles() {
     for (const doc of this.documents) {
       const docFolder = path.join(this.docsDir, doc.filePath);
 
-      // Check 1: Folder exists and is a directory
+      // Check 1: docs/{path}/ folder exists (for .meta.yaml)
       let folderExists = false;
       try {
         const stats = await stat(docFolder);
@@ -167,7 +195,7 @@ class DocumentContentValidator {
       if (folderExists) {
         await this.validateMetaFile(docFolder, doc);
 
-        // Check 3: At least one language file exists
+        // Check 3: HTML files exist in dist/
         await this.validateLanguageFiles(docFolder, doc);
       }
     }
@@ -248,122 +276,101 @@ class DocumentContentValidator {
   }
 
   /**
-   * Validate language files
+   * Validate language files - checks HTML files exist in dist/
+   * Instead of scanning docs/{path}/ for *.md, checks dist/{lang}/docs/{path}.html
    */
   async validateLanguageFiles(docFolder, doc) {
     try {
-      const files = await readdir(docFolder);
-      const langFiles = files.filter(
-        (f) => f.endsWith(".md") && !f.startsWith(".") && /^[a-z]{2}(-[A-Z]{2})?\.md$/.test(f),
-      );
+      const langInfo = await this.getExpectedLanguages(docFolder);
+      if (!langInfo) return; // .meta.yaml errors already reported
 
-      if (langFiles.length === 0) {
+      const { langs, meta, translateLanguages } = langInfo;
+
+      if (langs.size === 0) {
         this.errors.fatal.push({
           type: "MISSING_LANGUAGE_FILE",
           path: doc.path,
-          message: `No language version files: ${doc.path}`,
-          suggestion: "Please generate at least one language version file (e.g. zh.md, en.md)",
+          message: `No expected language versions: ${doc.path}`,
+          suggestion: "Check .meta.yaml default/source fields",
         });
         return;
       }
 
-      // Check if default and source language files exist
-      const metaPath = path.join(docFolder, ".meta.yaml");
-      try {
-        const metaContent = await readFile(metaPath, "utf8");
-        const meta = yamlParse(metaContent);
+      // Check HTML files in dist/
+      for (const lang of langs) {
+        const htmlPath = path.join(this.distDir, lang, "docs", `${doc.filePath}.html`);
+        try {
+          await access(htmlPath, constants.F_OK);
+        } catch (_error) {
+          const isDefault = lang === meta.default;
+          const isSource = lang === meta.source;
+          const isTranslate = translateLanguages.includes(lang) && lang !== meta.source;
 
-        if (meta.default) {
-          const defaultFile = `${meta.default}.md`;
-          if (!langFiles.includes(defaultFile)) {
-            this.errors.fatal.push({
-              type: "MISSING_DEFAULT_LANGUAGE",
-              path: doc.path,
-              defaultLang: meta.default,
-              message: `Default language file missing: ${defaultFile}`,
-              suggestion: `Generate ${defaultFile} or modify the default field in .meta.yaml`,
-            });
-          }
+          let errorType = "MISSING_LANGUAGE_FILE";
+          if (isDefault && isSource) errorType = "MISSING_DEFAULT_LANGUAGE";
+          else if (isDefault) errorType = "MISSING_DEFAULT_LANGUAGE";
+          else if (isSource) errorType = "MISSING_SOURCE_LANGUAGE";
+          else if (isTranslate) errorType = ERROR_CODES.MISSING_TRANSLATE_LANGUAGE;
+
+          this.errors.fatal.push({
+            type: errorType,
+            path: doc.path,
+            lang,
+            message: `HTML file missing for ${lang}: ${doc.path}`,
+            suggestion: `Build HTML with: build.mjs --doc <md-file> --path ${doc.path}`,
+          });
         }
-
-        if (meta.source) {
-          const sourceFile = `${meta.source}.md`;
-          if (!langFiles.includes(sourceFile)) {
-            this.errors.fatal.push({
-              type: "MISSING_SOURCE_LANGUAGE",
-              path: doc.path,
-              sourceLang: meta.source,
-              message: `Source language file missing: ${sourceFile}`,
-              suggestion: `Generate ${sourceFile} or modify the source field in .meta.yaml`,
-            });
-          }
-        }
-
-        // Check if target language files configured in translateLanguages exist
-        const translateLanguages = await this.loadTranslateLanguages();
-        if (translateLanguages.length > 0) {
-          for (const lang of translateLanguages) {
-            // Skip source language (source language doesn't need to be a translation target)
-            if (lang === meta.source) continue;
-
-            const langFile = `${lang}.md`;
-            if (!langFiles.includes(langFile)) {
-              this.errors.fatal.push({
-                type: ERROR_CODES.MISSING_TRANSLATE_LANGUAGE,
-                path: doc.path,
-                lang,
-                message: `Translation language file missing: ${langFile}`,
-                suggestion: `Please translate document to ${lang} language, or remove ${lang} from translateLanguages in config.yaml`,
-              });
-            }
-          }
-        }
-      } catch (_error) {
-        // .meta.yaml errors already reported in validateMetaFile
       }
     } catch (error) {
       this.errors.fatal.push({
         type: "READ_FOLDER_ERROR",
         path: doc.path,
-        message: `Cannot read document folder: ${error.message}`,
+        message: `Cannot validate language files: ${error.message}`,
       });
     }
   }
 
   /**
-   * Layer 2-4: Validate single document content
+   * Layer 2-4: Validate single document content (reads HTML from dist/)
    */
   async validateDocument(doc, checkRemoteImages) {
     const docFolder = path.join(this.docsDir, doc.filePath);
 
     try {
-      // Read .meta.yaml to get language list
-      const metaPath = path.join(docFolder, ".meta.yaml");
-      const metaContent = await readFile(metaPath, "utf8");
-      const _meta = yamlParse(metaContent);
+      const langInfo = await this.getExpectedLanguages(docFolder);
+      if (!langInfo) return;
 
-      // Get all language files
-      const files = await readdir(docFolder);
-      const langFiles = files.filter((f) => f.endsWith(".md") && !f.startsWith("."));
+      const { langs } = langInfo;
 
-      // Check each language version
-      for (const langFile of langFiles) {
-        const fullPath = path.join(docFolder, langFile);
-        const content = await readFile(fullPath, "utf8");
+      // Check each language's HTML file
+      for (const lang of langs) {
+        const htmlPath = path.join(this.distDir, lang, "docs", `${doc.filePath}.html`);
+        const langFile = `${lang}.html`;
+
+        let htmlContent;
+        try {
+          htmlContent = await readFile(htmlPath, "utf8");
+        } catch (_error) {
+          // HTML file missing already reported in validateLanguageFiles
+          continue;
+        }
 
         this.stats.checkedDocs++;
 
+        // Extract main content area for validation
+        const bodyContent = this.extractMainContent(htmlContent);
+
         // Layer 2: Content parsing and checking
-        this.checkEmptyDocument(content, doc, langFile);
-        this.checkHeadingHierarchy(content, doc, langFile);
+        this.checkEmptyDocument(bodyContent, doc, langFile);
+        this.checkHeadingHierarchy(bodyContent, doc, langFile);
 
         // Layer 3: Link and image validation
-        await this.validateLinks(content, doc, langFile);
-        await this.validateImages(content, doc, langFile, checkRemoteImages);
+        await this.validateLinks(bodyContent, doc, langFile);
+        await this.validateImages(bodyContent, doc, langFile, lang, checkRemoteImages);
 
-        // Layer 5: AFS image slot validation (when checkSlots is enabled)
+        // Layer 5: AFS image slot validation (check for escaped markers in HTML)
         if (this.checkSlots) {
-          await this.validateImageSlots(content, doc, langFile);
+          await this.validateImageSlots(htmlContent, doc, langFile);
         }
       }
     } catch (_error) {
@@ -371,13 +378,62 @@ class DocumentContentValidator {
     }
   }
 
+  // ============================================
+  // HTML Content Extraction Helpers
+  // ============================================
+
   /**
-   * Layer 4: Empty document detection
+   * Extract main content from HTML (content inside data-ds="content")
+   */
+  extractMainContent(html) {
+    // Extract content from <main data-ds="content">...</main>
+    const contentMatch = html.match(/<main[^>]*data-ds="content"[^>]*>([\s\S]*?)<\/main>/i);
+    if (contentMatch) return contentMatch[1];
+
+    // Fallback: extract body content
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    return bodyMatch ? bodyMatch[1] : html;
+  }
+
+  /**
+   * Remove HTML code blocks (<pre><code>...</code></pre>)
+   */
+  removeHtmlCodeBlocks(content) {
+    return content.replace(/<pre[^>]*>[\s\S]*?<\/pre>/gi, "");
+  }
+
+  /**
+   * Get HTML code block position ranges
+   */
+  getHtmlCodeBlockRanges(content) {
+    const ranges = [];
+    const codeBlockRegex = /<pre[^>]*>[\s\S]*?<\/pre>/gi;
+    for (const match of content.matchAll(codeBlockRegex)) {
+      ranges.push({ start: match.index, end: match.index + match[0].length });
+    }
+    return ranges;
+  }
+
+  /**
+   * Strip all HTML tags from content
+   */
+  stripHtmlTags(content) {
+    return content.replace(/<[^>]+>/g, "");
+  }
+
+  // ============================================
+  // Content Validation (adapted for HTML)
+  // ============================================
+
+  /**
+   * Layer 4: Empty document detection (HTML version)
    */
   checkEmptyDocument(content, doc, langFile) {
-    // Remove all headings
-    let cleaned = content.replace(/^#{1,6}\s+.+$/gm, "");
-    // Remove whitespace characters
+    // Strip HTML tags and get text content
+    let cleaned = this.stripHtmlTags(content);
+    // Decode common HTML entities
+    cleaned = cleaned.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+    // Remove whitespace
     cleaned = cleaned.replace(/\s+/g, "");
 
     if (cleaned.length < 50) {
@@ -392,20 +448,20 @@ class DocumentContentValidator {
   }
 
   /**
-   * Layer 4: Heading hierarchy check
+   * Layer 4: Heading hierarchy check (HTML version)
    */
   checkHeadingHierarchy(content, doc, langFile) {
-    // First remove content in code blocks to avoid false positives
-    const contentWithoutCodeBlocks = this.removeCodeBlocks(content);
+    // Remove code blocks first
+    const contentWithoutCode = this.removeHtmlCodeBlocks(content);
 
-    const headingRegex = /^(#{1,6})\s+(.+)$/gm;
+    // Match HTML headings: <h1>...</h1> through <h6>...</h6>
+    const headingRegex = /<h([1-6])[^>]*>([\s\S]*?)<\/h[1-6]>/gi;
     const headings = [];
 
-    for (const match of contentWithoutCodeBlocks.matchAll(headingRegex)) {
+    for (const match of contentWithoutCode.matchAll(headingRegex)) {
       headings.push({
-        level: match[1].length,
-        text: match[2],
-        line: contentWithoutCodeBlocks.substring(0, match.index).split("\n").length,
+        level: parseInt(match[1]),
+        text: this.stripHtmlTags(match[2]).trim(),
       });
     }
 
@@ -413,98 +469,36 @@ class DocumentContentValidator {
       const prev = headings[i - 1];
       const curr = headings[i];
 
-      // Check for level skipping
       if (curr.level > prev.level + 1) {
         this.errors.fatal.push({
           type: "HEADING_SKIP",
           path: doc.path,
           langFile,
-          line: curr.line,
-          message: `Heading skipped from H${prev.level} to H${curr.level}`,
-          suggestion: `Consider changing "${"#".repeat(curr.level)} ${curr.text}" to "${"#".repeat(prev.level + 1)} ${curr.text}"`,
+          message: `Heading skipped from H${prev.level} to H${curr.level}: "${curr.text}"`,
+          suggestion: `Consider changing H${curr.level} to H${prev.level + 1}`,
         });
       }
     }
   }
 
   /**
-   * Remove content in Markdown code blocks
-   */
-  removeCodeBlocks(content) {
-    // Remove fenced code blocks (```...```)
-    let result = content.replace(/^```[\s\S]*?^```$/gm, "");
-
-    // Remove indented code blocks (lines starting with 4 spaces or 1 tab)
-    result = result.replace(/^( {4}|\t).+$/gm, "");
-
-    return result;
-  }
-
-  /**
-   * Get code block position ranges
-   * @returns {Array<{start: number, end: number}>} Array of code block start/end positions
-   */
-  getCodeBlockRanges(content) {
-    const ranges = [];
-
-    // Match fenced code blocks (```...```)
-    const fencedCodeRegex = /^```[\s\S]*?^```$/gm;
-
-    for (const match of content.matchAll(fencedCodeRegex)) {
-      ranges.push({
-        start: match.index,
-        end: match.index + match[0].length,
-      });
-    }
-
-    // Match inline code blocks (`...`)
-    const inlineCodeRegex = /`[^`\n]+`/g;
-    for (const match of content.matchAll(inlineCodeRegex)) {
-      ranges.push({
-        start: match.index,
-        end: match.index + match[0].length,
-      });
-    }
-
-    // Match indented code blocks (lines starting with 4 spaces or 1 tab)
-    const indentedCodeRegex = /^( {4}|\t).+$/gm;
-    for (const match of content.matchAll(indentedCodeRegex)) {
-      ranges.push({
-        start: match.index,
-        end: match.index + match[0].length,
-      });
-    }
-
-    return ranges;
-  }
-
-  /**
-   * Check if position is inside a code block
-   * @param {number} position - Position to check
-   * @param {Array<{start: number, end: number}>} ranges - Code block range array
-   * @returns {boolean} Whether inside a code block
-   */
-  isInCodeBlock(position, ranges) {
-    return ranges.some((range) => position >= range.start && position < range.end);
-  }
-
-  /**
-   * Layer 3: Validate internal links
+   * Layer 3: Validate internal links (HTML version)
+   * Extracts links from <a href="..."> tags
    */
   async validateLinks(content, doc, langFile) {
-    // Get code block position ranges
-    const codeBlockRanges = this.getCodeBlockRanges(content);
+    const codeBlockRanges = this.getHtmlCodeBlockRanges(content);
 
-    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    // Match <a href="...">...</a> tags
+    const linkRegex = /<a[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
 
     for (const match of content.matchAll(linkRegex)) {
-      // Check if link is inside code block, skip if so
+      // Skip links inside code blocks
       if (this.isInCodeBlock(match.index, codeBlockRanges)) {
         continue;
       }
 
-      const linkText = match[1];
-      const linkUrl = match[2];
+      const linkUrl = match[1];
+      const linkText = this.stripHtmlTags(match[2]).trim();
 
       this.stats.totalLinks++;
 
@@ -522,7 +516,7 @@ class DocumentContentValidator {
         continue;
       }
 
-      // All other links are treated as internal document links
+      // Validate as internal document link
       await this.validateInternalLink(linkUrl, doc, linkText, langFile);
     }
   }
@@ -531,55 +525,25 @@ class DocumentContentValidator {
    * Check if link points to a resource file (non-document)
    */
   isResourceFile(url) {
-    // 移除查询参数和锚点
     const cleanUrl = url.split("?")[0].split("#")[0].toLowerCase();
-    // 资源文件扩展名
     const resourceExtensions = [
-      ".png",
-      ".jpg",
-      ".jpeg",
-      ".gif",
-      ".svg",
-      ".webp",
-      ".ico",
-      ".bmp",
-      ".pdf",
-      ".doc",
-      ".docx",
-      ".xls",
-      ".xlsx",
-      ".ppt",
-      ".pptx",
-      ".zip",
-      ".tar",
-      ".gz",
-      ".rar",
-      ".7z",
-      ".mp3",
-      ".mp4",
-      ".wav",
-      ".avi",
-      ".mov",
-      ".webm",
-      ".json",
-      ".xml",
-      ".csv",
-      ".txt",
-      ".js",
-      ".ts",
-      ".css",
-      ".scss",
-      ".less",
-      ".py",
-      ".rb",
-      ".go",
-      ".rs",
-      ".java",
-      ".c",
-      ".cpp",
-      ".h",
+      ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp",
+      ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+      ".zip", ".tar", ".gz", ".rar", ".7z",
+      ".mp3", ".mp4", ".wav", ".avi", ".mov", ".webm",
+      ".json", ".xml", ".csv", ".txt",
+      ".js", ".ts", ".css", ".scss", ".less",
+      ".py", ".rb", ".go", ".rs", ".java", ".c", ".cpp", ".h",
+      ".html",
     ];
     return resourceExtensions.some((ext) => cleanUrl.endsWith(ext));
+  }
+
+  /**
+   * Check if position is inside a code block
+   */
+  isInCodeBlock(position, ranges) {
+    return ranges.some((range) => position >= range.start && position < range.end);
   }
 
   /**
@@ -592,12 +556,10 @@ class DocumentContentValidator {
     const urlWithoutAnchor = linkUrl.split("#")[0];
 
     // Check if link format is correct: internal links should not contain .md suffix
-    const langSuffixPattern = /\/[a-z]{2}(-[A-Z]{2})?\.md$/; // Match /en.md, /zh.md, /en-US.md
+    const langSuffixPattern = /\/[a-z]{2}(-[A-Z]{2})?\.md$/;
     const mdSuffixPattern = /\.md$/;
 
     if (mdSuffixPattern.test(urlWithoutAnchor)) {
-      // Link contains .md suffix, this is a format error
-      // If it's a language suffix pattern, remove the entire /xx.md part; otherwise just remove .md
       const isLangSuffix = langSuffixPattern.test(urlWithoutAnchor);
       const suggestedLink = isLangSuffix
         ? urlWithoutAnchor.replace(langSuffixPattern, "")
@@ -610,29 +572,22 @@ class DocumentContentValidator {
         langFile,
         link: linkUrl,
         linkText,
-        message: `Internal link format error: [${linkText}](${linkUrl})`,
+        message: `Internal link format error: ${linkText} -> ${linkUrl}`,
         suggestion: `Link should not contain .md suffix, suggest changing to: ${suggestedLink}`,
       });
       return;
     }
 
-    // Link format is correct, continue to validate if target exists
     const cleanLinkUrl = urlWithoutAnchor;
 
-    // If link is only anchor (like #section), cleanLinkUrl will be empty string, skip check
     if (!cleanLinkUrl) {
       return;
     }
 
     if (cleanLinkUrl.startsWith("/")) {
-      // Absolute path
       targetPath = cleanLinkUrl;
     } else {
-      // Relative path: based on document's "parent directory"
-      // Document /getting-started/claude-code's parent directory is /getting-started
-      // Example: document /getting-started/claude-code, link ../getting-started -> /getting-started
-      // Example: document /getting-started, link ./claude-code -> /getting-started/claude-code
-      const docDir = path.dirname(doc.path); // /getting-started/claude-code -> /getting-started
+      const docDir = path.dirname(doc.path);
       const upLevels = (cleanLinkUrl.match(/\.\.\//g) || []).length;
       const currentDepth = docDir === "/" ? 0 : docDir.split("/").filter((p) => p).length;
 
@@ -644,13 +599,12 @@ class DocumentContentValidator {
           langFile,
           link: linkUrl,
           linkText,
-          message: `Internal link path exceeds root directory: [${linkText}](${linkUrl})`,
+          message: `Internal link path exceeds root directory: ${linkText} -> ${linkUrl}`,
           suggestion: `Link goes up ${upLevels} levels, but current document's directory is only at level ${currentDepth}`,
         });
         return;
       }
 
-      // Merge document's parent directory with relative link
       targetPath = path.posix.normalize(path.posix.join(docDir, cleanLinkUrl));
       if (!targetPath.startsWith("/")) {
         targetPath = `/${targetPath}`;
@@ -666,53 +620,77 @@ class DocumentContentValidator {
         link: linkUrl,
         linkText,
         targetPath,
-        message: `Internal broken link: [${linkText}](${linkUrl})`,
+        message: `Internal broken link: ${linkText} -> ${linkUrl}`,
         suggestion: `Target document ${targetPath} does not exist`,
       });
     }
   }
 
   /**
-   * Layer 3: Validate images
+   * Layer 3: Validate images (HTML version)
+   * Extracts images from <img src="..."> tags
    */
-  async validateImages(content, doc, langFile, checkRemoteImages) {
-    // Get code block position ranges
-    const codeBlockRanges = this.getCodeBlockRanges(content);
+  async validateImages(content, doc, langFile, lang, checkRemoteImages) {
+    const codeBlockRanges = this.getHtmlCodeBlockRanges(content);
 
-    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    // Match <img> tags (both self-closing and not)
+    const imageRegex = /<img[^>]+src="([^"]*)"[^>]*>/gi;
 
     for (const match of content.matchAll(imageRegex)) {
-      // Check if image is inside code block, skip if so
       if (this.isInCodeBlock(match.index, codeBlockRanges)) {
         continue;
       }
 
-      const altText = match[1];
-      const imageUrl = match[2];
+      const imageUrl = match[1];
+      // Extract alt text
+      const altMatch = match[0].match(/alt="([^"]*)"/i);
+      const altText = altMatch ? altMatch[1] : "";
 
       this.stats.totalImages++;
 
-      // Categorize: local vs remote
       if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-        // Remote image
         this.stats.remoteImages++;
         if (checkRemoteImages) {
           await this.validateRemoteImage(imageUrl, doc, altText, langFile);
         }
       } else {
-        // Local image
         this.stats.localImages++;
-        await this.validateLocalImage(imageUrl, doc, altText, langFile);
+        await this.validateLocalImage(imageUrl, doc, altText, langFile, lang);
       }
     }
   }
 
   /**
-   * Validate local image
-   * Only relative paths allowed, absolute paths (like /sources/...) not allowed
+   * Validate local image in HTML context
+   * Handles both absolute paths (/assets/images/...) and relative paths
    */
-  async validateLocalImage(imageUrl, doc, altText, langFile) {
-    // Check if absolute path (starts with /) - not allowed
+  async validateLocalImage(imageUrl, doc, altText, langFile, lang) {
+    // Absolute paths starting with /assets/images/ are AFS-generated images
+    // These resolve to dist/assets/images/...
+    if (imageUrl.startsWith("/assets/images/")) {
+      const imagePath = path.join(this.distDir, imageUrl);
+      try {
+        await access(imagePath, constants.F_OK);
+        // When checkSlots is enabled, validate the image exists
+        if (this.checkSlots) {
+          await this.validateAssetImagePath(imageUrl, doc, langFile);
+        }
+      } catch (_error) {
+        this.stats.missingImages++;
+        this.errors.fatal.push({
+          type: "MISSING_IMAGE",
+          path: doc.path,
+          langFile,
+          imageUrl,
+          altText,
+          message: `Local image not found: ${imageUrl}`,
+          suggestion: `Check image path or rebuild with --nav to copy assets`,
+        });
+      }
+      return;
+    }
+
+    // Other absolute paths are not allowed
     if (imageUrl.startsWith("/")) {
       this.stats.missingImages++;
       this.errors.fatal.push({
@@ -722,25 +700,18 @@ class DocumentContentValidator {
         imageUrl,
         altText,
         message: `Image absolute path not allowed: ${imageUrl}`,
-        suggestion: `Please use relative path to access image, calculate correct relative path based on document location`,
+        suggestion: `Please use /assets/images/ prefix for generated images, or relative path for project images`,
       });
       return;
     }
 
-    // Relative path handling: resolve based on document location
-    const fullDocPath = path.join(doc.filePath, langFile);
-    const docDir = path.dirname(path.join(this.docsDir, fullDocPath));
-    const imagePath = path.resolve(docDir, imageUrl);
+    // Relative path: resolve from HTML file location
+    // HTML file is at: dist/{lang}/docs/{filePath}.html
+    const htmlDir = path.dirname(path.join(this.distDir, lang, "docs", `${doc.filePath}.html`));
+    const imagePath = path.resolve(htmlDir, imageUrl);
 
-    // Check if file exists
     try {
       await access(imagePath, constants.F_OK);
-      // Image exists, relative path is correct
-
-      // When checkSlots is enabled, validate image paths in assets directory
-      if (this.checkSlots) {
-        await this.validateAssetImagePath(imageUrl, doc, langFile);
-      }
     } catch (_error) {
       this.stats.missingImages++;
       this.errors.fatal.push({
@@ -759,7 +730,6 @@ class DocumentContentValidator {
    * Validate remote image
    */
   async validateRemoteImage(imageUrl, doc, altText, langFile) {
-    // Check cache
     if (this.remoteImageCache.has(imageUrl)) {
       const cached = this.remoteImageCache.get(imageUrl);
       if (!cached.accessible) {
@@ -779,7 +749,6 @@ class DocumentContentValidator {
       return;
     }
 
-    // Check remote image accessibility
     const result = await this.checkRemoteImage(imageUrl);
     this.remoteImageCache.set(imageUrl, result);
 
@@ -834,51 +803,54 @@ class DocumentContentValidator {
   }
 
   /**
-   * Validate AFS image slots (when checkSlots is enabled)
-   * Check if document contains unreplaced placeholders
+   * Validate AFS image slots (HTML version)
+   * In HTML, unreplaced slots appear as escaped text or raw comments
    */
-  async validateImageSlots(content, doc, langFile) {
-    // Get code block position ranges
-    const codeBlockRanges = this.getCodeBlockRanges(content);
+  async validateImageSlots(htmlContent, doc, langFile) {
+    const codeBlockRanges = this.getHtmlCodeBlockRanges(htmlContent);
 
-    // Match all slots: <!-- afs:image id="xxx" ... -->
-    const slotRegex = /<!--\s*afs:image\s+id="([^"]+)"(?:\s+key="([^"]+)")?(?:\s+desc="([^"]+)")?\s*-->/g;
-
-    for (const match of content.matchAll(slotRegex)) {
-      // Skip slots inside code blocks
-      if (this.isInCodeBlock(match.index, codeBlockRanges)) {
-        continue;
-      }
-
-      const slotId = match[1];
+    // Check for raw HTML comments (if markdown-it passes them through)
+    const rawSlotRegex = /<!--\s*afs:image\s+id="([^"]+)"(?:\s+key="([^"]+)")?(?:\s+desc="([^"]+)")?\s*-->/g;
+    for (const match of htmlContent.matchAll(rawSlotRegex)) {
+      if (this.isInCodeBlock(match.index, codeBlockRanges)) continue;
       this.stats.unreplacedSlots++;
-
       this.errors.fatal.push({
         type: ERROR_CODES.UNREPLACED_IMAGE_SLOT,
         path: doc.path,
         langFile,
-        slotId,
-        message: `AFS image slot not replaced: ${slotId}`,
+        slotId: match[1],
+        message: `AFS image slot not replaced: ${match[1]}`,
         suggestion: `Please use generate-slot-image to generate image`,
+      });
+    }
+
+    // Check for escaped slot markers (markdown-it html:false escapes them)
+    const escapedSlotRegex = /&lt;!--\s*afs:image\s+id=(?:&quot;|")([^"&]+)(?:&quot;|")/g;
+    for (const match of htmlContent.matchAll(escapedSlotRegex)) {
+      if (this.isInCodeBlock(match.index, codeBlockRanges)) continue;
+      this.stats.unreplacedSlots++;
+      this.errors.fatal.push({
+        type: ERROR_CODES.UNREPLACED_IMAGE_SLOT,
+        path: doc.path,
+        langFile,
+        slotId: match[1],
+        message: `AFS image slot not replaced (escaped in HTML): ${match[1]}`,
+        suggestion: `Please use generate-slot-image to generate image before building HTML`,
       });
     }
   }
 
   /**
-   * Validate image path level is correct (for images in assets directory)
-   * @param {string} imageUrl - Image URL
-   * @param {Object} doc - Document object
-   * @param {string} langFile - Language file name
+   * Validate AFS image path for images in /assets/images/ directory
    */
   async validateAssetImagePath(imageUrl, doc, langFile) {
-    // Only check images pointing to assets directory
-    if (!imageUrl.includes(`/${ASSETS_DIR_NAME}/`)) {
+    // Only check images in /assets/images/ (AFS-generated)
+    if (!imageUrl.startsWith("/assets/images/")) {
       return;
     }
 
-    // Extract key and filename from imageUrl
-    // Format: ../../assets/{key}/images/{locale}.png or ../../../assets/{key}/images/{locale}.png
-    const assetsMatch = imageUrl.match(/(?:\.\.\/)+assets\/([^/]+)\/images\/([^/]+)$/);
+    // Extract key and filename: /assets/images/{key}/images/{locale}.ext
+    const assetsMatch = imageUrl.match(/^\/assets\/images\/([^/]+)\/images\/([^/]+)$/);
     if (!assetsMatch) {
       return;
     }
@@ -886,42 +858,12 @@ class DocumentContentValidator {
     const key = assetsMatch[1];
     const imageName = assetsMatch[2];
 
-    // Calculate document depth
-    // Document path format: /overview or /api/auth
-    // Actual file path: docs/overview/zh.md or docs/api/auth/zh.md
-    // Accessing assets from language file needs to consider the language file's own level
-    const docPathParts = doc.path.split("/").filter((p) => p);
-    const docPathDepth = docPathParts.length;
-    // +1 because language file (like zh.md) itself occupies one level
-    const totalDepth = docPathDepth + 1;
-
-    // Calculate expected relative path level
-    // Depth 1 (like /overview) file docs/overview/zh.md: ../../assets/...
-    // Depth 2 (like /api/auth) file docs/api/auth/zh.md: ../../../assets/...
-    const expectedPrefix = "../".repeat(totalDepth);
-    const expectedPath = `${expectedPrefix}${ASSETS_DIR_NAME}/${key}/images/${imageName}`;
-
-    // Check if actual path matches expected path
-    if (imageUrl !== expectedPath) {
-      this.stats.invalidSlotPaths++;
-      this.errors.fatal.push({
-        type: ERROR_CODES.IMAGE_PATH_LEVEL_ERROR,
-        path: doc.path,
-        langFile,
-        imageUrl,
-        expectedPath,
-        message: `Image path level error: ${imageUrl}`,
-        suggestion: `Expected path: ${expectedPath}`,
-      });
-      return;
-    }
-
-    // Check if image file exists
+    // Check if source image exists in workspace assets
     const assetsDir = path.join(this.PATHS.WORKSPACE_BASE, ASSETS_DIR_NAME);
-    const imagePath = path.join(assetsDir, key, "images", imageName);
+    const sourcePath = path.join(assetsDir, key, "images", imageName);
 
     try {
-      await access(imagePath, constants.F_OK);
+      await access(sourcePath, constants.F_OK);
     } catch (_error) {
       this.stats.missingSlotImages++;
       this.errors.fatal.push({
@@ -929,8 +871,7 @@ class DocumentContentValidator {
         path: doc.path,
         langFile,
         imageUrl,
-        imagePath,
-        message: `Image file missing: ${imageUrl}`,
+        message: `Image file missing in workspace assets: ${imageUrl}`,
         suggestion: `Generate image or remove reference`,
       });
     }
@@ -1043,8 +984,9 @@ function formatOutput(result, options = {}) {
  * Main function - Function Agent
  * @param {Object} params
  * @param {string} params.yamlPath - Document structure YAML file path
- * @param {string} params.docsDir - Document directory path
- * @param {string[]} params.docs - Array of document paths to check, e.g. ['/overview', '/api/introduction'], check all documents if not provided
+ * @param {string} params.docsDir - Document directory path (for .meta.yaml)
+ * @param {string} params.distDir - Dist directory path (for HTML files)
+ * @param {string[]} params.docs - Array of document paths to check
  * @param {boolean} params.checkRemoteImages - Whether to check remote images
  * @param {boolean} params.checkSlots - Whether to check AFS image slots are replaced
  * @returns {Promise<Object>} - Validation result
@@ -1052,6 +994,7 @@ function formatOutput(result, options = {}) {
 export default async function validateDocumentContent({
   yamlPath,
   docsDir,
+  distDir,
   docs = undefined,
   checkRemoteImages = true,
   checkSlots = false,
@@ -1059,8 +1002,9 @@ export default async function validateDocumentContent({
   const PATHS = getPaths();
   yamlPath = yamlPath || PATHS.DOCUMENT_STRUCTURE;
   docsDir = docsDir || PATHS.DOCS_DIR;
+  distDir = distDir || PATHS.DIST_DIR;
   try {
-    const validator = new DocumentContentValidator(yamlPath, docsDir, docs, { checkSlots });
+    const validator = new DocumentContentValidator(yamlPath, docsDir, distDir, docs, { checkSlots });
     const result = await validator.validate(checkRemoteImages);
 
     const formattedOutput = formatOutput(result, { checkSlots });
