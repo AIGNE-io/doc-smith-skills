@@ -230,7 +230,7 @@ rm -rf /tmp/ds-test4
 - [x] 现有 `../../` 格式仍兼容（向后兼容过渡期）
 - [x] --nav 模式不受影响
 - [x] E2E Gate 验证通过
-- [ ] 代码已提交
+- [x] 代码已提交
 
 ---
 
@@ -243,26 +243,26 @@ rm -rf /tmp/ds-test4
 ### Tests
 
 #### Happy Path
-- [ ] 使用 `/assets/` 格式的文档通过校验
-- [ ] `--check-slots` 功能不受影响
-- [ ] `--structure` 校验不受影响
+- [x] 使用 `/assets/` 格式的文档通过校验
+- [x] `--check-slots` 功能不受影响
+- [x] `--structure` 校验不受影响
 
 #### Bad Path
-- [ ] 使用 `../../assets/` 旧格式的文档产生警告
-- [ ] 混合新旧格式的文档标记所有旧格式位置
+- [x] 使用 `../../assets/` 旧格式的文档产生警告
+- [x] 混合新旧格式的文档标记所有旧格式位置
 
 #### Edge Cases
-- [ ] 代码块中的 `../../assets/` 不触发警告（只检查正文）
-- [ ] 外部 URL 中包含 `assets` 关键字不误报
+- [x] 代码块中的 `../../assets/` 不触发警告（只检查正文）
+- [x] 外部 URL 中包含 `assets` 关键字不误报
 
 #### Security
-- [ ] 不适用（校验工具无安全风险）
+- [x] 不适用（校验工具无安全风险）
 
 #### Data Leak
-- [ ] 不适用
+- [x] 不适用
 
 #### Data Damage
-- [ ] 校验工具只读不写，不修改任何文件
+- [x] 校验工具只读不写，不修改任何文件
 
 ### E2E Gate
 
@@ -317,10 +317,10 @@ rm -f "$WORKSPACE/dist/zh/docs/test-path-check.html"
 
 ### Acceptance Criteria
 
-- [ ] 新增路径格式校验规则
-- [ ] doc-smith-check SKILL.md 重写为声明式风格
-- [ ] 现有校验功能（结构 + 内容 + slots）不受影响
-- [ ] 在测试项目上验证通过
+- [x] 新增路径格式校验规则
+- [x] doc-smith-check SKILL.md 重写为声明式风格
+- [x] 现有校验功能（结构 + 内容 + slots）不受影响
+- [x] 在测试项目上验证通过
 - [ ] 代码已提交
 
 ---

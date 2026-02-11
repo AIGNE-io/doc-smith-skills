@@ -1,4 +1,4 @@
-import { readFile, access, stat } from "node:fs/promises";
+import { readFile, readdir, access, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import { parse as yamlParse } from "yaml";
 import path from "node:path";
@@ -335,6 +335,9 @@ class DocumentContentValidator {
    */
   async validateDocument(doc, checkRemoteImages) {
     const docFolder = path.join(this.docsDir, doc.filePath);
+
+    // Check MD source files for old path format (if they still exist)
+    await this.validatePathFormat(docFolder, doc);
 
     try {
       const langInfo = await this.getExpectedLanguages(docFolder);
@@ -874,6 +877,47 @@ class DocumentContentValidator {
         message: `Image file missing in workspace assets: ${imageUrl}`,
         suggestion: `Generate image or remove reference`,
       });
+    }
+  }
+
+  /**
+   * Validate path format in MD source files.
+   * Warns about old ../../assets/ format; recommends /assets/ instead.
+   */
+  async validatePathFormat(docFolder, doc) {
+    let entries;
+    try {
+      entries = await readdir(docFolder);
+    } catch (_error) {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (!entry.endsWith(".md")) continue;
+
+      const mdPath = path.join(docFolder, entry);
+      let content;
+      try {
+        content = await readFile(mdPath, "utf8");
+      } catch (_error) {
+        continue;
+      }
+
+      // Remove fenced code blocks before checking
+      const contentWithoutCode = content.replace(/```[\s\S]*?```/g, "");
+
+      // Detect old ../../assets/ format in image references
+      const oldFormatRegex = /!\[([^\]]*)\]\(((?:\.\.\/)+)assets\/([^)]+)\)/g;
+      for (const match of contentWithoutCode.matchAll(oldFormatRegex)) {
+        this.errors.warnings.push({
+          type: "OLD_PATH_FORMAT",
+          path: doc.path,
+          langFile: entry,
+          imageUrl: match[0],
+          message: `Old path format: ${match[2]}assets/${match[3]} in ${doc.path} (${entry})`,
+          suggestion: `Use /assets/${match[3]} instead`,
+        });
+      }
     }
   }
 
