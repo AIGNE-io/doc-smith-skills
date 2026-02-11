@@ -325,6 +325,40 @@ async function replaceImagePlaceholders(mdContent, docPath, lang, mainLocale, as
   return result;
 }
 
+function rewriteAbsoluteAssetPaths(mdContent, assetPath) {
+  // Convert /assets/ absolute paths to relative paths based on document depth.
+  // Paths containing ".." are treated as traversal attempts and left unchanged.
+
+  // Markdown image: ![alt](/assets/xxx)
+  mdContent = mdContent.replace(
+    /!\[([^\]]*)\]\(\/assets\/([^)]+)\)/g,
+    (match, alt, rest) => {
+      if (rest.includes("..")) return match;
+      return `![${alt}](${assetPath}/${rest})`;
+    }
+  );
+
+  // Markdown link (not image): [text](/assets/xxx)
+  mdContent = mdContent.replace(
+    /(?<!!)\[([^\]]*)\]\(\/assets\/([^)]+)\)/g,
+    (match, text, rest) => {
+      if (rest.includes("..")) return match;
+      return `[${text}](${assetPath}/${rest})`;
+    }
+  );
+
+  // HTML img: <img src="/assets/xxx">
+  mdContent = mdContent.replace(
+    /(<img[^>]+src=")\/assets\/([^"]+)(")/gi,
+    (match, prefix, rest, suffix) => {
+      if (rest.includes("..")) return match;
+      return `${prefix}${assetPath}/${rest}${suffix}`;
+    }
+  );
+
+  return mdContent;
+}
+
 function rewriteImagePaths(mdContent, docPath, assetPath) {
   // Rewrite relative image paths that target workspace assets/ directory.
   // MD files are at docs/{path}/{lang}.md; they use ../../..+ to reach workspace root.
@@ -817,6 +851,9 @@ async function buildSingleDoc(options) {
   // Replace image placeholders (AFS image slots → relative paths)
   const workspaceAssets = join(workspace, "assets");
   mdContent = await replaceImagePlaceholders(mdContent, docPath, lang, mainLocale, workspaceAssets, assetPath);
+
+  // Convert /assets/ absolute paths to relative paths
+  mdContent = rewriteAbsoluteAssetPaths(mdContent, assetPath);
 
   // Rewrite direct relative image paths from MD file context to HTML output context
   mdContent = rewriteImagePaths(mdContent, docPath, assetPath);
