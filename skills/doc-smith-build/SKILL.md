@@ -7,7 +7,7 @@ description: Build Doc-Smith generated Markdown documentation into static HTML s
 
 双模式构建：`--nav` 生成导航和静态资源，`--doc` 构建单篇文档。
 
-## Usage
+## 用法
 
 ```bash
 # 生成 nav.js + 复制资源 + 创建重定向
@@ -20,7 +20,7 @@ node skills/doc-smith-build/scripts/build.mjs \
   --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
 ```
 
-## Options
+## 选项
 
 | Option | Alias | Description |
 |--------|-------|-------------|
@@ -57,9 +57,22 @@ node skills/doc-smith-build/scripts/build.mjs \
 - 套 HTML 骨架（data-ds 锚点）
 - 生成 TOC（页面内联）
 - 处理图片占位符（`<!-- afs:image ... -->`）
+- `/assets/` 路径转换为相对路径（见下方路径契约）
 - 拼接静态资源引用（CSS + nav.js）
 
 **不负责：** 导航渲染（nav.js 客户端完成）、MD 清理（调用方负责）。
+
+### 路径契约
+
+MD 文件中使用 `/assets/` 绝对路径引用资源，build.mjs 自动转换为相对路径：
+
+| MD 中写法 | HTML 输出（depth=1） | HTML 输出（depth=2） |
+|-----------|---------------------|---------------------|
+| `![img](/assets/logo.png)` | `../../assets/logo.png` | `../../../assets/logo.png` |
+
+- 路径包含 `..` 的视为非法，不转换（防遍历攻击）
+- 旧格式 `../../assets/` 仍由已有逻辑处理（向后兼容）
+- 外部 URL 不受影响
 
 ## 导航架构
 

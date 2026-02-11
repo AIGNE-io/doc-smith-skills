@@ -474,24 +474,24 @@ grep -q 'translateLanguages' skills/doc-smith-localize/SKILL.md
 ### Tests
 
 #### Happy Path
-- [ ] doc-smith-build SKILL.md 包含路径抽象契约说明
-- [ ] doc-smith-images SKILL.md 风格统一（保留 AIGNE CLI 依赖）
-- [ ] doc-smith-clear SKILL.md 风格统一
+- [x] doc-smith-build SKILL.md 包含路径抽象契约说明
+- [x] doc-smith-images SKILL.md 风格统一（保留 AIGNE CLI 依赖）
+- [x] doc-smith-clear SKILL.md 风格统一
 
 #### Bad Path
-- [ ] build SKILL.md 中不包含旧的 `../../` 路径教程
+- [x] build SKILL.md 中不包含旧的 `../../` 路径教程
 
 #### Edge Cases
-- [ ] images SKILL.md 保留所有现有功能描述（save/edit 模式）
+- [x] images SKILL.md 保留所有现有功能描述（save/edit 模式）
 
 #### Security
-- [ ] 不适用
+- [x] 不适用
 
 #### Data Leak
-- [ ] 不适用
+- [x] 不适用
 
 #### Data Damage
-- [ ] 不适用
+- [x] 不适用
 
 ### E2E Gate
 
@@ -507,9 +507,9 @@ grep -q '/assets/' skills/doc-smith-build/SKILL.md
 
 ### Acceptance Criteria
 
-- [ ] 3 个 SKILL.md 风格统一
-- [ ] build 包含路径抽象契约
-- [ ] 功能描述完整无遗漏
+- [x] 3 个 SKILL.md 风格统一
+- [x] build 包含路径抽象契约
+- [x] 功能描述完整无遗漏
 - [ ] 代码已提交
 
 ---
