@@ -2,7 +2,7 @@
 
 ## Overview
 
-在 DocSmith 现有 Markdown 生成流程基础上，集成 HTML 构建步骤，使文档生成的最终产物为静态 HTML 站点。采用 per-doc build 模式：每篇文档生成后立即构建为 HTML，导航外置为 nav.js。同时将图片生成从 AIGNE CLI 迁移到直接调用 AIGNE Hub API。
+在 DocSmith 现有 Markdown 生成流程基础上，集成 HTML 构建步骤，使文档生成的最终产物为静态 HTML 站点。采用 per-doc build 模式：每篇文档生成后立即构建为 HTML，导航外置为 nav.js。同时将图片生成从 AIGNE CLI 迁移到直接调用 AIGNE Hub API，翻译流程从 MD-to-MD 改为 HTML-to-HTML。
 
 ## Prerequisites
 
@@ -16,6 +16,7 @@
 - per-doc build：MD 仅在单篇文档生成瞬间存在，生成 → 构建 → 删除
 - 导航外置：侧边栏和语言切换由 nav.js 驱动，使用 `<script src>` 加载（兼容 file://）
 - 构建集成到 doc-smith-content 中，doc-smith-create 只负责编排和 nav.js 生成
+- 翻译直接在 HTML 层面完成（HTML-to-HTML），不引入 HTML→MD 逆转换
 - 发布方式待定，不在本次改造中处理发布提示
 - 不处理预览，只输出 HTML
 
@@ -328,6 +329,120 @@ test -f /tmp/test-image-en.png && echo "✓ Image edited"
 
 ---
 
+## Phase 3: 翻译流程改造（HTML-to-HTML）
+
+### Description
+
+将翻译流程从依赖持久 MD 文件改为直接在 HTML 层面完成。translate-document 读取源语言 HTML，提取可翻译内容，翻译后直接输出目标语言 HTML。同时在 doc-smith-content 中添加翻译过期提醒。
+
+### 涉及文件
+
+- `skills/doc-smith-localize/SKILL.md`（改造：翻译源从 MD 改为 HTML，产物直接输出 HTML）
+- `agents/translate-document.md`（改造：HTML-to-HTML 翻译流程）
+- `agents/doc-smith-content.md`（补充：更新文档时提示翻译可能过期）
+
+### 改造要点
+
+**translate-document 新流程：**
+1. 读取源 HTML：`dist/{sourceLang}/docs/{path}.html`
+2. 提取可翻译部分：`<title>`、`<meta description>`、`<main data-ds="content">`、`<nav data-ds="toc">`
+3. 翻译内容（保持 HTML 标签不动）
+4. 复制源 HTML 骨架，替换翻译后的内容 + `<html lang>` + 图片路径
+5. 保存为 `dist/{targetLang}/docs/{path}.html`
+
+**doc-smith-localize 适配：**
+- sourceHash 改为对源 HTML 做 hash
+- 图片引用在目标 HTML 中直接替换
+- 翻译完成后调用 `build.mjs --nav` 更新语言列表
+
+**doc-smith-content 补充：**
+- 更新文档后检查 .meta.yaml 是否有 translations 记录
+- 如有，在摘要中提示翻译可能需要更新
+
+### Tests
+
+#### Happy Path
+- [ ] translate-document：读取源 zh HTML → 翻译 → 输出 en HTML 到正确路径
+- [ ] translate-document：`<html lang="zh">` 改为 `<html lang="en">`
+- [ ] translate-document：`<title>` 和 `<meta description>` 翻译正确
+- [ ] translate-document：`<main data-ds="content">` 正文翻译完整
+- [ ] translate-document：`<nav data-ds="toc">` 目录标题翻译
+- [ ] translate-document：图片路径 `images/zh.png` 替换为 `images/en.png`（目标语言图片存在时）
+- [ ] translate-document：HTML 骨架（CSS 引用、script 引用）保持不变
+- [ ] doc-smith-localize：批量翻译多篇文档，各自独立成功
+- [ ] doc-smith-localize：翻译完成后 nav.js 更新包含新语言
+- [ ] doc-smith-localize：.meta.yaml 更新 translations 和 sourceHash
+- [ ] doc-smith-content：更新文档后提示翻译可能过期
+
+#### Bad Path
+- [ ] 源 HTML 不存在：报告明确错误
+- [ ] 源 HTML 格式异常（缺少 data-ds="content"）：报告错误，不产出损坏 HTML
+- [ ] 目标语言与源语言相同：跳过并提示
+- [ ] sourceHash 未变化（源文档未更新）：跳过翻译（除非 --force）
+- [ ] 翻译后 HTML 缺少必要标签：校验失败，不保存
+
+#### Edge Cases
+- [ ] 源 HTML 正文为空（只有骨架）：翻译为空正文的目标 HTML
+- [ ] 正文中包含代码块：代码不翻译，只翻译注释
+- [ ] 正文中包含 AFS image slot 占位符：保留不翻译
+- [ ] 目标语言图片不存在（shared=true 或未翻译）：保留源语言图片路径
+- [ ] 并行翻译同一文档到多语言：各自独立，不冲突
+
+#### Security
+- [ ] 翻译内容不引入新的 `<script>` 标签
+- [ ] 翻译内容不破坏 HTML 转义
+- [ ] 术语表内容不注入 HTML
+
+#### Data Leak
+- [ ] 翻译日志不包含完整 HTML 正文
+- [ ] 错误信息不暴露文件系统路径
+- [ ] .meta.yaml 不包含翻译 API 凭证
+
+#### Data Damage
+- [ ] 翻译后 HTML 标签结构完整（打开/关闭匹配）
+- [ ] 翻译失败不覆盖已有的目标语言 HTML
+- [ ] 翻译失败不修改 .meta.yaml
+- [ ] 部分文档翻译失败不影响已成功的文档
+
+### E2E Gate
+
+```bash
+# 前置：确保有已构建的源语言 HTML
+test -f .aigne/doc-smith/dist/zh/docs/overview.html && echo "✓ 源 HTML 存在"
+
+# 执行翻译（需要人工触发 /doc-smith-localize -l en）
+# 验证翻译结果
+test -f .aigne/doc-smith/dist/en/docs/overview.html && echo "✓ 翻译 HTML 生成"
+
+# 验证 lang 属性
+grep 'lang="en"' .aigne/doc-smith/dist/en/docs/overview.html && echo "✓ lang 属性正确"
+
+# 验证骨架保留
+grep 'data-ds="content"' .aigne/doc-smith/dist/en/docs/overview.html && echo "✓ 骨架完整"
+grep 'nav.js' .aigne/doc-smith/dist/en/docs/overview.html && echo "✓ nav.js 引用保留"
+grep 'docsmith.css' .aigne/doc-smith/dist/en/docs/overview.html && echo "✓ CSS 引用保留"
+
+# 验证 nav.js 包含新语言
+grep -q 'en' .aigne/doc-smith/dist/assets/nav.js && echo "✓ nav.js 包含 en"
+
+# 验证 .meta.yaml 更新
+grep -q 'en' .aigne/doc-smith/docs/overview/.meta.yaml && echo "✓ meta 已更新"
+
+# 验证无 MD 中间文件残留
+test ! "$(find .aigne/doc-smith/docs -name 'en.md' 2>/dev/null)" && echo "✓ 无 MD 残留"
+```
+
+### Acceptance Criteria
+
+- [ ] 所有 6 类测试通过
+- [ ] E2E Gate 验证通过
+- [ ] translate-document.md 已更新（HTML-to-HTML 流程）
+- [ ] doc-smith-localize SKILL.md 已更新（HTML 源 + HTML 产物）
+- [ ] doc-smith-content.md 已更新（翻译过期提醒）
+- [ ] 代码已提交
+
+---
+
 ## Final E2E Verification
 
 ```bash
@@ -357,6 +472,9 @@ test -f .aigne/doc-smith/dist/assets/docsmith.css && echo "✓ CSS 存在"
 
 # 7. 验证导航数据
 grep -q '__DS_NAV__' .aigne/doc-smith/dist/assets/nav.js && echo "✓ nav.js 有效"
+
+# 8. 验证翻译流程（如已执行 /doc-smith-localize）
+ls .aigne/doc-smith/dist/en/docs/*.html 2>/dev/null | wc -l  # 翻译后应有 HTML
 ```
 
 ## Risk Mitigation
@@ -368,6 +486,8 @@ grep -q '__DS_NAV__' .aigne/doc-smith/dist/assets/nav.js && echo "✓ nav.js 有
 | per-doc 并发构建冲突 | 各 doc 写入不同路径，无共享状态 | 串行构建降级 |
 | AIGNE Hub API 接口变更 | 封装 API 调用层，便于适配 | 回退到 AIGNE CLI |
 | 并发图片生成 API 限流 | 控制并发数，添加重试逻辑 | 串行执行降级 |
+| AI 翻译 HTML 时破坏标签结构 | 只提取可翻译文本，保持 HTML 标签不动；翻译后校验标签完整性 | 回退到 HTML→MD→翻译→MD→HTML |
+| 源文档更新后翻译过期 | doc-smith-content 检查 .meta.yaml 并提示；sourceHash 不匹配检测 | 用户手动 /doc-smith-localize --force |
 
 ## References
 
