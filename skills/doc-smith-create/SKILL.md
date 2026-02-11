@@ -71,7 +71,7 @@ documents:
 - 每篇文档必须有 `docs/{path}/.meta.yaml`（kind: doc, source, default）
 - HTML 必须生成在 `dist/{lang}/docs/{path}.html`
 - `docs/` 目录中不得残留 `.md` 文件（构建后删除）
-- 所有内部链接必须可达，使用文档 path 格式
+- 所有内部链接使用文档 path 格式（如 `/overview/doc-gen`），build.mjs 自动转换为相对 HTML 路径
 - 所有 AFS Image Slot 必须被替换
 - 资源引用使用 `/assets/xxx` 绝对路径格式（build.mjs 自动转换为相对路径）
 

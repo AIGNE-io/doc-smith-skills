@@ -372,6 +372,24 @@ function rewriteImagePaths(mdContent, docPath, assetPath) {
   );
 }
 
+function rewriteDocumentLinks(mdContent, currentDocPath) {
+  // Convert document path links [text](/path) to relative HTML file paths.
+  // Matches non-image links starting with / that are NOT /assets/ and have no file extension.
+  // Example: [文档生成](/overview/doc-gen) → [文档生成](overview/doc-gen.html)
+  const currentSegments = currentDocPath.split("/").filter(Boolean);
+  const dirLevels = currentSegments.length - 1;
+  const upPrefix = "../".repeat(dirLevels);
+
+  return mdContent.replace(
+    /(?<!!)\[([^\]]*)\]\(\/((?!assets\/)[^)#.]*)(#[^)]*)?\)/g,
+    (match, text, pathWithoutSlash, anchor) => {
+      if (!pathWithoutSlash) return match;
+      const htmlPath = `${upPrefix}${pathWithoutSlash}.html${anchor || ""}`;
+      return `[${text}](${htmlPath})`;
+    }
+  );
+}
+
 function filterOtherComments(mdContent) {
   return mdContent.replace(/<!--(?!\s*afs:image)[\s\S]*?-->/g, "");
 }
@@ -857,6 +875,9 @@ async function buildSingleDoc(options) {
 
   // Rewrite direct relative image paths from MD file context to HTML output context
   mdContent = rewriteImagePaths(mdContent, docPath, assetPath);
+
+  // Rewrite document path links (/path) to relative HTML paths
+  mdContent = rewriteDocumentLinks(mdContent, docPath);
 
   mdContent = filterOtherComments(mdContent);
 
