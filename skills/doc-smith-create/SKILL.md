@@ -28,7 +28,7 @@ workspaceVersion: "1.0"
 createdAt: "2025-01-13T10:00:00Z"  # ISO 8601
 projectName: "my-project"
 projectDesc: "项目描述"
-locale: "zh"                        # 输出语言代码
+locale: "zh"                        # 输出语言代码，初始化时必须向用户确认
 projectLogo: ""
 translateLanguages: []
 sources:
@@ -38,6 +38,8 @@ sources:
     branch: ""                      # 可选: 当前分支
     commit: ""                      # 可选: 当前 commit
 ```
+
+**locale 确认规则**：初始化 workspace 时，若用户未明确指定语言，必须用 AskUserQuestion 确认输出语言（如 zh、en、ja），不得默认写入。
 
 ### 2. 结构约束
 
