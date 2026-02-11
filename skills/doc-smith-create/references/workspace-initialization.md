@@ -120,6 +120,8 @@ sources:
 
 ### 步骤 6: 创建初始提交
 
+在 workspace 自己的 git 仓库中提交（注意：步骤 4 切换回了项目根目录，这里需要切回 workspace）：
+
 ```bash
 cd .aigne/doc-smith
 git add .

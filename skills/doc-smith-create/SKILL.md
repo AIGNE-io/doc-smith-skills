@@ -371,7 +371,11 @@ Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}
 ## 自动提交变更
 
 每次完成用户要求的任务，导致 workspace 变化，都自动提交 commit。
+
+**重要**：workspace（`.aigne/doc-smith/`）拥有独立的 git 仓库（初始化时通过 `git init` 创建），与项目根目录的 git 仓库无关。所有 git 操作必须在 workspace 目录下执行，否则看不到变更。
+
 ```bash
+cd .aigne/doc-smith
 git add .
 git commit -m "docsmith: xxxx(合适的标题)"
 ```
@@ -431,7 +435,7 @@ my-project/                        # 用户的项目目录（cwd）
 - **基于用户意图**：所有规划和生成都应参考 `.aigne/doc-smith/intent/user-intent.md`
 - **最小必要原则**：只生成用户意图中明确需要的文档
 - **批量执行**：生成文档内容时优先批量执行，缩短执行时间
-- **Git 版本管理**：生成/更新/翻译完成后自动将所有变更提交到 Git
+- **Git 版本管理**：生成/更新/翻译完成后自动将所有变更提交到 Git。注意 workspace 有独立的 git 仓库，git 操作必须在 `.aigne/doc-smith/` 目录下执行
 
 ## 相关技能
 
