@@ -83,19 +83,26 @@ documents:
 
 ### 5. 上下文管理约束
 
-**主 agent 禁止预读源文件**。源文件由 Task subagent 根据 sourcePaths 自行读取。主 agent 只读取：
-- `config.yaml`、`document-structure.yaml`、`user-intent.md`（workspace 元数据）
-- 项目的 README（用于推断意图，≤1 次 Read）
+**主 agent 禁止读取项目源代码文件**。所有需要分析源文件的工作必须委派给 Task subagent。
 
-**严禁**：主 agent 逐个读取 sourcePaths 中的源代码文件。这会快速耗尽上下文，导致 Task 结果返回后无法继续。
+主 agent 允许读取的文件：
+- workspace 元数据：`config.yaml`（已存在时）
+- 项目 README（仅用于用户意图推断，≤1 次 Read）
+- Task 生成的产物：`user-intent.md`、`document-structure.yaml`（用于向用户展示确认）
+
+**严禁**：主 agent 读取 sourcePaths 中的源代码文件、逐个读取项目文档、或读取任何大量项目文件。这会快速耗尽上下文，导致后续 Task 结果返回后无法继续。
 
 ### 6. Task 分发约束
 
-- 内容生成通过 Task(references/content.md) 分发，每篇文档一个 Task
-- 图片生成通过 Task(references/generate-slot-image.md) 分发
+三类 Task：
+- **结构规划** Task：分析项目源文件，生成 `document-structure.yaml` 草稿（需要 `user-intent.md` 作为输入）
+- **内容生成** Task：通过 Task(references/content.md) 分发，每篇文档一个 Task
+- **图片生成** Task：通过 Task(references/generate-slot-image.md) 分发
+
+分发规则：
 - 文档数量 ≤ 5 时并行执行，> 5 时分批（每批 ≤ 5 个），前一批完成后再启动下一批
 - 内容生成前先执行媒体资源扫描：`Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}`（排除 .aigne/ 和 node_modules/），将结果作为 mediaFiles 传递给每个 Task
-- Task 返回的摘要应尽量简短（路径、状态、slot 列表），避免返回文档内容
+- 所有 Task 返回的摘要必须简短（≤ 10 行），避免返回文件内容
 
 ### 7. 完成约束
 
@@ -154,6 +161,19 @@ documents:
 - 无子文档的详细文档：详写（300-500 行），完整展开
 
 ## 关键流程
+
+### 结构规划（Task 分发）
+
+主 agent 生成 `user-intent.md` 并经用户确认后，启动结构规划 Task：
+
+```
+使用 Task tool 分析项目源文件并生成 document-structure.yaml 草稿。
+Task 输入：user-intent.md 内容、项目目录结构、config.yaml
+Task 职责：读取 sourcePaths 中的源代码，分析 API/模块/功能，按结构规划原则生成 document-structure.yaml
+Task 输出：document-structure.yaml 文件路径 + 结构摘要（≤ 10 行）
+```
+
+主 agent 读取生成的 `document-structure.yaml`，用 AskUserQuestion 向用户确认。
 
 ### 生成 nav.js（结构确认后、内容生成前）
 
