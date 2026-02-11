@@ -1,6 +1,6 @@
 ---
 name: doc-smith-create
-description: "从项目数据源生成和更新结构化文档。支持首次生成和修改已有文档。当用户请求创建文档、生成文档、更新文档、修改文档时使用此 Skill。"
+description: "Generate and update structured documentation from project data sources. Supports initial generation and modifying existing documents. Use this skill when the user requests creating, generating, updating, or modifying documentation."
 ---
 
 # DocSmith 文档生成

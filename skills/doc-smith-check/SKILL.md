@@ -1,6 +1,6 @@
 ---
 name: doc-smith-check
-description: 校验 Doc-Smith 文档的结构和内容完整性。验证 document-structure.yaml、HTML 输出、链接、图片路径。可被其他 doc-smith skill 调用。
+description: Validate Doc-Smith document structure and content integrity. Checks document-structure.yaml, HTML output, links, and image paths. Can be invoked by other doc-smith skills.
 ---
 
 # Doc-Smith 文档检查
