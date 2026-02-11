@@ -334,6 +334,16 @@ function filterOtherComments(mdContent) {
 
 function generateNavigation(documents, titleMap = {}) {
   const nav = [];
+
+  // Track which top-level paths have children (from multi-segment paths)
+  const parentPaths = new Set();
+  for (const doc of documents) {
+    const parts = doc.path.split("/").filter(Boolean);
+    if (parts.length > 1) {
+      parentPaths.add(`/${parts[0]}`);
+    }
+  }
+
   const groups = {};
   const groupOrder = [];
 
@@ -343,11 +353,26 @@ function generateNavigation(documents, titleMap = {}) {
     const title = titleMap[path] || doc.title;
 
     if (parts.length === 1) {
-      nav.push({
-        title: title,
-        path: path,
-        href: `/docs${path}.html`,
-      });
+      if (parentPaths.has(path)) {
+        // This top-level doc has children — initialize the group with it
+        const groupKey = parts[0];
+        if (!groups[groupKey]) {
+          groups[groupKey] = {
+            title: title,
+            path: path,
+            href: `/docs${path}.html`,
+            children: [],
+          };
+          groupOrder.push(groupKey);
+        }
+      } else {
+        // Standalone top-level doc without children
+        nav.push({
+          title: title,
+          path: path,
+          href: `/docs${path}.html`,
+        });
+      }
     } else {
       const groupKey = parts[0];
       if (!groups[groupKey]) {
@@ -369,11 +394,37 @@ function generateNavigation(documents, titleMap = {}) {
     }
   }
 
-  for (const key of groupOrder) {
-    nav.push(groups[key]);
+  // Merge groups into nav at their correct positions
+  // Rebuild nav preserving original document order
+  const result = [];
+  const groupInserted = new Set();
+  for (const doc of documents) {
+    const parts = doc.path.split("/").filter(Boolean);
+    const groupKey = parts[0];
+
+    if (parts.length === 1 && parentPaths.has(doc.path)) {
+      // Insert the group (with children) at the parent's position
+      if (!groupInserted.has(groupKey)) {
+        result.push(groups[groupKey]);
+        groupInserted.add(groupKey);
+      }
+    } else if (parts.length === 1) {
+      // Standalone item
+      result.push({
+        title: titleMap[doc.path] || doc.title,
+        path: doc.path,
+        href: `/docs${doc.path}.html`,
+      });
+    } else {
+      // Child item — ensure its group is inserted
+      if (!groupInserted.has(groupKey) && groups[groupKey]) {
+        result.push(groups[groupKey]);
+        groupInserted.add(groupKey);
+      }
+    }
   }
 
-  return nav;
+  return result;
 }
 
 // ============================================
