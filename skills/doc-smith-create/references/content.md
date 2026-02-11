@@ -148,22 +148,18 @@ Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}
 
 #### 4.3 图片路径格式
 
-文档中引用**已有图片**时，使用相对路径引用 workspace `assets/` 目录下的文件。
+文档中引用图片时，统一使用 `/assets/` 绝对路径格式：
 
-**路径规则：使用 `../` 从 MD 文件位置回溯到 workspace 的 `assets/` 目录。**
+```markdown
+![描述](/assets/logo.png)
+![架构图](/assets/architecture-overview/images/zh.png)
+```
 
-从 `docs/{path}/` 到 workspace 根目录需要的 `../` 层数 = 1（docs/） + path 的目录深度。
-
-| 文档 path | MD 文件位置 | `../` 层数 | 图片引用示例 |
-|-----------|-------------|-----------|-------------|
-| `/overview` | `docs/overview/zh.md` | 2 | `![img](../../assets/logo.png)` |
-| `/api/auth` | `docs/api/auth/zh.md` | 3 | `![img](../../../assets/logo.png)` |
-
-**构建脚本会自动将这些相对路径转换为 HTML 输出中的正确路径，无需关心 HTML 的输出位置。**
+**构建脚本（build.mjs）会自动将 `/assets/` 路径转换为 HTML 输出中的正确相对路径，无需手动计算深度。**
 
 **注意**：
-- `assets/` 指的是 workspace 的 assets 目录（`.aigne/doc-smith/assets/`），不是项目根目录
-- 语言文件（zh.md、en.md）位于文档目录内，不额外增加层级计算
+- `/assets/` 指的是 workspace 的 assets 目录（`.aigne/doc-smith/assets/`），不是项目根目录
+- 所有文档深度的路径写法完全相同，无需关心文档层级
 
 ### 5. 生成文档内容
 
@@ -248,7 +244,7 @@ Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}
 **应用截图：**
 1. 从前置准备的查找结果中匹配相关图片
 2. 只在图片明确与文档内容相关时使用
-3. 引用格式：`![截图说明](../../assets/screenshot.png)`（`../` 层数按 4.3 节规则计算）
+3. 引用格式：`![截图说明](/assets/screenshot.png)`
 
 **技术图表：**
 1. 判断是否真的需要图表来辅助理解

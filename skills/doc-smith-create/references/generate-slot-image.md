@@ -164,27 +164,23 @@ languages:
 
 1. **读取文档文件**：`.aigne/doc-smith/docs/{docPath}/{locale}.md`
 
-2. **计算图片相对路径**：
-   - 根据文档深度计算 `../` 的数量
-   - 深度 1（如 /overview）：`../../assets/{key}/images/{locale}.png`
-   - 深度 2（如 /api/auth）：`../../../assets/{key}/images/{locale}.png`
-
-3. **构建图片 Markdown**：
+2. **构建图片路径**（统一使用 `/assets/` 绝对路径）：
    ```markdown
-   ![{slotDesc}]({相对路径})
+   ![{slotDesc}](/assets/{key}/images/{locale}.png)
    ```
 
-4. **替换占位符**：
+3. **替换占位符**：
    - 查找：`<!-- afs:image id="{slotId}" ... -->`（可能包含 key 和 desc 属性）
-   - 替换为：`![{slotDesc}]({相对路径})`
+   - 替换为：`![{slotDesc}](/assets/{key}/images/{locale}.png)`
 
-5. **写回文档文件**
+4. **写回文档文件**
 
 **示例**：
-- 文档路径 `/overview`（深度 1），slot ID `architecture-overview`
-- 相对路径：`../../assets/architecture-overview/images/zh.png`
+- 文档路径 `/overview`，slot ID `architecture-overview`
 - 替换前：`<!-- afs:image id="architecture-overview" desc="系统架构图" -->`
-- 替换后：`![系统架构图](../../assets/architecture-overview/images/zh.png)`
+- 替换后：`![系统架构图](/assets/architecture-overview/images/zh.png)`
+
+**注意**：构建脚本（build.mjs）会自动将 `/assets/` 路径转换为正确的相对路径，无需手动计算深度。
 
 ### 9. 返回摘要
 
@@ -257,8 +253,8 @@ languages:
    - `documents`、`languages`
 3. **Prompt 质量**：生成的 prompt 具体、可视化，结合了文档上下文
 4. **路径正确**：文件保存在正确的目录结构中
-5. **占位符已替换**：文档中的 `<!-- afs:image ... -->` 已替换为 `![desc](path)` 格式
-6. **图片路径层级正确**：根据文档深度使用正确数量的 `../`
+5. **占位符已替换**：文档中的 `<!-- afs:image ... -->` 已替换为 `![desc](/assets/...)` 格式
+6. **图片路径格式正确**：统一使用 `/assets/` 绝对路径格式
 7. **摘要完整**：返回的摘要必须明确显示元文件路径和文档更新状态
 
 ## 错误处理

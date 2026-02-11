@@ -321,7 +321,7 @@ rm -f "$WORKSPACE/dist/zh/docs/test-path-check.html"
 - [x] doc-smith-check SKILL.md 重写为声明式风格
 - [x] 现有校验功能（结构 + 内容 + slots）不受影响
 - [x] 在测试项目上验证通过
-- [ ] 代码已提交
+- [x] 代码已提交
 
 ---
 
@@ -334,41 +334,41 @@ rm -f "$WORKSPACE/dist/zh/docs/test-path-check.html"
 ### Tests
 
 #### Happy Path
-- [ ] 新 SKILL.md 行数 ≤ 200 行
-- [ ] 包含全部 6 类约束（Workspace/结构/内容/人类确认/Task分发/完成）
-- [ ] config.yaml schema 已内联
-- [ ] document-structure.yaml schema 已内联
-- [ ] user-intent.md 格式模板已内联
-- [ ] content.md（Task agent）保留且可被 Task tool 引用
-- [ ] generate-slot-image.md（Task agent）保留且可被 Task tool 引用
+- [x] 新 SKILL.md 行数 ≤ 200 行
+- [x] 包含全部 6 类约束（Workspace/结构/内容/人类确认/Task分发/完成）
+- [x] config.yaml schema 已内联
+- [x] document-structure.yaml schema 已内联
+- [x] user-intent.md 格式模板已内联
+- [x] content.md（Task agent）保留且可被 Task tool 引用
+- [x] generate-slot-image.md（Task agent）保留且可被 Task tool 引用
 
 #### Bad Path
-- [ ] 已删除的 reference 文件不存在于 references/ 目录
-  - [ ] changeset-guide.md 已删除
-  - [ ] patch-guide.md 已删除
-  - [ ] update-workflow.md 已删除
-  - [ ] document-content-guide.md 已删除
-  - [ ] document-structure-schema.md 已删除
-  - [ ] structure-confirmation-guide.md 已删除
-  - [ ] structure-planning-guide.md 已删除
-  - [ ] user-intent-guide.md 已删除
-  - [ ] workspace-initialization.md 已删除
-- [ ] SKILL.md 中不包含 Phase 编号（Phase 0, Phase 1 等）
-- [ ] SKILL.md 中不包含 task_plan.md 相关指令
+- [x] 已删除的 reference 文件不存在于 references/ 目录
+  - [x] changeset-guide.md 已删除
+  - [x] patch-guide.md 已删除
+  - [x] update-workflow.md 已删除
+  - [x] document-content-guide.md 已删除
+  - [x] document-structure-schema.md 已删除
+  - [x] structure-confirmation-guide.md 已删除
+  - [x] structure-planning-guide.md 已删除
+  - [x] user-intent-guide.md 已删除
+  - [x] workspace-initialization.md 已删除
+- [x] SKILL.md 中不包含 Phase 编号（Phase 0, Phase 1 等）
+- [x] SKILL.md 中不包含 task_plan.md 相关指令
 
 #### Edge Cases
-- [ ] SKILL.md 中引用的 schema/模板内容完整（对比原 reference 文件关键字段）
-- [ ] content.md 中路径引用已更新为 `/assets/` 格式
-- [ ] generate-slot-image.md 风格统一
+- [x] SKILL.md 中引用的 schema/模板内容完整（对比原 reference 文件关键字段）
+- [x] content.md 中路径引用已更新为 `/assets/` 格式
+- [x] generate-slot-image.md 风格统一
 
 #### Security
-- [ ] 不适用（Skill 文件无安全风险）
+- [x] 不适用（Skill 文件无安全风险）
 
 #### Data Leak
-- [ ] 不适用
+- [x] 不适用
 
 #### Data Damage
-- [ ] 原 reference 文件内容的关键信息（schema 字段、配置规则）在内联后无遗漏
+- [x] 原 reference 文件内容的关键信息（schema 字段、配置规则）在内联后无遗漏
 
 ### E2E Gate
 
@@ -399,12 +399,12 @@ grep -q 'TaskCreate\|Task tool' skills/doc-smith-create/SKILL.md || true
 
 ### Acceptance Criteria
 
-- [ ] SKILL.md ≤ 200 行，声明式约束风格
-- [ ] 8 个 reference 文件已删除
-- [ ] 2 个 Task agent 文件保留且更新
-- [ ] 6 类约束完整内联
-- [ ] 无 Phase 编号、无 task_plan.md 引用
-- [ ] config.yaml schema + document-structure.yaml schema 已内联
+- [x] SKILL.md ≤ 200 行，声明式约束风格
+- [x] 8 个 reference 文件已删除
+- [x] 2 个 Task agent 文件保留且更新
+- [x] 6 类约束完整内联
+- [x] 无 Phase 编号、无 task_plan.md 引用
+- [x] config.yaml schema + document-structure.yaml schema 已内联
 - [ ] 代码已提交
 
 ---
