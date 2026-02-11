@@ -66,7 +66,7 @@ New Document Generation Template:
 - [ ] Phase 4: Generate document-structure.yaml
 - [ ] Phase 5: Confirm document structure
 - [ ] Phase 6: Generate document content
-- [ ] Phase 7: Check for `AFS Image Slot`, if exists call `generate-slot-image` SubAgent to generate images
+- [ ] Phase 7: Check for `AFS Image Slot`, if exists use `generate-slot-image.md` to generate images via Task tool
 - [ ] Phase 7.5: Verify image slots have been replaced
 - [ ] Phase 9: Confirm all tasks are completed before finishing
 - [ ] Phase 10: (Additional user requirements, extend this list as needed)
@@ -187,30 +187,30 @@ node skills/doc-smith-build/scripts/build.mjs \
 
 ### 6. 生成文档内容
 
-使用 `doc-smith-content` **子代理**为文档结构中的每个文档生成内容。
+按 `content.md` 流程，使用 Task tool 为文档结构中的每个文档生成内容。
 
 **调用方式**：
 
 ```
 # 生成单个文档
-使用 doc-smith-content 子代理生成 /api/overview 文档
+按 content.md 流程使用 Task tool 生成 /api/overview 文档
 
 # 带自定义要求
-使用 doc-smith-content 子代理生成 /api/authentication 文档，重点说明安全注意事项
+按 content.md 流程使用 Task tool 生成 /api/authentication 文档，重点说明安全注意事项
 ```
 
 **批量并行生成**（推荐）：
 
 ```
-使用单独的 doc-smith-content 子代理并行生成以下文档：
+按 content.md 流程使用单独的 Task tool 并行生成以下文档：
 - /overview
 - /api/authentication
 - /guides/getting-started
 ```
 
-每个子代理完成后会返回摘要，包含：文档路径、主题概述、章节列表、image slots、HTML 构建结果、校验结果。
+每个 Task 完成后会返回摘要，包含：文档路径、主题概述、章节列表、image slots、HTML 构建结果、校验结果。
 
-**注意**：`doc-smith-content` 子代理内部会自动完成 per-doc build（生成 MD → 构建 HTML → 删除 MD），不需要在此步骤额外调用 build 命令。
+**注意**：`content.md` 流程内部会自动完成 per-doc build（生成 MD → 构建 HTML → 删除 MD），不需要在此步骤额外调用 build 命令。
 
 ### 7. 更新已有文档
 
@@ -230,11 +230,11 @@ node skills/doc-smith-build/scripts/build.mjs \
   node skills/doc-smith-build/scripts/build.mjs \
     --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
   ```
-- 新增文档时，使用 `doc-smith-content` 子代理生成内容：
+- 新增文档时，按 `content.md` 流程使用 Task tool 生成内容：
 
 ```
 # 为新增的文档生成内容
-使用 doc-smith-content 子代理并行生成以下文档：
+按 content.md 流程使用单独的 Task tool 并行生成以下文档：
 - /new-section/overview
 - /new-section/details
 ```
@@ -293,20 +293,20 @@ node skills/doc-smith-build/scripts/build.mjs \
 
 需要忽略代码示例中的`AFS Image Slot` 占位符，确保真的是文档中需要展示的图片。
 
-**使用 `generate-slot-image` 子代理并行生成图片**：
+**按 `generate-slot-image.md` 流程使用 Task tool 并行生成图片**：
 
 ```
-使用单独的 generate-slot-image 子代理并行生成以下图片：
+按 generate-slot-image.md 流程使用单独的 Task tool 并行生成以下图片：
 - docPath=/overview, slotId=architecture-overview, slotDesc="系统架构图，展示各模块关系"
 - docPath=/api/auth, slotId=auth-flow, slotDesc="认证流程图", aspectRatio=16:9
 - docPath=/guides/start, slotId=setup-steps, slotDesc="安装步骤示意图"
 ```
 
-**子代理的优势**：
-- 每个子代理独立处理一个 slot，有独立的上下文窗口
-- 可以并行执行多个子代理，加快生成速度
-- 子代理在前台执行，确保权限缺失时，可以向用户确认权限
-- 子代理自动处理图片保存和 meta 文件创建
+**Task 分发的优势**：
+- 每个 Task 独立处理一个 slot，有独立的上下文窗口
+- 可以并行执行多个 Task，加快生成速度
+- Task 在前台执行，确保权限缺失时，可以向用户确认权限
+- Task 自动处理图片保存和 meta 文件创建
 
 生成的图片会保存在 `.aigne/doc-smith/assets/{key}/images/` 目录。
 
@@ -423,8 +423,8 @@ my-project/                        # 用户的项目目录（cwd）
 
 | 技能 | 用途 | 调用示例 |
 |------|------|----------|
-| `doc-smith-content` | 生成单篇文档内容 | `/doc-smith-content /api/overview` |
-| `generate-slot-image` | 生成文档中的图片 | `generate-slot-image docPath=/overview, slotId=architecture-overview, slotDesc="系统架构图，展示各模块关系"`|
+| `content.md` | 生成单篇文档内容（Task tool 调用） | 按 content.md 流程生成 /api/overview |
+| `generate-slot-image.md` | 生成文档中的图片（Task tool 调用） | 按 generate-slot-image.md 流程生成图片 |
 | `doc-smith-check` | 校验文档结构和内容 | `/doc-smith-check` 或 `/doc-smith-check --structure` |
 
 以下技能由用户按需独立调用：
