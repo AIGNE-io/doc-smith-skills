@@ -83,19 +83,20 @@ documents:
 
 ### 5. 上下文管理约束
 
-**主 agent 禁止读取项目源代码文件**。所有需要分析源文件的工作必须委派给 Task subagent。
+主 agent 可以读取项目源文件，但必须为后续 Task 结果预留上下文空间。
 
-主 agent 允许读取的文件：
-- workspace 元数据：`config.yaml`（已存在时）
-- 项目 README（仅用于用户意图推断，≤1 次 Read）
-- Task 生成的产物：`user-intent.md`、`document-structure.yaml`（用于向用户展示确认）
+**判断原则**：主 agent 读取的源文件量 + 后续所有 Task 返回的摘要量，不能超出上下文预算。文档越多，Task 结果越多，主 agent 自身读取源文件的空间越小。
 
-**严禁**：主 agent 读取 sourcePaths 中的源代码文件、逐个读取项目文档、或读取任何大量项目文件。这会快速耗尽上下文，导致后续 Task 结果返回后无法继续。
+**实践规则**：
+- 修改少量已有文档时，直接读取相关源文件没有问题
+- 首次生成时，先通过目录结构（`ls`/`Glob`）评估项目规模，再决定结构规划方式：
+  - 小项目（源文件少、预计文档 ≤ 5 篇）：主 agent 可直接读取源文件并规划结构
+  - 大项目（源文件多、预计文档 > 5 篇）：将结构规划委派给 Task（见"关键流程"）
 
 ### 6. Task 分发约束
 
-三类 Task：
-- **结构规划** Task：分析项目源文件，生成 `document-structure.yaml` 草稿（需要 `user-intent.md` 作为输入）
+Task 类型：
+- **结构规划** Task（按需）：当项目较大时，委派 Task 分析源文件生成 `document-structure.yaml` 草稿
 - **内容生成** Task：通过 Task(references/content.md) 分发，每篇文档一个 Task
 - **图片生成** Task：通过 Task(references/generate-slot-image.md) 分发
 
@@ -126,7 +127,7 @@ documents:
 
 文件：`.aigne/doc-smith/intent/user-intent.md`
 
-基于项目 README 和目录结构（`ls`/`Glob`）推断目标用户、使用场景、文档侧重点。不读取源代码文件。生成后用 AskUserQuestion 确认。
+基于项目 README 和目录结构（`ls`/`Glob`）推断目标用户、使用场景、文档侧重点。生成后用 AskUserQuestion 确认。
 
 ```markdown
 # 用户意图
@@ -162,18 +163,14 @@ documents:
 
 ## 关键流程
 
-### 结构规划（Task 分发）
+### 结构规划
 
-主 agent 生成 `user-intent.md` 并经用户确认后，启动结构规划 Task：
+主 agent 生成 `user-intent.md` 并经用户确认后，根据项目规模选择结构规划方式：
 
-```
-使用 Task tool 分析项目源文件并生成 document-structure.yaml 草稿。
-Task 输入：user-intent.md 内容、项目目录结构、config.yaml
-Task 职责：读取 sourcePaths 中的源代码，分析 API/模块/功能，按结构规划原则生成 document-structure.yaml
-Task 输出：document-structure.yaml 文件路径 + 结构摘要（≤ 10 行）
-```
+- **小项目**：主 agent 直接读取源文件，分析后生成 `document-structure.yaml`
+- **大项目**：委派 Task 分析源文件并生成 `document-structure.yaml` 草稿，Task 返回文件路径 + 结构摘要（≤ 10 行）
 
-主 agent 读取生成的 `document-structure.yaml`，用 AskUserQuestion 向用户确认。
+生成后用 AskUserQuestion 向用户确认，展示文档总数、层次、每个文档的标题和描述。
 
 ### 生成 nav.js（结构确认后、内容生成前）
 
