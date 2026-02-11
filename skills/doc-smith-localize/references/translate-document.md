@@ -127,6 +127,7 @@ shasum -a 256 .aigne/doc-smith/dist/{sourceLanguage}/docs/{docPath}.html | cut -
 2. **替换翻译内容**：将步骤 4 翻译好的 4 个区域分别替换到对应位置
 3. **更新 `<html lang>` 属性**：`<html lang="{sourceLanguage}">` → `<html lang="{targetLanguage}">`
 4. **更新图片路径**：将正文中 `images/{sourceLanguage}.png` 替换为 `images/{targetLanguage}.png`（仅当目标语言图片存在时；如果不存在，保留源语言路径）
+5. **更新 header 链接**：将 `<header>` 中站点标题 `<a>` 的 href 从 `/{sourceLanguage}/index.html` 替换为 `/{targetLanguage}/index.html`
 
 **校验目标 HTML**：
 - 翻译后的 HTML 必须包含 `<main data-ds="content">` 标签

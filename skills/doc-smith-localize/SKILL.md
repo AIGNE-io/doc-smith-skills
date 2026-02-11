@@ -75,22 +75,22 @@ description: Translate Doc-Smith generated documentation into multiple languages
 ## Execution Phases
 
 - [ ] Phase 1: Detect Workspace
-- [ ] Phase 2: Read configuration and validate parameters
-- [ ] Phase 3: Load glossary
-- [ ] Phase 4: Batch translate documents
+- [ ] Phase 2: Read configuration
+- [ ] Phase 3: Validate parameters
+- [ ] Phase 4: Load glossary
+- [ ] Phase 5: Batch translate documents
   - [ ] Document 1: /overview → en
   - [ ] Document 1: /overview → ja
   - [ ] Document 2: /api/auth → en
   - [ ] ... (expand based on actual document list)
-- [ ] Phase 5: Translate images (if not skipped)
+- [ ] Phase 6: Translate images (if not skipped)
   - [ ] Image 1: arch → en
   - [ ] Image 2: flow → en
   - [ ] ... (expand based on actual image list)
-- [ ] Phase 6: Update image references in documents
-- [ ] Phase 7: Update config.yaml
-- [ ] Phase 8: Update nav.js language list
-- [ ] Phase 9: Generate translation report
-- [ ] Phase 10: Commit changes to Git
+- [ ] Phase 7: Update image references in documents
+- [ ] Phase 8: Update config.yaml (translateLanguages)
+- [ ] Phase 9: Rebuild nav.js (language switching) ← 语言切换生效的关键步骤
+- [ ] Phase 10: Generate translation report
 
 ## Execution Statistics
 - Total documents: 0
@@ -281,6 +281,8 @@ translateLanguages:
 
 **注意**：避免重复添加已存在的语言。
 
+**验证**：更新后读取 `config.yaml`，确认 `translateLanguages` 数组包含本次所有目标语言。如果缺少，立即补充并重新保存。
+
 ### 9. 更新 nav.js 语言列表
 
 翻译完成后，调用 `build.mjs --nav` 更新导航数据，使 nav.js 包含新增的语言：
@@ -290,7 +292,9 @@ node skills/doc-smith-build/scripts/build.mjs \
   --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
 ```
 
-**注意**：此步骤确保 nav.js 中的语言列表反映翻译后的实际情况，用户可在页面上切换语言。
+**验证**：执行后用 Grep 检查 `dist/assets/nav.js` 是否包含所有目标语言的 code（如 `"en"`、`"ja"`）。如果缺少目标语言，检查 Phase 8 的 config.yaml 是否正确更新，修正后重新执行本步骤。
+
+**注意**：此步骤是语言切换功能生效的关键。nav.js 中的语言列表决定了页面是否显示语言切换下拉框。
 
 ### 10. 生成翻译报告
 
@@ -402,3 +406,4 @@ node skills/doc-smith-build/scripts/build.mjs \
 - **批量执行**：翻译文档时优先批量并行执行，缩短执行时间
 - **Task 隔离**：每个文档的翻译由独立 Task 处理，避免上下文膨胀
 - **nav.js 更新**：翻译完成后调用 `build.mjs --nav` 更新导航语言列表
+- **Phase 8 → Phase 9 必经路径**：Phase 8（更新 config.yaml）和 Phase 9（重建 nav.js）是语言切换功能生效的必经路径，绝不能跳过。如果跳过，翻译后的页面将无法显示语言切换入口
