@@ -418,26 +418,26 @@ grep -q 'TaskCreate\|Task tool' skills/doc-smith-create/SKILL.md || true
 ### Tests
 
 #### Happy Path
-- [ ] SKILL.md 重写为声明式约束风格
-- [ ] 7 条约束声明完整
-- [ ] translate-document.md（Task agent）保留且路径引用更新为 `/assets/`
-- [ ] 不包含 translate_task_plan.md 相关指令
+- [x] SKILL.md 重写为声明式约束风格
+- [x] 7 条约束声明完整
+- [x] translate-document.md（Task agent）保留且路径引用更新为 `/assets/`
+- [x] 不包含 translate_task_plan.md 相关指令
 
 #### Bad Path
-- [ ] SKILL.md 中不包含 Phase 编号
-- [ ] 不包含 task_plan 相关文件引用
+- [x] SKILL.md 中不包含 Phase 编号
+- [x] 不包含 task_plan 相关文件引用
 
 #### Edge Cases
-- [ ] translate-document.md 中图片路径替换规则适配新的 `/assets/` 格式
+- [x] translate-document.md 中图片路径替换规则适配新的 `/assets/` 格式
 
 #### Security
-- [ ] 不适用
+- [x] 不适用
 
 #### Data Leak
-- [ ] 不适用
+- [x] 不适用
 
 #### Data Damage
-- [ ] 翻译约束中的关键规则无遗漏（sourceHash、nav.js 重建、config.yaml 更新）
+- [x] 翻译约束中的关键规则无遗漏（sourceHash、nav.js 重建、config.yaml 更新）
 
 ### E2E Gate
 
@@ -457,10 +457,10 @@ grep -q 'translateLanguages' skills/doc-smith-localize/SKILL.md
 
 ### Acceptance Criteria
 
-- [ ] SKILL.md 声明式约束风格
-- [ ] translate-document.md 路径格式更新
-- [ ] 无 task_plan 机制引用
-- [ ] 7 条约束完整
+- [x] SKILL.md 声明式约束风格
+- [x] translate-document.md 路径格式更新
+- [x] 无 task_plan 机制引用
+- [x] 7 条约束完整
 - [ ] 代码已提交
 
 ---

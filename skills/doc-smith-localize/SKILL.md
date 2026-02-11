@@ -7,403 +7,131 @@ description: Translate Doc-Smith generated documentation into multiple languages
 
 将文档翻译成多种语言，支持批量翻译和术语一致性。
 
-## Usage
+## 用法
 
 ```bash
-# 翻译所有文档到指定语言
-/doc-smith-localize --lang en
-/doc-smith-localize -l en
-
-# 翻译到多个语言
-/doc-smith-localize --lang en --lang ja
-/doc-smith-localize -l en -l ja
-
-# 只翻译指定文档
-/doc-smith-localize --lang en --path /overview
-/doc-smith-localize -l en -p /overview
-
-# 翻译多个指定文档
-/doc-smith-localize --lang en --path /overview --path /api/auth
-
-# 强制重新翻译（覆盖已有翻译）
-/doc-smith-localize --lang en --force
-/doc-smith-localize -l en -f
-
-# 跳过图片翻译
-/doc-smith-localize --lang en --skip-images
+/doc-smith-localize --lang en                    # 翻译所有文档到英文
+/doc-smith-localize -l en -l ja                  # 翻译到多个语言
+/doc-smith-localize -l en -p /overview           # 只翻译指定文档
+/doc-smith-localize -l en --force                # 强制重新翻译
+/doc-smith-localize -l en --skip-images          # 跳过图片翻译
 ```
 
-## Options
+## 选项
 
-| Option | Alias | Description |
-|--------|-------|-------------|
-| `--lang <code>` | `-l` | 目标语言代码（可多次使用），如 en, ja, fr, de |
-| `--path <docPath>` | `-p` | 指定要翻译的文档路径（可多次使用），不指定则翻译全部 |
-| `--force` | `-f` | 强制重新翻译，覆盖已存在的翻译文件 |
-| `--skip-images` | | 跳过图片翻译，只翻译文档内容 |
+| 选项 | 别名 | 说明 |
+|------|------|------|
+| `--lang <code>` | `-l` | 目标语言代码（可多次使用） |
+| `--path <docPath>` | `-p` | 指定文档路径（可多次使用） |
+| `--force` | `-f` | 强制重新翻译，覆盖已有 |
+| `--skip-images` | | 跳过图片翻译 |
 
-## 触发场景
+## 约束
 
-- 用户要求翻译文档到其他语言
-- 用户说"翻译"、"本地化"、"多语言"
-- 批量翻译多篇文档
-- 优化某篇文档的翻译质量
+以下约束在任何操作中都必须满足。
 
-## 工作流程
+### 1. Workspace 约束
 
-**任务规划机制**：翻译任务涉及多个文档和图片，使用持久化的任务规划文件来跟踪执行进度，确保长时间任务的可追溯性和可恢复性。
+- `.aigne/doc-smith/config.yaml` 和 `planning/document-structure.yaml` 必须存在
+- 不存在时提示用户先使用 `/doc-smith` 生成文档
 
-### 任务规划初始化
+### 2. 参数验证约束
 
-**在开始任何实际工作前，必须先初始化任务规划文件。**
+- 目标语言不能与源语言（config.yaml 的 locale）相同
+- `--path` 指定的路径必须存在于 document-structure.yaml
+- 过滤后无有效语言时报错
 
-在 `.aigne/doc-smith/cache` 目录创建 `translate_task_plan.md` 文件，如果文件已存在，可以覆盖之前的文件，内容模板：
+### 3. 增量翻译约束
 
-```markdown
-# Document Translation Task Plan
+- 基于源 HTML 的 SHA256 hash（sourceHash）判断是否需要翻译
+- hash 未变化的文档自动跳过（除非 `--force`）
+- 翻译失败时不覆盖已有翻译、不修改 .meta.yaml
 
-## Goal
-[One sentence describing this task, e.g., Translate all documents into English and Japanese]
+### 4. Task 分发约束
 
-## Configuration
-- Source language: zh
-- Target languages: en, ja
-- Document scope: All / Specified paths
-- Force re-translation: No
-- Skip images: No
+- 每个文档到每种语言为一个独立翻译任务
+- 通过 Task(references/translate-document.md) 分发，并行执行
+- 每批最多并行 5 个 Task，超过时分批执行
+- 如有术语表（`.aigne/doc-smith/glossary.yaml` 或 `.md`），传递给每个 Task
 
-## Execution Phases
+### 5. 图片翻译约束
 
-- [ ] Phase 1: Detect Workspace
-- [ ] Phase 2: Read configuration
-- [ ] Phase 3: Validate parameters
-- [ ] Phase 4: Load glossary
-- [ ] Phase 5: Batch translate documents
-  - [ ] Document 1: /overview → en
-  - [ ] Document 1: /overview → ja
-  - [ ] Document 2: /api/auth → en
-  - [ ] ... (expand based on actual document list)
-- [ ] Phase 6: Translate images (if not skipped)
-  - [ ] Image 1: arch → en
-  - [ ] Image 2: flow → en
-  - [ ] ... (expand based on actual image list)
-- [ ] Phase 7: Update image references in documents
-- [ ] Phase 8: Update config.yaml (translateLanguages)
-- [ ] Phase 9: Rebuild nav.js (language switching) ← 语言切换生效的关键步骤
-- [ ] Phase 10: Generate translation report
+- 未指定 `--skip-images` 时，扫描 assets 中的图片资源
+- 跳过条件（满足任一）：`generation.shared: true`、目标语言已存在、源语言图片不存在
+- 使用 `/doc-smith-images --update` 翻译图片文字
+- 翻译后更新图片 .meta.yaml 的 languages 和 translations
 
-## Execution Statistics
-- Total documents: 0
-- Documents translated: 0
-- Documents skipped: 0
-- Documents failed: 0
-- Total images: 0
-- Images translated: 0
-- Images skipped: 0
-- Images failed: 0
+### 6. Config 更新约束
 
-## Key Decisions
-[Record important decisions made during execution and their rationale]
+- 翻译完成后，将目标语言添加到 config.yaml 的 `translateLanguages` 数组
+- 避免重复添加已存在的语言
+- 更新后验证 config.yaml 正确
 
-## Errors Encountered
-[Record errors encountered and solutions, format: Error description -> Solution]
+### 7. nav.js 重建约束
 
-## Current Status
-**Executing Phase 1** - Detecting Workspace
-```
+- Config 更新后**必须**执行 nav.js 重建：
+  ```bash
+  node skills/doc-smith-build/scripts/build.mjs \
+    --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
+  ```
+- 验证 `dist/assets/nav.js` 包含所有目标语言的 code
+- **此步骤是语言切换功能生效的关键，绝不能跳过**
 
-**规划文件使用规则**：
-1. **每个阶段开始前**：读取 `.aigne/doc-smith/cache/translate_task_plan.md` 刷新目标和上下文
-2. **每个阶段完成后**：立即更新规划文件，标记该阶段为 [x]，更新"当前状态"和"执行统计"
-3. **每个子任务完成后**：更新对应的子任务状态（文档翻译、图片翻译）
-4. **做出重要决策时**：记录到"关键决策"部分
-5. **遇到错误时**：记录到"遇到的错误"部分，包括错误描述和解决方案
+## HTML-to-HTML 翻译模型
 
-### 1. 检测 Workspace
-
-检查当前目录是否为有效的 Doc-Smith workspace：
-
-```bash
-ls -la .aigne/doc-smith/config.yaml .aigne/doc-smith/planning/document-structure.yaml .aigne/doc-smith/docs/
-```
-
-如果不存在，提示用户先使用 `doc-smith` 生成文档。
-
-### 2. 读取配置
-
-从 `.aigne/doc-smith/config.yaml` 读取：
-- `locale`：源语言代码
-
-从 `.aigne/doc-smith/planning/document-structure.yaml` 读取：
-- 所有文档路径列表（遍历 documents 数组提取 path 字段）
-
-### 3. 验证参数
-
-**验证目标语言**：
-- 过滤掉与源语言相同的语言
-- 如果过滤后为空，提示用户："所有目标语言都与源语言相同，请指定不同的目标语言"
-
-**验证文档路径**（如果指定了 `--path`）：
-- 检查路径是否存在于 document-structure.yaml 中
-- 如果路径无效，提示用户哪些路径不存在
-
-### 4. 加载术语表
-
-检查是否存在术语表文件：
-- `.aigne/doc-smith/glossary.yaml`
-- `.aigne/doc-smith/glossary.md`
-
-如果存在，读取术语表内容供翻译使用。
-
-### 5. 批量翻译文档
-
-按 `references/translate-document.md` 流程使用 Task tool 批量翻译文档。
-
-**生成翻译任务列表**：
-
-对于每个文档和每种目标语言，创建一个翻译任务：
+翻译直接在 HTML 层面完成，不经过 MD 中间步骤：
 
 ```
-文档列表: [/overview, /api/auth, /guides/start]
-目标语言: [en, ja]
-
-任务列表:
-1. docPath=/overview, targetLanguage=en
-2. docPath=/overview, targetLanguage=ja
-3. docPath=/api/auth, targetLanguage=en
-4. docPath=/api/auth, targetLanguage=ja
-5. docPath=/guides/start, targetLanguage=en
-6. docPath=/guides/start, targetLanguage=ja
+源 HTML → 提取可翻译区域 → 翻译 → 组装目标 HTML → 保存
+dist/{source}/docs/{path}.html → dist/{target}/docs/{path}.html
 ```
 
-**并行调用 Task tool**：
+**可翻译区域**（4 个）：
+- `<title>` 标签内文本
+- `<meta name="description">` 的 content 属性
+- `<main data-ds="content">` 标签内 HTML
+- `<nav data-ds="toc">` 标签内 HTML
+
+**不翻译**：head 资源引用、script、header/footer/sidebar、HTML 属性、代码块中的代码
+
+## 翻译质量要求
+
+- 术语一致性：使用术语表保持专业术语统一
+- HTML 结构保持：标签原样保留，只翻译文本内容
+- 上下文理解：根据技术文档语境选择合适译法
+- 自然流畅：翻译结果符合目标语言习惯
+
+## 关键流程
+
+### 并行翻译文档
 
 ```
 按 references/translate-document.md 流程使用单独的 Task tool 并行翻译以下文档：
 - docPath=/overview, targetLanguage=en, sourceLanguage=zh, force=false
-- docPath=/overview, targetLanguage=ja, sourceLanguage=zh, force=false
 - docPath=/api/auth, targetLanguage=en, sourceLanguage=zh, force=false
 ```
 
-**注意**：
-- 每个 Task 处理一个文档到一种语言的翻译
-- Task 会检查 hash 避免重复翻译（除非 force=true）
-- **每批最多并行 5 个 Task**。超过 5 个文档时分多批执行，前一批完成后再启动下一批。
-- Task 在前台运行，当有权限确认时，用户可响应权限确认操作
-
-### 6. 翻译图片（可选）
-
-如果未指定 `--skip-images`，扫描并翻译需要本地化的图片。
-
-#### 6.1 扫描图片资源
-
-查找所有图片的 `.meta.yaml` 文件：
+### 翻译图片
 
 ```bash
-find .aigne/doc-smith/assets -name ".meta.yaml" -type f
+/doc-smith-images "将图片中的文字从 {source} 翻译成 {target}，保持布局和风格不变" \
+  --update .aigne/doc-smith/assets/{key}/images/{source}.png \
+  --savePath .aigne/doc-smith/assets/{key}/images/{target}.png \
+  --locale {target}
 ```
 
-#### 6.2 检查图片是否需要翻译
+### 更新图片引用
 
-对每个图片资源，读取 `.meta.yaml`：
+翻译后 HTML 中的图片路径需更新语言后缀：
+- 匹配 `images/{source}.png` → 替换为 `images/{target}.png`（仅当目标语言图片存在时）
 
-**跳过条件**（满足任一则跳过）：
-- `generation.shared` 为 `true`（跨语言共享的图片，如纯图标、无文字图表）
-- `languages` 数组已包含目标语言（已翻译）
-- 源语言图片不存在
+### 翻译报告
 
-**需要翻译的条件**：
-- `generation.shared` 不为 `true`（或不存在）
-- `languages` 数组不包含目标语言
-- 源语言图片存在
-
-#### 6.3 翻译图片
-
-对需要翻译的图片，调用 `doc-smith-images` 的 `--update` 功能：
-
-```bash
-/doc-smith-images "将图片中的文字从 {sourceLanguage} 翻译成 {targetLanguage}，保持图片的布局和风格不变" \
-  --update .aigne/doc-smith/assets/{key}/images/{sourceLanguage}.png \
-  --savePath .aigne/doc-smith/assets/{key}/images/{targetLanguage}.png \
-  --locale {targetLanguage}
-```
-
-#### 6.4 更新图片 .meta.yaml
-
-翻译完成后更新图片的元信息：
-
-```yaml
-languages:
-  - zh
-  - en  # 新增
-translations:
-  en:
-    sourceHash: "abc123..."
-    translatedAt: "2026-01-21T10:00:00.000Z"
-```
-
-### 7. 更新文档中的图片引用
-
-**注意**：references/translate-document.md 流程在步骤 5 中已处理图片路径替换。此步骤作为补充校验。
-
-翻译后的 HTML 文档需要引用对应语言的图片。
-
-**替换逻辑**：
-
-在翻译后的 HTML 中，检查图片引用并更新语言后缀：
-
-```html
-<!-- 源 HTML (zh) 中的图片引用 -->
-<img src="../../assets/arch/images/zh.png" alt="架构图">
-
-<!-- 翻译后 HTML (en) 中应更新为 -->
-<img src="../../assets/arch/images/en.png" alt="Architecture">
-```
-
-**处理逻辑**：
-
-1. 使用正则匹配 HTML 中的图片引用：`src="(.*?/images/)(\w+)(\.png|\.jpg)"`
-2. 检查目标语言图片是否存在
-3. 如果存在，替换语言后缀
-4. 如果不存在（shared=true 或跳过图片翻译），保持原语言后缀
-
-### 8. 更新 config.yaml
-
-将新的目标语言添加到 `translateLanguages` 数组：
-
-读取 `.aigne/doc-smith/config.yaml`，更新：
-
-```yaml
-translateLanguages:
-  - en
-  - ja  # 新增
-```
-
-**注意**：避免重复添加已存在的语言。
-
-**验证**：更新后读取 `config.yaml`，确认 `translateLanguages` 数组包含本次所有目标语言。如果缺少，立即补充并重新保存。
-
-### 9. 更新 nav.js 语言列表
-
-翻译完成后，调用 `build.mjs --nav` 更新导航数据，使 nav.js 包含新增的语言：
-
-```bash
-node skills/doc-smith-build/scripts/build.mjs \
-  --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
-```
-
-**验证**：执行后用 Grep 检查 `dist/assets/nav.js` 是否包含所有目标语言的 code（如 `"en"`、`"ja"`）。如果缺少目标语言，检查 Phase 8 的 config.yaml 是否正确更新，修正后重新执行本步骤。
-
-**注意**：此步骤是语言切换功能生效的关键。nav.js 中的语言列表决定了页面是否显示语言切换下拉框。
-
-### 10. 生成翻译报告
-
-返回翻译结果摘要：
-
-```
-翻译完成:
-
-配置:
-- 源语言: zh
-- 目标语言: en, ja
-
-文档翻译:
-- 总数: 10
-- 已翻译: 7
-- 跳过（未变化）: 3
-- 失败: 0
-
-图片翻译:
-- 总数: 5
-- 已翻译: 3
-- 跳过（shared）: 1
-- 跳过（已存在）: 1
-- 失败: 0
-```
-
-## 翻译质量要求
-
-- **术语一致性**：使用术语表保持专业术语统一
-- **HTML 结构保持**：保持原文的 HTML 标签结构不变，只翻译文本内容
-- **上下文理解**：根据技术文档语境选择合适译法
-- **自然流畅**：翻译结果应符合目标语言习惯
+返回翻译结果摘要，包含文档和图片的翻译/跳过/失败统计。
 
 ## 错误处理
 
-### Workspace 不存在
-
-```
-错误: Doc-Smith workspace 不存在
-
-当前目录下未找到 .aigne/doc-smith/ 目录。
-请先使用 /doc-smith 生成文档。
-```
-
-### 目标语言无效
-
-```
-错误: 所有目标语言都与源语言 (zh) 相同
-
-请指定不同的目标语言，例如: /doc-smith-localize -l en
-```
-
-### 文档路径无效
-
-```
-错误: 以下文档路径不存在于文档结构中:
-- /invalid/path
-- /another/invalid
-
-有效的文档路径包括:
-- /overview
-- /api/auth
-- /guides/start
-
-请检查文档路径是否正确。
-```
-
-### 翻译部分失败
-
-```
-翻译完成（部分失败）:
-
-成功: 8/10 个文档
-失败:
-- /api/complex: 内容过长，翻译超时
-- /guides/advanced: 源文件不存在
-
-建议: 使用 --path 参数单独重试失败的文档
-```
-
-## 示例
-
-**翻译所有文档到英文和日文**：
-```bash
-/doc-smith-localize -l en -l ja
-```
-
-**翻译指定文档到英文**：
-```bash
-/doc-smith-localize -l en -p /overview -p /api/auth
-```
-
-**强制重新翻译（覆盖已有）**：
-```bash
-/doc-smith-localize -l en --force
-```
-
-**只翻译文档，跳过图片**：
-```bash
-/doc-smith-localize -l en --skip-images
-```
-
-## 关键原则
-
-- **任务规划先行**：开始工作前必须创建 `.aigne/doc-smith/cache/translate_task_plan.md`，每个阶段前读取，每个阶段后更新
-- **持久化记录**：将关键决策、错误和解决方案记录到规划文件，确保任务可追溯
-- **增量翻译**：通过 sourceHash（基于源 HTML）比对避免重复翻译，节省时间和资源
-- **HTML-to-HTML**：翻译直接在 HTML 层面完成，不经过 MD 中间步骤
-- **批量执行**：翻译文档时优先批量并行执行，缩短执行时间
-- **Task 隔离**：每个文档的翻译由独立 Task 处理，避免上下文膨胀
-- **nav.js 更新**：翻译完成后调用 `build.mjs --nav` 更新导航语言列表
-- **Phase 8 → Phase 9 必经路径**：Phase 8（更新 config.yaml）和 Phase 9（重建 nav.js）是语言切换功能生效的必经路径，绝不能跳过。如果跳过，翻译后的页面将无法显示语言切换入口
+- Workspace 不存在：提示先使用 `/doc-smith` 生成文档
+- 目标语言与源语言相同：提示指定不同的语言
+- 文档路径无效：列出有效路径供用户参考
+- 翻译部分失败：报告失败文档，建议使用 `--path` 单独重试
