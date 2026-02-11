@@ -88,8 +88,9 @@ description: Translate Doc-Smith generated documentation into multiple languages
   - [ ] ... (expand based on actual image list)
 - [ ] Phase 6: Update image references in documents
 - [ ] Phase 7: Update config.yaml
-- [ ] Phase 8: Generate translation report
-- [ ] Phase 9: Commit changes to Git
+- [ ] Phase 8: Update nav.js language list
+- [ ] Phase 9: Generate translation report
+- [ ] Phase 10: Commit changes to Git
 
 ## Execution Statistics
 - Total documents: 0
@@ -243,23 +244,25 @@ translations:
 
 ### 7. 更新文档中的图片引用
 
-翻译后的文档需要引用对应语言的图片。
+**注意**：translate-document 子代理在步骤 5 中已处理图片路径替换。此步骤作为补充校验。
+
+翻译后的 HTML 文档需要引用对应语言的图片。
 
 **替换逻辑**：
 
-在翻译后的文档中，检查图片引用并更新语言后缀：
+在翻译后的 HTML 中，检查图片引用并更新语言后缀：
 
-```markdown
-# 原文档（zh.md）中的图片引用
-![架构图](../../assets/arch/images/zh.png)
+```html
+<!-- 源 HTML (zh) 中的图片引用 -->
+<img src="../../assets/arch/images/zh.png" alt="架构图">
 
-# 翻译后文档（en.md）中应更新为
-![Architecture](../../assets/arch/images/en.png)
+<!-- 翻译后 HTML (en) 中应更新为 -->
+<img src="../../assets/arch/images/en.png" alt="Architecture">
 ```
 
 **处理逻辑**：
 
-1. 使用正则匹配文档中的图片引用：`!\[.*?\]\((.*?/images/)(\w+)(\.png|\.jpg)\)`
+1. 使用正则匹配 HTML 中的图片引用：`src="(.*?/images/)(\w+)(\.png|\.jpg)"`
 2. 检查目标语言图片是否存在
 3. 如果存在，替换语言后缀
 4. 如果不存在（shared=true 或跳过图片翻译），保持原语言后缀
@@ -278,7 +281,18 @@ translateLanguages:
 
 **注意**：避免重复添加已存在的语言。
 
-### 9. 生成翻译报告
+### 9. 更新 nav.js 语言列表
+
+翻译完成后，调用 `build.mjs --nav` 更新导航数据，使 nav.js 包含新增的语言：
+
+```bash
+node skills/doc-smith-build/scripts/build.mjs \
+  --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
+```
+
+**注意**：此步骤确保 nav.js 中的语言列表反映翻译后的实际情况，用户可在页面上切换语言。
+
+### 10. 生成翻译报告
 
 返回翻译结果摘要：
 
@@ -306,7 +320,7 @@ translateLanguages:
 ## 翻译质量要求
 
 - **术语一致性**：使用术语表保持专业术语统一
-- **格式保持**：保持原文的 Markdown 格式
+- **HTML 结构保持**：保持原文的 HTML 标签结构不变，只翻译文本内容
 - **上下文理解**：根据技术文档语境选择合适译法
 - **自然流畅**：翻译结果应符合目标语言习惯
 
@@ -383,6 +397,8 @@ translateLanguages:
 
 - **任务规划先行**：开始工作前必须创建 `.aigne/doc-smith/cache/translate_task_plan.md`，每个阶段前读取，每个阶段后更新
 - **持久化记录**：将关键决策、错误和解决方案记录到规划文件，确保任务可追溯
-- **增量翻译**：通过 sourceHash 比对避免重复翻译，节省时间和资源
+- **增量翻译**：通过 sourceHash（基于源 HTML）比对避免重复翻译，节省时间和资源
+- **HTML-to-HTML**：翻译直接在 HTML 层面完成，不经过 MD 中间步骤
 - **批量执行**：翻译文档时优先批量并行执行，缩短执行时间
 - **子代理隔离**：每个文档的翻译由独立子代理处理，避免上下文膨胀
+- **nav.js 更新**：翻译完成后调用 `build.mjs --nav` 更新导航语言列表

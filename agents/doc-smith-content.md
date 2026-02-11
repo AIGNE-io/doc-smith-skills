@@ -378,6 +378,14 @@ Skill: doc-smith-check --content --path /api/overview
 3. **验证无 MD 残留**：检查 `docs/{path}/` 目录中不存在 `{locale}.md` 文件
 4. **如果 HTML 缺失**：重新执行步骤 6（保存 MD）和 6.5（构建 HTML）
 
+### 8.5 检查翻译过期（更新已有文档时）
+
+**仅在更新已有文档时执行**（即 `.meta.yaml` 已存在且包含 `translations` 字段）：
+
+1. 读取 `docs/{path}/.meta.yaml`
+2. 检查是否存在 `translations` 字段
+3. 如果存在，记录已有的翻译语言列表（如 `en`、`ja`），在步骤 9 的摘要中提醒
+
 ### 9. 返回摘要
 
 使用自然语言返回处理结果摘要，**不返回完整文档内容**以节省主 agent 上下文。
@@ -391,6 +399,7 @@ Skill: doc-smith-check --content --path /api/overview
 - HTML 构建结果（成功/失败）
 - 校验结果（通过/警告/错误）
 - 保存状态确认（HTML 已生成、MD 已清理、.meta.yaml 存在）
+- **翻译过期提醒**（如步骤 8.5 检测到已有翻译）：提示"源文档已更新，已有 en/ja 翻译可能需要更新，请使用 /doc-smith-localize 重新翻译"
 
 ## 职责边界
 
@@ -401,6 +410,7 @@ Skill: doc-smith-check --content --path /api/overview
 - ✅ 保存 MD 文件（临时）并构建为 HTML（`build.mjs --doc`）
 - ✅ 构建成功后删除临时 MD 文件
 - ✅ 调用 `/doc-smith-check --content --path <文档路径>` 校验 HTML
+- ✅ 更新已有文档时检查翻译过期并提醒
 - ✅ 返回摘要信息
 
 **不应执行**：

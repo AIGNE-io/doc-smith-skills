@@ -362,47 +362,47 @@ test -f /tmp/test-image-en.png && echo "✓ Image edited"
 ### Tests
 
 #### Happy Path
-- [ ] translate-document：读取源 zh HTML → 翻译 → 输出 en HTML 到正确路径
-- [ ] translate-document：`<html lang="zh">` 改为 `<html lang="en">`
-- [ ] translate-document：`<title>` 和 `<meta description>` 翻译正确
-- [ ] translate-document：`<main data-ds="content">` 正文翻译完整
-- [ ] translate-document：`<nav data-ds="toc">` 目录标题翻译
-- [ ] translate-document：图片路径 `images/zh.png` 替换为 `images/en.png`（目标语言图片存在时）
-- [ ] translate-document：HTML 骨架（CSS 引用、script 引用）保持不变
-- [ ] doc-smith-localize：批量翻译多篇文档，各自独立成功
-- [ ] doc-smith-localize：翻译完成后 nav.js 更新包含新语言
-- [ ] doc-smith-localize：.meta.yaml 更新 translations 和 sourceHash
-- [ ] doc-smith-content：更新文档后提示翻译可能过期
+- [x] translate-document：读取源 zh HTML → 翻译 → 输出 en HTML 到正确路径
+- [x] translate-document：`<html lang="zh">` 改为 `<html lang="en">`
+- [x] translate-document：`<title>` 和 `<meta description>` 翻译正确
+- [x] translate-document：`<main data-ds="content">` 正文翻译完整
+- [x] translate-document：`<nav data-ds="toc">` 目录标题翻译
+- [x] translate-document：图片路径 `images/zh.png` 替换为 `images/en.png`（目标语言图片存在时）
+- [x] translate-document：HTML 骨架（CSS 引用、script 引用）保持不变
+- [x] doc-smith-localize：批量翻译多篇文档，各自独立成功
+- [x] doc-smith-localize：翻译完成后 nav.js 更新包含新语言
+- [x] doc-smith-localize：.meta.yaml 更新 translations 和 sourceHash
+- [x] doc-smith-content：更新文档后提示翻译可能过期
 
 #### Bad Path
-- [ ] 源 HTML 不存在：报告明确错误
-- [ ] 源 HTML 格式异常（缺少 data-ds="content"）：报告错误，不产出损坏 HTML
-- [ ] 目标语言与源语言相同：跳过并提示
-- [ ] sourceHash 未变化（源文档未更新）：跳过翻译（除非 --force）
-- [ ] 翻译后 HTML 缺少必要标签：校验失败，不保存
+- [x] 源 HTML 不存在：报告明确错误
+- [x] 源 HTML 格式异常（缺少 data-ds="content"）：报告错误，不产出损坏 HTML
+- [x] 目标语言与源语言相同：跳过并提示
+- [x] sourceHash 未变化（源文档未更新）：跳过翻译（除非 --force）
+- [x] 翻译后 HTML 缺少必要标签：校验失败，不保存
 
 #### Edge Cases
-- [ ] 源 HTML 正文为空（只有骨架）：翻译为空正文的目标 HTML
-- [ ] 正文中包含代码块：代码不翻译，只翻译注释
-- [ ] 正文中包含 AFS image slot 占位符：保留不翻译
-- [ ] 目标语言图片不存在（shared=true 或未翻译）：保留源语言图片路径
-- [ ] 并行翻译同一文档到多语言：各自独立，不冲突
+- [x] 源 HTML 正文为空（只有骨架）：翻译为空正文的目标 HTML
+- [x] 正文中包含代码块：代码不翻译，只翻译注释
+- [x] 正文中包含 AFS image slot 占位符：保留不翻译
+- [x] 目标语言图片不存在（shared=true 或未翻译）：保留源语言图片路径
+- [x] 并行翻译同一文档到多语言：各自独立，不冲突
 
 #### Security
-- [ ] 翻译内容不引入新的 `<script>` 标签
-- [ ] 翻译内容不破坏 HTML 转义
-- [ ] 术语表内容不注入 HTML
+- [x] 翻译内容不引入新的 `<script>` 标签
+- [x] 翻译内容不破坏 HTML 转义
+- [x] 术语表内容不注入 HTML
 
 #### Data Leak
-- [ ] 翻译日志不包含完整 HTML 正文
-- [ ] 错误信息不暴露文件系统路径
-- [ ] .meta.yaml 不包含翻译 API 凭证
+- [x] 翻译日志不包含完整 HTML 正文
+- [x] 错误信息不暴露文件系统路径
+- [x] .meta.yaml 不包含翻译 API 凭证
 
 #### Data Damage
-- [ ] 翻译后 HTML 标签结构完整（打开/关闭匹配）
-- [ ] 翻译失败不覆盖已有的目标语言 HTML
-- [ ] 翻译失败不修改 .meta.yaml
-- [ ] 部分文档翻译失败不影响已成功的文档
+- [x] 翻译后 HTML 标签结构完整（打开/关闭匹配）
+- [x] 翻译失败不覆盖已有的目标语言 HTML
+- [x] 翻译失败不修改 .meta.yaml
+- [x] 部分文档翻译失败不影响已成功的文档
 
 ### E2E Gate
 
@@ -434,11 +434,11 @@ test ! "$(find .aigne/doc-smith/docs -name 'en.md' 2>/dev/null)" && echo "✓ �
 
 ### Acceptance Criteria
 
-- [ ] 所有 6 类测试通过
+- [x] 所有 6 类测试通过
 - [ ] E2E Gate 验证通过
-- [ ] translate-document.md 已更新（HTML-to-HTML 流程）
-- [ ] doc-smith-localize SKILL.md 已更新（HTML 源 + HTML 产物）
-- [ ] doc-smith-content.md 已更新（翻译过期提醒）
+- [x] translate-document.md 已更新（HTML-to-HTML 流程）
+- [x] doc-smith-localize SKILL.md 已更新（HTML 源 + HTML 产物）
+- [x] doc-smith-content.md 已更新（翻译过期提醒）
 - [ ] 代码已提交
 
 ---
