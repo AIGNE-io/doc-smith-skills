@@ -17,6 +17,7 @@ import { constants } from "node:fs";
 import { join, dirname, basename, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as yamlParse } from "yaml";
+import matter from "gray-matter";
 import MarkdownIt from "markdown-it";
 import markdownItAnchor from "markdown-it-anchor";
 
@@ -800,11 +801,14 @@ async function buildSingleDoc(options) {
   const config = await readConfig(workspace);
   const mainLocale = config.locale;
 
-  // Read MD content
-  let mdContent = await readFile(mdFile, "utf-8");
+  // Read MD content and strip frontmatter
+  const raw = await readFile(mdFile, "utf-8");
+  const { data: frontmatter, content: mdWithoutFrontmatter } = matter(raw);
+  let mdContent = mdWithoutFrontmatter;
 
-  // Extract title
-  const title = extractTitleFromMarkdown(mdContent) || docPath;
+  // Extract title and description (prefer frontmatter, fallback to H1 / empty)
+  const title = frontmatter.title || extractTitleFromMarkdown(mdContent) || docPath;
+  const description = frontmatter.description || "";
 
   // Calculate asset path (relative from output/{lang}/docs/{path}.html)
   const depth = docPath.split("/").filter(Boolean).length;
@@ -830,7 +834,7 @@ async function buildSingleDoc(options) {
   const fullPage = renderTemplate({
     lang,
     title,
-    description: "",
+    description,
     siteName: config.projectName || "",
     content: htmlContent,
     toc: tocHtml,
