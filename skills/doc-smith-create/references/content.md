@@ -141,46 +141,28 @@ Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}
 - **绝对不要使用 Read 工具读取图片文件**（.png/.jpg/.jpeg/.gif/.svg/.mp4/.webp）。图片以 base64 编码传输，单张可消耗 150+ KB 上下文。
 - 只需记录图片的**文件路径**用于文档引用，不需要查看图片内容。
 
-记录所有结果，例如：
-- `../../assets/create/screenshot1.png`
-- `../../assets/run/screenshot2.png`
-- `../../images/architecture.png`
+记录所有结果（项目根目录下的完整路径），例如：
+- `assets/create/screenshot1.png`
+- `assets/run/screenshot2.png`
+- `images/architecture.png`
 
 #### 4.3 图片路径格式
 
-文档中引用图片使用**相对路径**，需要根据文档层级计算 `../` 的数量。
+文档中引用**已有图片**时，使用相对路径引用 workspace `assets/` 目录下的文件。
 
-**路径计算规则**：
+**路径规则：使用 `../` 从 MD 文件位置回溯到 workspace 的 `assets/` 目录。**
 
-```
-总层级 = 基础层级(3) + 文档路径层级
+从 `docs/{path}/` 到 workspace 根目录需要的 `../` 层数 = 1（docs/） + path 的目录深度。
 
-基础层级 = 3（.aigne/ + doc-smith/ + docs/）
-文档路径层级 = 文档 path 的目录深度
-```
+| 文档 path | MD 文件位置 | `../` 层数 | 图片引用示例 |
+|-----------|-------------|-----------|-------------|
+| `/overview` | `docs/overview/zh.md` | 2 | `![img](../../assets/logo.png)` |
+| `/api/auth` | `docs/api/auth/zh.md` | 3 | `![img](../../../assets/logo.png)` |
 
-**计算示例**：
-
-| 文档 path | 文档文件位置 | 路径层级 | 总 `../` 数 | 图片引用示例 |
-|-----------|-------------|---------|------------|-------------|
-| `/overview` | `docs/overview/zh.md` | 1 | 4 | `![img](../../../../assets/logo.png)` |
-| `/api/auth` | `docs/api/auth/zh.md` | 2 | 5 | `![img](../../../../../assets/logo.png)` |
-| `/guides/quick/start` | `docs/guides/quick/start/zh.md` | 3 | 6 | `![img](../../../../../../assets/logo.png)` |
-
-**完整路径格式**：
-
-```markdown
-![描述](../../../.../<项目中的图片路径>)
-```
-
-**示例**：
-- 文档 path: `/api/overview`（2 层）
-- 图片位置: `assets/screenshots/login.png`（在项目根目录下）
-- 文档中引用: `![登录截图](../../../../../assets/screenshots/login.png)`
+**构建脚本会自动将这些相对路径转换为 HTML 输出中的正确路径，无需关心 HTML 的输出位置。**
 
 **注意**：
-- 路径层级从文档的 `path` 字段计算，不是从文件系统路径
-- 每个 `/` 分隔的目录算 1 层（如 `/api/auth` 是 2 层）
+- `assets/` 指的是 workspace 的 assets 目录（`.aigne/doc-smith/assets/`），不是项目根目录
 - 语言文件（zh.md、en.md）位于文档目录内，不额外增加层级计算
 
 ### 5. 生成文档内容
@@ -266,7 +248,7 @@ Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}
 **应用截图：**
 1. 从前置准备的查找结果中匹配相关图片
 2. 只在图片明确与文档内容相关时使用
-3. 引用格式：`![截图说明](../../../../assets/screenshot.png)`
+3. 引用格式：`![截图说明](../../assets/screenshot.png)`（`../` 层数按 4.3 节规则计算）
 
 **技术图表：**
 1. 判断是否真的需要图表来辅助理解

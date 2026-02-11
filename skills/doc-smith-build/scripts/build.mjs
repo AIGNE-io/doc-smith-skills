@@ -301,7 +301,7 @@ async function findImageFile(assetsDir, key, locale, mainLocale) {
   return null;
 }
 
-async function replaceImagePlaceholders(mdContent, docPath, lang, mainLocale, assetsDir) {
+async function replaceImagePlaceholders(mdContent, docPath, lang, mainLocale, assetsDir, assetPath) {
   const pattern = /<!--\s*afs:image\s+id="([^"]*)"\s*(?:key="([^"]*)")?\s*desc="([^"]*)"\s*-->/g;
 
   const matches = [...mdContent.matchAll(pattern)];
@@ -316,12 +316,25 @@ async function replaceImagePlaceholders(mdContent, docPath, lang, mainLocale, as
     const imagePath = await findImageFile(assetsDir, key, lang, mainLocale);
 
     if (imagePath) {
-      const imageMarkdown = `![${desc}](/assets/images/${imagePath})`;
+      const imageMarkdown = `![${desc}](${assetPath}/${imagePath})`;
       result = result.replace(raw, imageMarkdown);
     }
   }
 
   return result;
+}
+
+function rewriteImagePaths(mdContent, docPath, assetPath) {
+  // Rewrite relative image paths that target workspace assets/ directory.
+  // MD files are at docs/{path}/{lang}.md; they use ../../..+ to reach workspace root.
+  // HTML output is at dist/{lang}/docs/{path}.html; needs assetPath-based paths.
+  // Pattern: ![alt](../../../...assets/key/images/lang.png)
+  return mdContent.replace(
+    /!\[([^\]]*)\]\(((?:\.\.\/)+)assets\/([^)]+)\)/g,
+    (match, alt, dots, rest) => {
+      return `![${alt}](${assetPath}/${rest})`;
+    }
+  );
 }
 
 function filterOtherComments(mdContent) {
@@ -703,10 +716,10 @@ async function buildNav(options) {
     console.log("  Created empty theme.css");
   }
 
-  // Copy document images
+  // Copy document images (workspace assets → dist/assets/)
   const workspaceAssets = join(workspace, "assets");
   if (await exists(workspaceAssets)) {
-    await copyDir(workspaceAssets, join(output, "assets", "images"));
+    await copyDir(workspaceAssets, join(output, "assets"));
     console.log("  Copied document images");
   }
 
@@ -793,9 +806,17 @@ async function buildSingleDoc(options) {
   // Extract title
   const title = extractTitleFromMarkdown(mdContent) || docPath;
 
-  // Replace image placeholders
+  // Calculate asset path (relative from output/{lang}/docs/{path}.html)
+  const depth = docPath.split("/").filter(Boolean).length;
+  const assetPath = "../".repeat(depth + 1) + "assets";
+
+  // Replace image placeholders (AFS image slots → relative paths)
   const workspaceAssets = join(workspace, "assets");
-  mdContent = await replaceImagePlaceholders(mdContent, docPath, lang, mainLocale, workspaceAssets);
+  mdContent = await replaceImagePlaceholders(mdContent, docPath, lang, mainLocale, workspaceAssets, assetPath);
+
+  // Rewrite direct relative image paths from MD file context to HTML output context
+  mdContent = rewriteImagePaths(mdContent, docPath, assetPath);
+
   mdContent = filterOtherComments(mdContent);
 
   // Convert to HTML
@@ -804,10 +825,6 @@ async function buildSingleDoc(options) {
   // Generate TOC
   const toc = generateTOC(htmlContent);
   const tocHtml = renderTOC(toc);
-
-  // Calculate asset path (relative from output/{lang}/docs/{path}.html)
-  const depth = docPath.split("/").filter(Boolean).length;
-  const assetPath = "../".repeat(depth + 1) + "assets";
 
   // Render full page
   const fullPage = renderTemplate({
