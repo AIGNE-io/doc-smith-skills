@@ -295,18 +295,14 @@ Skill: doc-smith-check --content --path /api/overview
 
 ### 9. 返回摘要
 
-使用自然语言返回处理结果摘要，**不返回完整文档内容**以节省主 agent 上下文。
+**严格控制摘要长度（≤ 10 行）**，避免消耗主 agent 上下文。不返回文档内容、章节列表或详细说明。
 
-**摘要应包含以下信息：**
+摘要格式：
+```
+/api/overview: 成功 | HTML ✓ | .meta.yaml ✓ | MD 已清理 | slots: [architecture-overview, data-flow] | 翻译过期: en, ja
+```
 
-- 文档路径（如 `/api/overview`）
-- 文档主题概述（1-2 句话描述文档内容）
-- 主要章节列表
-- 生成的 AFS image slot ID 列表（如有）
-- HTML 构建结果（成功/失败）
-- 校验结果（通过/警告/错误）
-- 保存状态确认（HTML 已生成、MD 已清理、.meta.yaml 存在）
-- **翻译过期提醒**（如步骤 8.5 检测到已有翻译）：提示"源文档已更新，已有 en/ja 翻译可能需要更新，请使用 /doc-smith-localize 重新翻译"
+只包含：路径、状态（成功/失败）、文件验证结果、slot ID 列表（如有）、翻译过期提醒（如有）。
 
 ## 职责边界
 

@@ -81,14 +81,23 @@ documents:
 - 文档结构规划后必须经用户确认（使用 AskUserQuestion）
 - 确认后若有变更需再次确认
 
-### 5. Task 分发约束
+### 5. 上下文管理约束
+
+**主 agent 禁止预读源文件**。源文件由 Task subagent 根据 sourcePaths 自行读取。主 agent 只读取：
+- `config.yaml`、`document-structure.yaml`、`user-intent.md`（workspace 元数据）
+- 项目的 README（用于推断意图，≤1 次 Read）
+
+**严禁**：主 agent 逐个读取 sourcePaths 中的源代码文件。这会快速耗尽上下文，导致 Task 结果返回后无法继续。
+
+### 6. Task 分发约束
 
 - 内容生成通过 Task(references/content.md) 分发，每篇文档一个 Task
 - 图片生成通过 Task(references/generate-slot-image.md) 分发
-- 优先并行执行以缩短时间
+- 文档数量 ≤ 5 时并行执行，> 5 时分批（每批 ≤ 5 个），前一批完成后再启动下一批
 - 内容生成前先执行媒体资源扫描：`Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}`（排除 .aigne/ 和 node_modules/），将结果作为 mediaFiles 传递给每个 Task
+- Task 返回的摘要应尽量简短（路径、状态、slot 列表），避免返回文档内容
 
-### 6. 完成约束
+### 7. 完成约束
 
 - `/doc-smith-check --structure` 通过
 - `/doc-smith-check --content` 通过
@@ -110,7 +119,7 @@ documents:
 
 文件：`.aigne/doc-smith/intent/user-intent.md`
 
-推断目标用户、使用场景、文档侧重点，生成后用 AskUserQuestion 确认。
+基于项目 README 和目录结构（`ls`/`Glob`）推断目标用户、使用场景、文档侧重点。不读取源代码文件。生成后用 AskUserQuestion 确认。
 
 ```markdown
 # 用户意图
