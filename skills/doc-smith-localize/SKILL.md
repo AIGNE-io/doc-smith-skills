@@ -157,7 +157,7 @@ ls -la .aigne/doc-smith/config.yaml .aigne/doc-smith/planning/document-structure
 
 ### 5. 批量翻译文档
 
-按 `translate-document.md` 流程使用 Task tool 批量翻译文档。
+按 `references/translate-document.md` 流程使用 Task tool 批量翻译文档。
 
 **生成翻译任务列表**：
 
@@ -179,7 +179,7 @@ ls -la .aigne/doc-smith/config.yaml .aigne/doc-smith/planning/document-structure
 **并行调用 Task tool**：
 
 ```
-按 translate-document.md 流程使用单独的 Task tool 并行翻译以下文档：
+按 references/translate-document.md 流程使用单独的 Task tool 并行翻译以下文档：
 - docPath=/overview, targetLanguage=en, sourceLanguage=zh, force=false
 - docPath=/overview, targetLanguage=ja, sourceLanguage=zh, force=false
 - docPath=/api/auth, targetLanguage=en, sourceLanguage=zh, force=false
@@ -188,7 +188,7 @@ ls -la .aigne/doc-smith/config.yaml .aigne/doc-smith/planning/document-structure
 **注意**：
 - 每个 Task 处理一个文档到一种语言的翻译
 - Task 会检查 hash 避免重复翻译（除非 force=true）
-- 建议每批并行 3-5 个 Task，避免上下文过载
+- **每批最多并行 5 个 Task**。超过 5 个文档时分多批执行，前一批完成后再启动下一批。
 - Task 在前台运行，当有权限确认时，用户可响应权限确认操作
 
 ### 6. 翻译图片（可选）
@@ -244,7 +244,7 @@ translations:
 
 ### 7. 更新文档中的图片引用
 
-**注意**：translate-document.md 流程在步骤 5 中已处理图片路径替换。此步骤作为补充校验。
+**注意**：references/translate-document.md 流程在步骤 5 中已处理图片路径替换。此步骤作为补充校验。
 
 翻译后的 HTML 文档需要引用对应语言的图片。
 

@@ -65,6 +65,8 @@ shasum -a 256 .aigne/doc-smith/dist/{sourceLanguage}/docs/{docPath}.html | cut -
 .aigne/doc-smith/dist/{sourceLanguage}/docs/{docPath}.html
 ```
 
+**大文件处理**：如果 HTML 超过 1500 行，先用 Grep 定位 `<main data-ds="content">` 和 `<nav data-ds="toc">` 的行号，再用 Read 的 offset/limit 精确读取。
+
 **校验源 HTML 格式**：
 - 必须包含 `<main data-ds="content">` 标签，否则报错并终止
 - 必须包含 `<html lang="...">` 属性

@@ -66,7 +66,7 @@ New Document Generation Template:
 - [ ] Phase 4: Generate document-structure.yaml
 - [ ] Phase 5: Confirm document structure
 - [ ] Phase 6: Generate document content
-- [ ] Phase 7: Check for `AFS Image Slot`, if exists use `generate-slot-image.md` to generate images via Task tool
+- [ ] Phase 7: Check for `AFS Image Slot`, if exists use `references/generate-slot-image.md` to generate images via Task tool
 - [ ] Phase 7.5: Verify image slots have been replaced
 - [ ] Phase 9: Confirm all tasks are completed before finishing
 - [ ] Phase 10: (Additional user requirements, extend this list as needed)
@@ -112,6 +112,12 @@ Document Update Template:
 使用 Glob/Grep/Read 工具探索项目根目录。
 
 了解项目目的、结构、主要模块、现有文档和媒体资源。
+
+**上下文节约原则**：
+- 优先使用 Grep 搜索关键信息，避免全量读取大文件
+- 对超过 200 行的文件使用 Read 的 `limit` 参数分段读取
+- 不读取 node_modules/、dist/、.git/ 目录中的文件
+- 不读取二进制文件（图片、视频、编译产物）
 
 ### 2. 推断用户意图
 
@@ -185,32 +191,42 @@ node skills/doc-smith-build/scripts/build.mjs \
 - 如果 `build.mjs --nav` 失败，不要开始内容生成
 - 如果出现依赖未安装错误，先执行 `cd skills/doc-smith-build/scripts && npm install`
 
+### 5.7 媒体资源扫描（全局一次）
+
+在开始生成文档内容前，扫描一次项目中的媒体资源：
+
+```
+Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}
+```
+
+过滤掉 `.aigne/` 和 `node_modules/` 目录下的结果，将完整的文件路径列表作为 `mediaFiles` 参数传递给步骤 6 中每个 references/content.md Task。这样每个子代理无需重复扫描。
+
 ### 6. 生成文档内容
 
-按 `content.md` 流程，使用 Task tool 为文档结构中的每个文档生成内容。
+按 `references/content.md` 流程，使用 Task tool 为文档结构中的每个文档生成内容。
 
 **调用方式**：
 
 ```
 # 生成单个文档
-按 content.md 流程使用 Task tool 生成 /api/overview 文档
+按 references/content.md 流程使用 Task tool 生成 /api/overview 文档
 
 # 带自定义要求
-按 content.md 流程使用 Task tool 生成 /api/authentication 文档，重点说明安全注意事项
+按 references/content.md 流程使用 Task tool 生成 /api/authentication 文档，重点说明安全注意事项
 ```
 
 **批量并行生成**（推荐）：
 
 ```
-按 content.md 流程使用单独的 Task tool 并行生成以下文档：
-- /overview
-- /api/authentication
-- /guides/getting-started
+按 references/content.md 流程使用单独的 Task tool 并行生成以下文档（mediaFiles 见步骤 5.7 扫描结果）：
+- /overview, mediaFiles=[assets/logo.png, assets/screenshots/login.png, ...]
+- /api/authentication, mediaFiles=[同上]
+- /guides/getting-started, mediaFiles=[同上]
 ```
 
 每个 Task 完成后会返回摘要，包含：文档路径、主题概述、章节列表、image slots、HTML 构建结果、校验结果。
 
-**注意**：`content.md` 流程内部会自动完成 per-doc build（生成 MD → 构建 HTML → 删除 MD），不需要在此步骤额外调用 build 命令。
+**注意**：`references/content.md` 流程内部会自动完成 per-doc build（生成 MD → 构建 HTML → 删除 MD），不需要在此步骤额外调用 build 命令。
 
 ### 7. 更新已有文档
 
@@ -230,11 +246,11 @@ node skills/doc-smith-build/scripts/build.mjs \
   node skills/doc-smith-build/scripts/build.mjs \
     --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
   ```
-- 新增文档时，按 `content.md` 流程使用 Task tool 生成内容：
+- 新增文档时，按 `references/content.md` 流程使用 Task tool 生成内容：
 
 ```
 # 为新增的文档生成内容
-按 content.md 流程使用单独的 Task tool 并行生成以下文档：
+按 references/content.md 流程使用单独的 Task tool 并行生成以下文档：
 - /new-section/overview
 - /new-section/details
 ```
@@ -281,7 +297,7 @@ node skills/doc-smith-build/scripts/build.mjs \
 
 8.4 **检查是否存在 AFS Image Slot 需要生成图片**
 
-当检测到文档需要展示技术类图片，但是数据源中没有提供的时候，会生成 `AFS Image Slot` 占位符，参考 `references/document-content-guide.md`。
+当检测到文档需要展示技术类图片，但是数据源中没有提供的时候，会生成 `AFS Image Slot` 占位符（格式参考 `references/content.md` 步骤 5 中的"生成 AFS Image Slot"）。
 
 文档生成结束之后，扫描本次生成的文档中是否包含 `AFS Image Slot`：
 
@@ -293,10 +309,10 @@ node skills/doc-smith-build/scripts/build.mjs \
 
 需要忽略代码示例中的`AFS Image Slot` 占位符，确保真的是文档中需要展示的图片。
 
-**按 `generate-slot-image.md` 流程使用 Task tool 并行生成图片**：
+**按 `references/generate-slot-image.md` 流程使用 Task tool 并行生成图片**：
 
 ```
-按 generate-slot-image.md 流程使用单独的 Task tool 并行生成以下图片：
+按 references/generate-slot-image.md 流程使用单独的 Task tool 并行生成以下图片：
 - docPath=/overview, slotId=architecture-overview, slotDesc="系统架构图，展示各模块关系"
 - docPath=/api/auth, slotId=auth-flow, slotDesc="认证流程图", aspectRatio=16:9
 - docPath=/guides/start, slotId=setup-steps, slotDesc="安装步骤示意图"
@@ -411,7 +427,7 @@ my-project/                        # 用户的项目目录（cwd）
 - **任务规划先行**：开始工作前必须创建 `.aigne/doc-smith/task_plan.md`，每个阶段前读取，每个阶段后更新
 - **持久化记录**：将关键决策、错误和解决方案记录到 `.aigne/doc-smith/task_plan.md`，确保任务可追溯
 - **参考引用文件**：执行到每个步骤时，如果提供了参考文件，必须先阅读参考文件中的要求
-- **文档内容要求**：执行任何文档相关的生成、更新，都需要参考`references/document-content-guide.md`，确保文档符合要求
+- **文档内容要求**：步骤 7（更新已有文档）时参考 `references/document-content-guide.md` 的导航链接和内容组织原则；文档生成流程（媒体、图片、AFS Image Slot）以 `references/content.md` 为准
 - **基于用户意图**：所有规划和生成都应参考 `.aigne/doc-smith/intent/user-intent.md`
 - **最小必要原则**：只生成用户意图中明确需要的文档
 - **批量执行**：生成文档内容时优先批量执行，缩短执行时间
@@ -423,8 +439,8 @@ my-project/                        # 用户的项目目录（cwd）
 
 | 技能 | 用途 | 调用示例 |
 |------|------|----------|
-| `content.md` | 生成单篇文档内容（Task tool 调用） | 按 content.md 流程生成 /api/overview |
-| `generate-slot-image.md` | 生成文档中的图片（Task tool 调用） | 按 generate-slot-image.md 流程生成图片 |
+| `references/content.md` | 生成单篇文档内容（Task tool 调用） | 按 references/content.md 流程生成 /api/overview |
+| `references/generate-slot-image.md` | 生成文档中的图片（Task tool 调用） | 按 references/generate-slot-image.md 流程生成图片 |
 | `doc-smith-check` | 校验文档结构和内容 | `/doc-smith-check` 或 `/doc-smith-check --structure` |
 
 以下技能由用户按需独立调用：
