@@ -439,7 +439,7 @@ test ! "$(find .aigne/doc-smith/docs -name 'en.md' 2>/dev/null)" && echo "✓ �
 - [x] translate-document.md 已更新（HTML-to-HTML 流程）
 - [x] doc-smith-localize SKILL.md 已更新（HTML 源 + HTML 产物）
 - [x] doc-smith-content.md 已更新（翻译过期提醒）
-- [ ] 代码已提交
+- [x] 代码已提交
 
 ---
 
