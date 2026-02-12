@@ -96,7 +96,7 @@ documents:
 
 Task 类型：
 - **结构规划** Task（按需）：当项目较大时，委派 Task 分析源文件生成 `document-structure.yaml` 草稿
-- **内容生成** Task：通过 Task(references/content.md) 分发，每篇文档一个 Task
+- **内容生成** Task：按"并行生成文档内容"中的 prompt 模板分发，每篇文档一个 Task
 
 分发规则：
 - 文档数量 ≤ 5 时并行执行，> 5 时分批（每批 ≤ 5 个），前一批完成后再启动下一批
@@ -178,11 +178,36 @@ node skills/doc-smith-build/scripts/build.mjs \
 
 ### 并行生成文档内容
 
+每篇文档使用单独的 Task tool 生成（≤ 5 篇并行，> 5 篇分批）。**必须使用以下模板构造 Task prompt，不得自行概括 content.md 内容**：
+
 ```
-按 references/content.md 流程使用单独的 Task tool 并行生成以下文档（mediaFiles 见扫描结果）：
-- /overview, mediaFiles=[...]
-- /api/authentication, mediaFiles=[...]
+你是文档内容生成代理。请先用 Read 工具读取 {CONTENT_MD_PATH} 作为你的完整工作流程，然后严格按照其中的步骤执行。
+
+参数：
+- 文档路径：{docPath}
+- workspace：{WORKSPACE_PATH}
+- 可链接文档列表：{LINKABLE_DOCS}
+- mediaFiles：{MEDIA_FILES}
+- 用户意图摘要：{INTENT_SUMMARY}
+
+关键工具说明：
+- 使用 Skill 工具调用 /doc-smith-images 生成图片（步骤 5.5）
+- 使用 Skill 工具调用 /doc-smith-check 校验文档（步骤 7）
+
+完成检查清单（必须在返回摘要前逐项确认）：
+□ 步骤 5 图片使用：文档中已按需添加图片引用
+□ 步骤 5.5 图片生成：已扫描并处理所有 /assets/{key}/images/ 引用
+□ 步骤 6.5 HTML 构建：已执行 build.mjs --doc 并确认 HTML 生成
+□ 步骤 7 校验：已调用 /doc-smith-check --content --path {docPath}
 ```
+
+**模板变量说明**：
+- `{CONTENT_MD_PATH}`：`references/content.md` 的绝对路径
+- `{WORKSPACE_PATH}`：`.aigne/doc-smith` 的绝对路径
+- `{docPath}`：文档路径，如 `/overview`
+- `{LINKABLE_DOCS}`：所有文档路径列表（从 document-structure.yaml 提取）
+- `{MEDIA_FILES}`：媒体资源扫描结果
+- `{INTENT_SUMMARY}`：user-intent.md 的 2-3 句话摘要
 
 ### AI 巡检
 
