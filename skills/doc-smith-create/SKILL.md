@@ -194,6 +194,10 @@ node skills/doc-smith-build/scripts/build.mjs \
 - docPath=/overview, slotId=architecture-overview, slotDesc="系统架构图"
 ```
 
+### AI 巡检
+
+构建完成后，读取 `dist/` 中生成的 HTML 文件（每种语言各抽查 1-2 个页面），检查输出是否符合预期。如有问题直接修改 HTML 文件修复。
+
 ### 自动提交
 
 ```bash

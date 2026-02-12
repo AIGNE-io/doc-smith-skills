@@ -125,6 +125,10 @@ dist/{source}/docs/{path}.html → dist/{target}/docs/{path}.html
 翻译后 HTML 中的图片路径需更新语言后缀：
 - 匹配 `images/{source}.png` → 替换为 `images/{target}.png`（仅当目标语言图片存在时）
 
+### AI 巡检
+
+翻译和 nav.js 重建完成后，读取 `dist/` 中生成的 HTML 文件（每种语言各抽查 1-2 个页面），检查输出是否符合预期。如有问题直接修改 HTML 文件修复。
+
 ### 翻译报告
 
 返回翻译结果摘要，包含文档和图片的翻译/跳过/失败统计。
