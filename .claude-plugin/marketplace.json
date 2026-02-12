@@ -20,7 +20,8 @@
         "./skills/doc-smith-check",
         "./skills/doc-smith-publish",
         "./skills/doc-smith-localize",
-        "./skills/doc-smith-clear"
+        "./skills/doc-smith-clear",
+        "./skills/doc-smith-build"
       ]
     }
   ]

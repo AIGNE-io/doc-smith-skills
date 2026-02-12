@@ -1,6 +1,7 @@
 ---
 name: doc-smith-build
-description: Build Doc-Smith generated Markdown documentation into static HTML site. Supports two modes: --nav for navigation and assets generation, --doc for single document build.
+description: 'Build Doc-Smith generated Markdown documentation into static HTML site. Supports two modes: --nav for navigation and assets generation, --doc for single document build.'
+user-invocable: false
 ---
 
 # Doc-Smith HTML 构建

@@ -1,6 +1,7 @@
 ---
 name: doc-smith-check
 description: Validate Doc-Smith document structure and content integrity. Checks document-structure.yaml, HTML output, links, and image paths. Can be invoked by other doc-smith skills.
+user-invocable: false
 ---
 
 # Doc-Smith 文档检查
