@@ -152,8 +152,12 @@ const md = new MarkdownIt({
     class: "header-anchor",
     symbol: "#",
   }),
-  slugify: (s) => encodeURIComponent(String(s).trim().toLowerCase().replace(/\s+/g, "-")),
+  slugify: slugify,
 });
+
+function slugify(s) {
+  return encodeURIComponent(String(s).trim().toLowerCase().replace(/\s+/g, "-"));
+}
 
 // ============================================
 // Utility Functions
@@ -556,6 +560,11 @@ const NAV_RENDER_SCRIPT = `
 
   var lang = document.documentElement.lang;
   var path = document.body.dataset.dsPath || '';
+  var tr = (nav.translations && nav.translations[lang]) || {};
+
+  function t(item) {
+    return tr[item.path] || item.title;
+  }
 
   function esc(s) {
     var d = document.createElement('div');
@@ -571,16 +580,16 @@ const NAV_RENDER_SCRIPT = `
       if (item.children && item.children.length > 0) {
         var ph = '/' + lang + item.href;
         h += '<li>';
-        h += '<a href="' + ph + '" class="nav-group-title' + (item.path === path ? ' active' : '') + '">' + esc(item.title) + '</a>';
+        h += '<a href="' + ph + '" class="nav-group-title' + (item.path === path ? ' active' : '') + '">' + esc(t(item)) + '</a>';
         h += '<ul>';
         item.children.forEach(function(c) {
           var ch = '/' + lang + c.href;
-          h += '<li><a href="' + ch + '"' + (c.path === path ? ' class="active"' : '') + '>' + esc(c.title) + '</a></li>';
+          h += '<li><a href="' + ch + '"' + (c.path === path ? ' class="active"' : '') + '>' + esc(t(c)) + '</a></li>';
         });
         h += '</ul></li>';
       } else {
         var ih = '/' + lang + item.href;
-        h += '<li><a href="' + ih + '"' + (item.path === path ? ' class="active"' : '') + '>' + esc(item.title) + '</a></li>';
+        h += '<li><a href="' + ih + '"' + (item.path === path ? ' class="active"' : '') + '>' + esc(t(item)) + '</a></li>';
       }
     });
     h += '</ul>';
@@ -609,6 +618,9 @@ const NAV_RENDER_SCRIPT = `
       ctrl.insertBefore(dd, ctrl.firstChild);
     }
   }
+
+  // Prevent duplicate rendering from legacy inline scripts
+  window.__DS_NAV__ = null;
 })();
 `;
 
@@ -694,9 +706,139 @@ function renderTemplate(options) {
     Built with DocSmith
   </footer>
   <script src="${assetPath}/nav.js"></script>
-  <script>${NAV_RENDER_SCRIPT}</script>
 </body>
 </html>`;
+}
+
+// ============================================
+// Translated Title Extraction
+// ============================================
+
+async function extractTranslatedTitles(workspace, output, documents, targetLocales) {
+  const translations = {};
+
+  for (const lang of targetLocales) {
+    const titleMap = {};
+
+    for (const doc of documents) {
+      const docDir = doc.path.replace(/^\//, "");
+
+      // Try .md file first (available during build)
+      const mdFile = join(workspace, "docs", docDir, `${lang}.md`);
+      if (await exists(mdFile)) {
+        const content = await readFile(mdFile, "utf-8");
+        const { data: frontmatter, content: mdContent } = matter(content);
+        const title = frontmatter.title || extractTitleFromMarkdown(mdContent);
+        if (title) {
+          titleMap[doc.path] = title;
+          continue;
+        }
+      }
+
+      // Fallback: extract from translated HTML <title> tag
+      const htmlFile = join(output, lang, "docs", `${docDir}.html`);
+      if (await exists(htmlFile)) {
+        const html = await readFile(htmlFile, "utf-8");
+        const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+        if (titleMatch) {
+          // Strip " - siteName" suffix if present
+          let title = titleMatch[1].trim();
+          const dashIdx = title.lastIndexOf(" - ");
+          if (dashIdx > 0) {
+            title = title.substring(0, dashIdx);
+          }
+          titleMap[doc.path] = title;
+        }
+      }
+    }
+
+    if (Object.keys(titleMap).length > 0) {
+      translations[lang] = titleMap;
+    }
+  }
+
+  return translations;
+}
+
+// ============================================
+// Fix Translated Anchor IDs
+// ============================================
+
+function decodeHtmlEntities(str) {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+async function findHtmlFiles(dir) {
+  const files = [];
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return files;
+  }
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await findHtmlFiles(fullPath)));
+    } else if (entry.name.endsWith(".html")) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+async function fixTranslatedAnchors(output, sourceLocale, translateLanguages) {
+  for (const lang of translateLanguages) {
+    const langDocsDir = join(output, lang, "docs");
+    if (!(await exists(langDocsDir))) continue;
+
+    const htmlFiles = await findHtmlFiles(langDocsDir);
+    let fixedCount = 0;
+
+    for (const htmlFile of htmlFiles) {
+      let content = await readFile(htmlFile, "utf-8");
+
+      // Extract heading id → new slug mapping
+      const idMap = {};
+      const headingRegex = /<h([1-6])\s+id="([^"]*)"[^>]*>([\s\S]*?)<\/h\1>/g;
+      let match;
+
+      while ((match = headingRegex.exec(content)) !== null) {
+        const oldId = match[2];
+        const headingInner = match[3];
+        // Remove <a> anchor tags, then strip remaining HTML tags
+        const textContent = headingInner
+          .replace(/<a[^>]*class="header-anchor"[^>]*>[\s\S]*?<\/a>/g, "")
+          .replace(/<[^>]+>/g, "")
+          .trim();
+        const decodedText = decodeHtmlEntities(textContent);
+        const newId = slugify(decodedText);
+
+        if (oldId !== newId) {
+          idMap[oldId] = newId;
+        }
+      }
+
+      // Replace all old IDs with new IDs
+      if (Object.keys(idMap).length > 0) {
+        for (const [oldId, newId] of Object.entries(idMap)) {
+          content = content.replaceAll(`id="${oldId}"`, `id="${newId}"`);
+          content = content.replaceAll(`href="#${oldId}"`, `href="#${newId}"`);
+        }
+        await writeFile(htmlFile, content);
+        fixedCount++;
+      }
+    }
+
+    if (fixedCount > 0) {
+      console.log(`  Fixed anchor IDs: ${lang} (${fixedCount} files)`);
+    }
+  }
 }
 
 // ============================================
@@ -733,6 +875,12 @@ async function buildNav(options) {
   console.log(`  Languages: ${languages.join(", ")}`);
   console.log(`  Documents: ${documents.length}`);
 
+  // Extract translated titles for non-source locales (from .md files or dist HTML)
+  const translations = await extractTranslatedTitles(workspace, output, documents, translateLanguages);
+  if (Object.keys(translations).length > 0) {
+    console.log(`  Translated titles: ${Object.keys(translations).join(", ")}`);
+  }
+
   // Ensure output dirs
   await ensureDir(output);
   const assetsOutput = join(output, "assets");
@@ -748,9 +896,10 @@ async function buildNav(options) {
       flag: langFlags[code] || "🌐",
     })),
     documents: generateNavigation(documents, {}),
+    translations,
   };
 
-  const navJs = `window.__DS_NAV__ = ${JSON.stringify(navData, null, 2)};`;
+  const navJs = `window.__DS_NAV__ = ${JSON.stringify(navData, null, 2)};\n${NAV_RENDER_SCRIPT}`;
   await writeFile(join(assetsOutput, "nav.js"), navJs);
   console.log("  Generated nav.js");
 
@@ -784,6 +933,7 @@ async function buildNav(options) {
     if (documents.length > 0) {
       const firstDoc = documents[0];
       const firstDocUrl = `/${lang}/docs${firstDoc.path}.html`;
+      const firstDocTitle = (translations[lang] && translations[lang][firstDoc.path]) || firstDoc.title;
       const langIndexHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -792,7 +942,7 @@ async function buildNav(options) {
   <title>Redirecting...</title>
 </head>
 <body>
-  <p>Redirecting to <a href="${firstDocUrl}">${escapeHtml(firstDoc.title)}</a>...</p>
+  <p>Redirecting to <a href="${firstDocUrl}">${escapeHtml(firstDocTitle)}</a>...</p>
 </body>
 </html>`;
       await writeFile(join(langDir, "index.html"), langIndexHtml);
@@ -816,6 +966,11 @@ async function buildNav(options) {
 </html>`;
     await writeFile(join(output, "index.html"), rootIndexHtml);
     console.log("  Generated index.html redirect");
+  }
+
+  // Fix anchor IDs in translated HTML files
+  if (translateLanguages.length > 0) {
+    await fixTranslatedAnchors(output, locale, translateLanguages);
   }
 
   console.log("\n--nav complete!");
