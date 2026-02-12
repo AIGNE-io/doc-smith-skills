@@ -13,6 +13,7 @@ export function getPaths() {
     WORKSPACE_BASE: workspaceBase,
     DOCUMENT_STRUCTURE: resolve(workspaceBase, "planning/document-structure.yaml"),
     DOCS_DIR: resolve(workspaceBase, "docs"),
+    DIST_DIR: resolve(workspaceBase, "dist"),
     CONFIG: resolve(workspaceBase, "config.yaml"),
   };
 }

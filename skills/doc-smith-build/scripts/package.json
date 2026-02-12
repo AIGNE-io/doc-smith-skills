@@ -1,0 +1,13 @@
+{
+  "name": "@doc-smith/build-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "markdown-it": "^14.0.0",
+    "markdown-it-anchor": "^8.6.0",
+    "gray-matter": "^4.0.3",
+    "glob": "^10.0.0",
+    "yaml": "^2.8.0"
+  }
+}

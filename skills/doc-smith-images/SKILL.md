@@ -1,13 +1,14 @@
 ---
 name: doc-smith-images
 description: Generate images using AI. Use this skill to create technical diagrams, architecture diagrams, flowcharts, or update existing images. This is a general-purpose image generation capability for any scenario.
+user-invocable: false
 ---
 
 # Doc-Smith 图片生成
 
 使用 AI 生成图片，支持技术图表、架构图、流程图等。
 
-## Usage
+## 用法
 
 ```bash
 # 基础用法：描述要生成的图片
@@ -34,7 +35,7 @@ description: Generate images using AI. Use this skill to create technical diagra
 /doc-smith-images "微服务架构图" --ratio 16:9 --locale zh --savePath ./docs/arch.png
 ```
 
-## Options
+## 选项
 
 | Option | Alias | Description |
 |--------|-------|-------------|

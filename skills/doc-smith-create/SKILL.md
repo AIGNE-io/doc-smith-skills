@@ -1,393 +1,237 @@
 ---
 name: doc-smith-create
-description: "Generate and update comprehensive documentation from workspace data sources, including code repositories, text files, and media assets. Use this skill when the user requests to: (1) create or generate documentation from code or files, (2) build document structure or details, (3) update, modify, or improve existing documentation, (4) rewrite specific sections or paragraphs, (5) process changeset files or PATCH-marked modification requests. Supports technical documentation, user guides, API references, and general documentation needs."
+description: "Generate and update structured documentation from project data sources. Supports initial generation and modifying existing documents. Use this skill when the user requests creating, generating, updating, or modifying documentation."
 ---
 
-# DocSmith
+# DocSmith 文档生成
 
-从工作区数据源生成和更新结构化文档。
+从工作区数据源生成和更新结构化文档。所有输出创建在 `.aigne/doc-smith/` workspace 中。
 
-## 概述
+## 约束
 
-DocSmith 分析数据源内容（代码、文件、媒体）并生成：
-1. 用户意图描述（`user-intent.md`）
-2. 文档结构计划（`document-structure.yaml`）
-3. 按层次组织的 Markdown 文档文件
+以下约束在任何操作中都必须满足。
 
-所有输出都创建在独立的 `.aigne/doc-smith` 目录中。
+### 1. Workspace 约束
 
-**任务规划机制**：DocSmith 使用持久化的任务规划文件来跟踪执行进度，确保长时间任务的可追溯性和可恢复性。
+- 所有操作前 workspace 必须存在且有效（config.yaml + sources）
+- workspace 有独立 git 仓库，所有 git 操作在 `.aigne/doc-smith/` 下执行
+- workspace 不存在时按以下流程初始化：
+  1. `mkdir -p .aigne/doc-smith/{intent,planning,docs,assets,cache}`
+  2. `cd .aigne/doc-smith && git init`
+  3. 创建 config.yaml（schema 见下方）
+  4. 初始 commit
+
+**config.yaml schema**：
+
+```yaml
+workspaceVersion: "1.0"
+createdAt: "2025-01-13T10:00:00Z"  # ISO 8601
+projectName: "my-project"
+projectDesc: "项目描述"
+locale: "zh"                        # 输出语言代码，初始化时必须向用户确认
+projectLogo: ""
+translateLanguages: []
+sources:
+  - type: local-path
+    path: "../../"                  # 相对于 workspace
+    url: ""                         # 可选: git remote URL
+    branch: ""                      # 可选: 当前分支
+    commit: ""                      # 可选: 当前 commit
+```
+
+**locale 确认规则**：初始化 workspace 时，若用户未明确指定语言，必须用 AskUserQuestion 确认输出语言（如 zh、en、ja），不得默认写入。
+
+### 2. 结构约束
+
+- `document-structure.yaml` 必须符合下方 schema
+- 结构变更后必须通过 `/doc-smith-check --structure`
+- 结构变更后必须重建 nav.js：`node skills/doc-smith-build/scripts/build.mjs --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist`
+
+**document-structure.yaml schema**：
+
+```yaml
+project:
+  title: "项目名称"
+  description: "项目概述"
+documents:
+  - title: "文档标题"
+    description: "简要摘要"
+    path: "/filename"               # 必须以 / 开头
+    sourcePaths: ["src/main.py"]    # 源文件路径（无 workspace: 前缀）
+    icon: "lucide:book-open"        # 仅顶层文档必需
+    children:                       # 可选：嵌套文档
+      - title: "子文档"
+        description: "详细信息"
+        path: "/section/nested"
+        sourcePaths: ["src/utils.py"]
+```
+
+### 3. 内容约束
+
+- 每篇文档必须有 `docs/{path}/.meta.yaml`（kind: doc, source, default）
+- HTML 必须生成在 `dist/{lang}/docs/{path}.html`
+- `docs/` 目录中不得残留 `.md` 文件（构建后删除）
+- 所有内部链接使用文档 path 格式（如 `/overview/doc-gen`），build.mjs 自动转换为相对 HTML 路径
+- 资源引用使用 `/assets/xxx` 绝对路径格式（build.mjs 自动转换为相对路径）
+
+### 4. 人类确认约束
+
+- 用户意图推断后必须经用户确认（使用 AskUserQuestion）
+- 文档结构规划后必须经用户确认（使用 AskUserQuestion）
+- 确认后若有变更需再次确认
+
+### 5. 上下文管理约束
+
+主 agent 可以读取项目源文件，但必须为后续 Task 结果预留上下文空间。
+
+**判断原则**：主 agent 读取的源文件量 + 后续所有 Task 返回的摘要量，不能超出上下文预算。文档越多，Task 结果越多，主 agent 自身读取源文件的空间越小。
+
+**实践规则**：
+- 修改少量已有文档时，直接读取相关源文件没有问题
+- 首次生成时，先通过目录结构（`ls`/`Glob`）评估项目规模，再决定结构规划方式：
+  - 小项目（源文件少、预计文档 ≤ 5 篇）：主 agent 可直接读取源文件并规划结构
+  - 大项目（源文件多、预计文档 > 5 篇）：将结构规划委派给 Task（见"关键流程"）
+
+### 6. Task 分发约束
+
+Task 类型：
+- **结构规划** Task（按需）：当项目较大时，委派 Task 分析源文件生成 `document-structure.yaml` 草稿
+- **内容生成** Task：按"并行生成文档内容"中的 prompt 模板分发，每篇文档一个 Task
+
+分发规则：
+- 文档数量 ≤ 5 时并行执行，> 5 时分批（每批 ≤ 5 个），前一批完成后再启动下一批
+- 内容生成前先执行媒体资源扫描：`Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}`（排除 .aigne/ 和 node_modules/），将结果作为 mediaFiles 传递给每个 Task
+- 所有 Task 返回的摘要必须简短（≤ 10 行），避免返回文件内容
+
+### 7. 完成约束
+
+- `/doc-smith-check --structure` 通过
+- `/doc-smith-check --content` 通过
+- `dist/` 目录包含所有文档的 HTML
+- `nav.js` 包含所有文档条目
+- 自动 git commit（在 `.aigne/doc-smith/` 目录下）
+
+## 统一入口
+
+| 场景 | 判断条件 | 行为 |
+|------|---------|------|
+| 首次生成 | `docs/` 不存在或用户明确要求 | 完整流程：意图 → 结构 → 生成 |
+| 修改已有文档 | `docs/` 已存在 | AI 理解修改请求，直接修改，满足约束即可 |
+
+修改场景不需要 changeset/PATCH 机制。用户用自然语言描述修改需求，AI 执行并满足约束。
+
+## 用户意图
+
+文件：`.aigne/doc-smith/intent/user-intent.md`
+
+基于项目 README 和目录结构（`ls`/`Glob`）推断目标用户、使用场景、文档侧重点。生成后用 AskUserQuestion 确认。
+
+```markdown
+# 用户意图
+
+## 目标用户
+[主要受众是谁]
 
 ## 使用场景
+- [场景 1]
+- [场景 2]
 
-### 场景 A：生成新文档
-
-当 `.aigne/doc-smith/docs/` 目录不存在或用户明确要求重新生成时，使用 **文档生成流程**（步骤 1-6）。
-
-**适用情况：**
-- 首次为项目生成文档
-- 完全重建文档结构
-- 用户说"重新生成所有文档"
-
-### 场景 B：更新已有文档
-
-当 `.aigne/doc-smith/docs/` 目录已存在且用户要求修改时，使用 **文档更新流程**（步骤 7）。
-
-**适用情况：**
-- 用户提出自然语言修改请求（如"统一术语"、"补充章节"、"修正错误"）
-- 用户提供 changeset 文件路径
-- 文档中存在 `::: PATCH` 标记
-- 用户说"更新文档"、"修改文档"、"应用修改"
-- 用户希望更新文档中的图片，比希望在某篇文档中新增图片、删除图片或编辑某张图片
-
-## 工作流程
-
-按以下步骤依次执行：
-
-### 任务规划初始化
-
-**在开始任何实际工作前，必须先初始化任务规划文件。**
-
-在 `.aigne/doc-smith/cache`目录创建 `.aigne/doc-smithtask_plan.md` 文件，如果文件已存在，可以覆盖之前的文件，内容模板：
-
-```markdown
-# DocSmith Task Plan
-
-## Goal
-[One sentence describing the final goal of this task, e.g., Generate complete Chinese technical documentation for XXX project]
-
-## Execution Phases (Identify whether generating new or updating docs, refer to the appropriate template)
-
-New Document Generation Template:
-- [ ] Phase 0: Workspace check, read reference files, ensure config.yaml and sources data are complete
-- [ ] Phase 1: Analyze data sources
-- [ ] Phase 2: Infer user intent and confirm with user
-- [ ] Phase 3: Plan document structure
-- [ ] Phase 4: Generate document-structure.yaml
-- [ ] Phase 5: Confirm document structure
-- [ ] Phase 6: Generate document content
-- [ ] Phase 7: Check for `AFS Image Slot`, if exists call `generate-slot-image` SubAgent to generate images
-- [ ] Phase 7.5: Verify image slots have been replaced
-- [ ] Phase 9: Confirm all tasks are completed before finishing
-- [ ] Phase 10: (Additional user requirements, extend this list as needed)
-
-
-Document Update Template:
-- [ ] Phase 0: Workspace check, read reference files, ensure config.yaml and sources data are complete
-- [ ] Phase 1: Analyze update requirements (identify changeset files, PATCH markers, or natural language requests)
-- [ ] Phase 2: Check if document structure needs modification, if so update document-structure.yaml and validate
-- [ ] Phase 3: Apply document content updates
-- [ ] Phase 4: Process PATCH markers in documents
-- [ ] Phase 5: Whenever documents are added or updated, check for new `AFS Image Slot`, if exists call `generate-slot-image` to generate images
-- [ ] Phase 5.5: Verify image slots have been replaced
-- [ ] Phase 6: Execute document structure and content validation
-- [ ] Phase 7: Confirm all update tasks are completed
-- [ ] Phase 8: (Additional user requirements, extend this list as needed)
-
-## Key Decisions
-[Record important decisions made during execution and their rationale]
-
-## Errors Encountered
-[Record errors encountered and solutions, format: Error description -> Solution]
-
-## Current Status
-**Executing Phase 0** - Preparing to initialize workspace
+## 文档侧重点
+本文档采用**[文档类型]**的形式：
+- [侧重点 1]
+- [侧重点 2]
 ```
 
-**规划文件使用规则**：
-1. **每个阶段开始前**：读取 `.aigne/doc-smith/task_plan.md` 刷新目标和上下文
-2. **每个阶段完成后**：立即更新 `.aigne/doc-smith/task_plan.md`，标记该阶段为 [x]，更新"当前状态"
-3. **做出重要决策时**：记录到"关键决策"部分
-4. **遇到错误时**：记录到"遇到的错误"部分，包括错误描述和解决方案
+## 结构规划原则
 
-### 0. Workspace 检测
+- 规划必须依据用户意图，只规划明确需要的文档
+- 扁平优于嵌套，有疑虑时选择更简单的结构
+- 拆分条件：4+ 章节、内容独立、无重复、可独立查阅
+- 不拆分：内容单薄、顺序步骤、存在重复
+- 结构规划后用 AskUserQuestion 确认，展示文档总数、层次、每个文档的标题和描述
 
-**执行任何操作前，首先检测 workspace。**
+## 内容组织原则
 
-请阅读下面的参考检查 config.yaml 文件和 sources 数据是否完整。
-**workspace 检查流程参考**: `references/workspace-initialization.md`
+- 导航链接只能链接已生成的文档（使用 path 格式），不链接工作目录文件
+- 文档开头：前置条件、父主题
+- 文档结尾：相关主题、下一步、子文档
+- 有子文档的概览文档：简写（150-300 行），每个子主题 2-4 段 + 引导链接
+- 无子文档的详细文档：详写（300-500 行），完整展开
 
-### 1. 分析数据源
+## 关键流程
 
-使用 Glob/Grep/Read 工具探索项目根目录。
+### 结构规划
 
-了解项目目的、结构、主要模块、现有文档和媒体资源。
+主 agent 生成 `user-intent.md` 并经用户确认后，根据项目规模选择结构规划方式：
 
-### 2. 推断用户意图
+- **小项目**：主 agent 直接读取源文件，分析后生成 `document-structure.yaml`
+- **大项目**：委派 Task 分析源文件并生成 `document-structure.yaml` 草稿，Task 返回文件路径 + 结构摘要（≤ 10 行）
 
-首先检查用户意图文件是否已存在，如果存在向用户问询是否需要修改。
-用户意图格式**必须**参考： `references/user-intent-guide.md`
+生成后用 AskUserQuestion 向用户确认，展示文档总数、层次、每个文档的标题和描述。
 
-### 3. 规划文档结构
-
-首先检查文档结构文件是否已存在，如果存在执行第 5 步骤 ，向用户问询是否需要修改。
-文档结构规划要求**必须**参考： `references/structure-planning-guide.md`
-
-### 4. 生成 document-structure.yaml
-
-4.1 **生成 YAML 文件**
-
-文档结构数据结构**必须**参考： `references/document-structure-schema.md`
-
-生成文件到: `planning/document-structure.yaml`
-
-4.2 **立即执行程序化校验**
-
-生成 YAML 后，必须立即调用校验工具进行检查：
-
-**调用方式**：使用 `doc-smith-check` 技能进行结构校验
+### 生成 nav.js（结构确认后、内容生成前）
 
 ```bash
-/doc-smith-check --structure
+node skills/doc-smith-build/scripts/build.mjs \
+  --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
 ```
 
-**校验结果处理**:
+### 并行生成文档内容
 
-- ✅ **成功（valid: true）**: 继续执行步骤 5
-
-- ❌ **失败（valid: false）**:
-  1. 分析错误报告（errors 字段），理解哪些字段或格式不正确
-  2. 阅读 `references/document-structure-schema.md`
-  3. 修复错误或重新生成 `.aigne/doc-smith/planning/document-structure.yaml`
-  4. 重新调用 `/doc-smith-check --structure`
-  5. 如果连续 3 次失败，向用户报告错误并询问如何处理
-
-**重要提醒**:
-- 不要跳过校验步骤
-- 当工具返回 `fixed: true` 时，**必须**重新读取文件以获取最新内容
-- 校验失败时必须采取行动（修复或重新生成），不能忽略错误
-
-### 5. 确认文档结构
-
-5.1: 向用户展示的结构**必须**参考： `references/structure-confirmation-guide.md`
-5.2: 确认文档结构符合指定的数据结构，参考：`references/document-structure-schema.md`
-5.3: 如果用户提出修改意见，修改之后需要再次调用 `/doc-smith-check --structure` 检查更新后的文档结构。
-
-### 6. 生成文档内容
-
-使用 `doc-smith-content` **子代理**为文档结构中的每个文档生成内容。
-
-**调用方式**：
+每篇文档使用单独的 Task tool 生成（≤ 5 篇并行，> 5 篇分批）。**必须使用以下模板构造 Task prompt，不得自行概括 content.md 内容**：
 
 ```
-# 生成单个文档
-使用 doc-smith-content 子代理生成 /api/overview 文档
+你是文档内容生成代理。请先用 Read 工具读取 {CONTENT_MD_PATH} 作为你的完整工作流程，然后严格按照其中的步骤执行。
 
-# 带自定义要求
-使用 doc-smith-content 子代理生成 /api/authentication 文档，重点说明安全注意事项
+参数：
+- 文档路径：{docPath}
+- workspace：{WORKSPACE_PATH}
+- 可链接文档列表：{LINKABLE_DOCS}
+- mediaFiles：{MEDIA_FILES}
+- 用户意图摘要：{INTENT_SUMMARY}
+
+关键工具说明：
+- 使用 Skill 工具调用 /doc-smith-images 生成图片（步骤 5.5）
+- 使用 Skill 工具调用 /doc-smith-check 校验文档（步骤 7）
+
+完成检查清单（必须在返回摘要前逐项确认）：
+□ 步骤 5 图片使用：文档中已按需添加图片引用
+□ 步骤 5.5 图片生成：已扫描并处理所有 /assets/{key}/images/ 引用
+□ 步骤 6.5 HTML 构建：已执行 build.mjs --doc 并确认 HTML 生成
+□ 步骤 7 校验：已调用 /doc-smith-check --content --path {docPath}
 ```
 
-**批量并行生成**（推荐）：
+**模板变量说明**：
+- `{CONTENT_MD_PATH}`：`references/content.md` 的绝对路径
+- `{WORKSPACE_PATH}`：`.aigne/doc-smith` 的绝对路径
+- `{docPath}`：文档路径，如 `/overview`
+- `{LINKABLE_DOCS}`：所有文档路径列表（从 document-structure.yaml 提取）
+- `{MEDIA_FILES}`：媒体资源扫描结果
+- `{INTENT_SUMMARY}`：user-intent.md 的 2-3 句话摘要
 
-```
-使用单独的 doc-smith-content 子代理并行生成以下文档：
-- /overview
-- /api/authentication
-- /guides/getting-started
-```
+### AI 巡检
 
-每个子代理完成后会返回摘要，包含：文档路径、主题概述、章节列表、image slots、校验结果。
+构建完成后，读取 `dist/` 中生成的 HTML 文件（每种语言各抽查 1-2 个页面），检查输出是否符合预期。如有问题直接修改 HTML 文件修复。
 
-### 7. 更新已有文档
-
-仅当 `.aigne/doc-smith/docs/` 目录已存在时处理文档更新、文档中图片更新。
-
-**更新流程参考：**
-- 整体流程与输入识别：`references/update-workflow.md`
-- Changeset 文件处理：`references/changeset-guide.md`
-- PATCH 标记处理 (每次文档更新都需要检查文档中是否有 PATCH 需要处理)：`references/patch-guide.md`
-- 文档内容要求：`references/document-content-guide.md`
-
-**如果涉及文档结构的修改**：
-- 文档结构数据结构参考： `references/document-structure-schema.md`
-- 向用户展示的结构请参考： `references/structure-confirmation-guide.md`
-- 新增文档时，使用 `doc-smith-content` 子代理生成内容：
-
-```
-# 为新增的文档生成内容
-使用 doc-smith-content 子代理并行生成以下文档：
-- /new-section/overview
-- /new-section/details
-```
-
-### 8. 结束前确认任务都已完成
-
-8.1 **重新执行文档结构校验**
-
-在结束前，必须再次校验文档结构文件的完整性：
-
-**调用方式**：
+### 自动提交
 
 ```bash
-/doc-smith-check --structure
+cd .aigne/doc-smith && git add . && git commit -m "docsmith: xxx"
 ```
 
-如果校验失败，按照步骤 4.2 的错误处理流程处理。
-
-8.2 **执行文档内容检查**
-
-在结束前，必须执行文档内容检查：
-
-**调用方式**：
-
-```bash
-/doc-smith-check --content
-```
-
-- ✅ **成功（valid: true）**: 继续后续流程
-
-- ❌ **失败（valid: false）**:
-  1. 分析错误报告，理解问题所在
-  2. 根据错误类型采取行动：
-     - 文档缺失：生成缺失的文档
-     - 链接错误：修正链接路径
-     - 图片问题：提供图片或修正路径
-     - 空文档：补充内容
-  3. 修复后重新调用 `/doc-smith-check --content`
-  4. 如果连续 3 次失败，向用户报告错误并询问如何处理
-
-**重要提醒**:
-- 不要跳过内容检查步骤
-- 检查失败时必须采取行动（修复或重新生成），不能忽略错误
-
-8.4 **检查是否存在 AFS Image Slot 需要生成图片**
-
-当检测到文档需要展示技术类图片，但是数据源中没有提供的时候，会生成 `AFS Image Slot` 占位符，参考 `references/document-content-guide.md`。
-
-文档生成结束之后，扫描本次生成的文档中是否包含 `AFS Image Slot`：
-
-**Slot 格式**：
-```markdown
-<!-- afs:image id="architecture-overview" desc="系统架构图，展示各模块关系" -->
-<!-- afs:image id="data-flow" key="shared-data-flow" desc="数据流向图" -->
-```
-
-需要忽略代码示例中的`AFS Image Slot` 占位符，确保真的是文档中需要展示的图片。
-
-**使用 `generate-slot-image` 子代理并行生成图片**：
+## Workspace 目录结构
 
 ```
-使用单独的 generate-slot-image 子代理并行生成以下图片：
-- docPath=/overview, slotId=architecture-overview, slotDesc="系统架构图，展示各模块关系"
-- docPath=/api/auth, slotId=auth-flow, slotDesc="认证流程图", aspectRatio=16:9
-- docPath=/guides/start, slotId=setup-steps, slotDesc="安装步骤示意图"
+.aigne/doc-smith/
+├── config.yaml
+├── intent/user-intent.md
+├── planning/document-structure.yaml
+├── docs/{path}/.meta.yaml
+├── dist/
+│   ├── index.html
+│   ├── {lang}/docs/{path}.html
+│   └── assets/nav.js, docsmith.css, theme.css
+├── assets/{key}/.meta.yaml, images/{lang}.png
+├── glossary.yaml                  # 可选
+└── cache/translation-cache.yaml   # 发布用
 ```
-
-**子代理的优势**：
-- 每个子代理独立处理一个 slot，有独立的上下文窗口
-- 可以并行执行多个子代理，加快生成速度
-- 子代理在前台执行，确保权限缺失时，可以向用户确认权限
-- 子代理自动处理图片保存和 meta 文件创建
-
-生成的图片会保存在 `.aigne/doc-smith/assets/{key}/images/` 目录。
-
-8.5 **校验图片 slot 已替换（阶段 7.5 / 5.5）**
-
-图片生成完成后，执行 slot 替换校验：
-
-**调用方式**：
-```bash
-/doc-smith-check --content --check-slots
-```
-
-**校验内容**：
-- 文档中不存在未替换的 `<!-- afs:image ... -->` 占位符
-- 图片引用的相对路径层级正确
-- 引用的图片文件存在
-
-**失败处理**：
-1. 分析错误报告
-2. 对于未替换的 slot：重新调用 `generate-slot-image` 生成
-3. 对于路径错误：手动修正文档中的图片路径
-4. 修复后重新执行校验
-
-8.6 **核对完成清单**
-
-- [ ] 文档结构校验通过
-- [ ] 文档内容检查通过
-- [ ] 确认所有生成的文档所在文件夹路径与 `document-structure.yaml` 中的 path 字段一致，并存在 .meta.yaml 文件和主语言文件
-- [ ] 确认文档内部链接都有效
-- [ ] 确认图片路径正确且文件存在
-- [ ] 检查是否存在 `AFS Image Slot` 并生成图片
-- [ ] 图片 slot 替换校验通过（`/doc-smith-check --content --check-slots`）
-
-**文档更新的场景**：
-- [ ] 用户要求的变更都已处理
-- [ ] 文档中的 `::: PATCH` 标记都已处理
-- [ ] 如果修改了文档结构，重新执行 YAML 校验
-- [ ] 如果修改了文档内容，重新执行内容检查
-- [ ] 检查是否新生成了 `AFS Image Slot`, 如果存在则生成图片
-- [ ] 图片 slot 替换校验通过
-
-## 自动提交变更
-
-每次完成用户要求的任务，导致 workspace 变化，都自动提交 commit。
-```bash
-git add .
-git commit -m "docsmith: xxxx(合适的标题)"
-```
-
-## Workspace 目录结构参考
-
-用户在项目根目录执行 `/doc-smith`，workspace 创建在 `.aigne/doc-smith/` 目录：
-
-```
-my-project/                        # 用户的项目目录（cwd）
-├── .aigne/
-│   └── doc-smith/                 # DocSmith workspace
-│       ├── config.yaml            # workspace 配置文件
-│       ├── intent/
-│       │   └── user-intent.md     # 用户意图描述
-│       ├── planning/
-│       │   └── document-structure.yaml  # 文档结构计划
-│       ├── docs/                  # 生成的文档
-│       │   ├── overview/
-│       │   │   ├── .meta.yaml     # 元信息 (kind/source/default)
-│       │   │   └── zh.md          # 语言版本文件
-│       │   └── api/
-│       │       └── authentication/
-│       │           ├── .meta.yaml
-│       │           └── zh.md
-│       ├── assets/                # 生成的图片资源
-│       │   └── project-architecture/
-│       │       ├── .meta.yaml
-│       │       └── images/
-│       │           └── zh.png
-│       └── cache/                 # 缓存数据
-│           └── task_plan.md       # 任务规划文件
-├── src/                           # 项目源代码（数据源）
-├── README.md
-└── ...
-```
-
-**数据源**：项目本身，从 workspace 通过 `../../` 相对路径访问
-
-## 关键原则
-
-- **Workspace 优先**：执行任何操作前必须先检测和初始化 workspace
-- **任务规划先行**：开始工作前必须创建 `.aigne/doc-smith/task_plan.md`，每个阶段前读取，每个阶段后更新
-- **持久化记录**：将关键决策、错误和解决方案记录到 `.aigne/doc-smith/task_plan.md`，确保任务可追溯
-- **参考引用文件**：执行到每个步骤时，如果提供了参考文件，必须先阅读参考文件中的要求
-- **文档内容要求**：执行任何文档相关的生成、更新，都需要参考`references/document-content-guide.md`，确保文档符合要求
-- **基于用户意图**：所有规划和生成都应参考 `.aigne/doc-smith/intent/user-intent.md`
-- **最小必要原则**：只生成用户意图中明确需要的文档
-- **批量执行**：生成文档内容时优先批量执行，缩短执行时间
-- **Git 版本管理**：生成/更新/翻译完成后自动将所有变更提交到 Git
-
-## 相关技能
-
-本技能在执行过程中会调用以下技能：
-
-| 技能 | 用途 | 调用示例 |
-|------|------|----------|
-| `doc-smith-content` | 生成单篇文档内容 | `/doc-smith-content /api/overview` |
-| `generate-slot-image` | 生成文档中的图片 | `generate-slot-image docPath=/overview, slotId=architecture-overview, slotDesc="系统架构图，展示各模块关系"`|
-| `doc-smith-check` | 校验文档结构和内容 | `/doc-smith-check` 或 `/doc-smith-check --structure` |
-
-以下技能由用户按需独立调用：
-
-| 技能 | 用途 | 调用示例 |
-|------|------|----------|
-| `doc-smith-localize` | 翻译文档到其他语言 | `/doc-smith-localize --lang en` |
-| `doc-smith-publish` | 发布文档到平台 | `/doc-smith-publish --url https://...` |
-| `doc-smith-clear` | 清除授权和配置 | `/doc-smith-clear` |

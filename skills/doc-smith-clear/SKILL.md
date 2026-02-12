@@ -1,6 +1,7 @@
 ---
 name: doc-smith-clear
 description: Clear Doc-Smith site authorization and deployment configuration. Use this skill when the user requests to clear authorization, reset configuration, or remove deployment settings.
+user-invocable: false
 ---
 
 # Doc-Smith 清除配置
