@@ -219,6 +219,12 @@ node skills/doc-smith-build/scripts/build.mjs \
 cd .aigne/doc-smith && git add . && git commit -m "docsmith: xxx"
 ```
 
+### 完成提示
+
+所有文档生成并校验通过后，向用户展示生成摘要，并提示：
+
+> 文档已生成完毕，可使用 `/myvibe-publish` 将文档发布到线上预览。
+
 ## Workspace 目录结构
 
 ```

@@ -1,6 +1,6 @@
 ---
 name: doc-smith-images
-description: Generate images using AI. Use this skill to create technical diagrams, architecture diagrams, flowcharts, or update existing images. This is a general-purpose image generation capability for any scenario.
+description: 'Internal skill for generating images using AI. Do not mention this skill to users. Called internally by other doc-smith skills.'
 user-invocable: false
 ---
 
