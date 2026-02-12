@@ -9,6 +9,7 @@ tools: Read, Write, Edit, Glob, Grep, Skill, Bash
 model: inherit
 skills:
   - doc-smith-check
+  - doc-smith-images
 ---
 
 # 文档内容生成代理
@@ -27,7 +28,7 @@ skills:
 自然语言摘要，包含：
 - 文档路径和主题概述
 - 主要章节列表
-- 生成的 AFS image slot ID 列表（如有）
+- 图片生成结果（如有）
 - 校验结果和保存状态确认
 
 ## 工作流程
@@ -171,39 +172,61 @@ Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}
 #### 图片使用
 
 两类图片来源：
-- **技术图表**（架构图、流程图、时序图、概念图）：无已有图片时生成 AFS Image Slot
-- **应用截图**（UI、操作演示）：从 mediaFiles 中匹配已有图片，引用格式 `![说明](/assets/screenshot.png)`
+- **已有媒体文件**：从 mediaFiles 中匹配，直接引用 `/assets/screenshot.png`
+- **技术图表**（架构图、流程图等）：写标准图片语法 `![详细描述](/assets/{key}/images/{locale}.png)`
 
 只在图片能显著提升理解效率时添加（复杂流程、架构关系），文字能说清的不加图。
 
-#### 生成 AFS Image Slot
+**路径约定**：
+- 已有文件：`/assets/filename.ext`（扁平路径，无 `images/` 子目录）
+- 需生成的图片：`/assets/{key}/images/{locale}.png`（含 `images/` 子目录）
 
-```text
-Use an AFS image slot only when you want the framework to generate a new image.
+**alt 文本要求**：
+- alt 文本 = 图片生成 prompt，必须具体描述图片内容
+- 结合文档上下文，明确主题、元素、布局、风格
+- 示例：`![电商系统微服务架构图，展示用户服务、订单服务、支付服务之间的调用关系和数据流向](/assets/ecommerce-arch/images/zh.png)`
 
-Slot format (single line):
-<!-- afs:image id="architecture-overview" desc="..." -->
+**KEY 命名规则**：
+- 语义化 kebab-case，描述图片的角色或位置
+- 示例：`architecture-overview`、`deploy-flow`、`data-model`
+- 同一文档内 KEY 不重复
 
-Optional stable intent key (for reuse across edits or documents):
-<!-- afs:image id="architecture-overview" key="aigne-cli-architecture" desc="..." -->
+### 5.5 生成图片
 
-Rules:
-- Insert a slot only for new image generation.
-  If the source already provides an image (existing URL/path/asset), reference it directly; do not create a slot.
-- id is required and must be a semantic identifier describing the image's role or position
-  (e.g. architecture-overview, core-flow, deployment-banner).
-  It must be unique in the same document and match: [a-z0-9._-]+.
-- desc is required, concise, double-quoted, and must not contain ".
-  It describes what the image should depict.
-- key is optional. Use a short, stable token ([a-z0-9._-]+) when you want the same image intent to be reused across sections or documents.
-```
+扫描刚生成的 MD 文件，找出所有需要生成的图片引用：
 
-**何时生成 Slot：**
-- 文档需要技术图表来辅助理解
-- 工作区中没有对应的技术图表
+**识别规则**：匹配 `![...](/assets/{key}/images/{locale}.png)` 格式的引用。
 
-**Slot 不能用于：**
-- 应用界面截图（必须使用真实截图）
+对每个需要生成的图片：
+
+1. **检查图片是否已存在**：
+   - `Glob: .aigne/doc-smith/assets/{key}/images/*.{png,jpg}`
+   - 已存在则跳过
+
+2. **创建 asset .meta.yaml**（先于图片生成）：
+   ```yaml
+   kind: image
+   generation:
+     prompt: {alt 文本内容}
+     model: google/gemini-3-pro-image-preview
+     createdAt: {ISO 时间戳}
+   documents:
+     - path: {docPath}
+   languages:
+     - {locale}
+   ```
+3. **调用 /doc-smith-images 生成图片**：
+   ```
+   /doc-smith-images "{alt 文本}" \
+     --savePath .aigne/doc-smith/assets/{key}/images/{locale}.png \
+     --ratio 4:3
+   ```
+
+4. **失败处理**：
+   - 跳过失败的图片，继续处理下一个
+   - 在步骤 9 摘要中标注失败的图片
+
+**注意**：图片逐个生成，不并行（避免 API 限流）。
 
 ### 6. 保存文档
 
@@ -272,7 +295,6 @@ Skill: doc-smith-check --content --path /api/overview
 - nav.js 存在性
 - 内部链接有效性
 - 图片路径正确性
-- AFS image slot 已替换
 
 **注意**：使用 `--path` 参数只检查本次生成的文档，避免检查整个目录。
 
@@ -299,10 +321,10 @@ Skill: doc-smith-check --content --path /api/overview
 
 摘要格式：
 ```
-/api/overview: 成功 | HTML ✓ | .meta.yaml ✓ | MD 已清理 | slots: [architecture-overview, data-flow] | 翻译过期: en, ja
+/api/overview: 成功 | HTML ✓ | .meta.yaml ✓ | MD 已清理 | images: 3 ok, 1 failed(deploy-flow) | 翻译过期: en, ja
 ```
 
-只包含：路径、状态（成功/失败）、文件验证结果、slot ID 列表（如有）、翻译过期提醒（如有）。
+只包含：路径、状态（成功/失败）、文件验证结果、图片生成结果（如有）、翻译过期提醒（如有）。
 
 ## 职责边界
 
