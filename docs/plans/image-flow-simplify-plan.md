@@ -147,26 +147,26 @@ grep -c "afs:image\|check-slots\|generate-slot-image\|AFS Image Slot" skills/doc
 ### Tests
 
 #### Happy Path
-- [ ] doc-smith-check/SKILL.md 中不存在 `check-slots` 字符串
-- [ ] doc-smith-check/SKILL.md 中不存在 `AFS slot` 或 `AFS image` 字符串
-- [ ] translate-document.md 中不存在 `afs:image` 字符串
+- [x] doc-smith-check/SKILL.md 中不存在 `check-slots` 字符串
+- [x] doc-smith-check/SKILL.md 中不存在 `AFS slot` 或 `AFS image` 字符串
+- [x] translate-document.md 中不存在 `afs:image` 字符串
 
 #### Bad Path
-- [ ] doc-smith-check/SKILL.md 仍保留 `--structure` 和 `--content` 选项
-- [ ] doc-smith-check/SKILL.md 仍保留其他校验项（HTML 存在、meta 存在、nav.js、链接、图片路径）
-- [ ] translate-document.md 步骤 4 其他翻译规则未被修改
+- [x] doc-smith-check/SKILL.md 仍保留 `--structure` 和 `--content` 选项
+- [x] doc-smith-check/SKILL.md 仍保留其他校验项（HTML 存在、meta 存在、nav.js、链接、图片路径）
+- [x] translate-document.md 步骤 4 其他翻译规则未被修改
 
 #### Edge Cases
-- [ ] N/A
+- [x] N/A
 
 #### Security
-- [ ] N/A
+- [x] N/A
 
 #### Data Leak
-- [ ] N/A
+- [x] N/A
 
 #### Data Damage
-- [ ] N/A
+- [x] N/A
 
 ### E2E Gate
 
@@ -180,8 +180,8 @@ grep -c "afs:image" skills/doc-smith-localize/references/translate-document.md &
 
 ### Acceptance Criteria
 
-- [ ] 两个文件中所有 afs:image/slot 引用已移除
-- [ ] 其他不相关内容未被修改
+- [x] 两个文件中所有 afs:image/slot 引用已移除
+- [x] 其他不相关内容未被修改
 
 ---
 

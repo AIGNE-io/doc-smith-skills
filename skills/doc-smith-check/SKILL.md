@@ -15,7 +15,6 @@ user-invocable: false
 /doc-smith-check --structure                  # 只检查结构
 /doc-smith-check --content                    # 只检查内容
 /doc-smith-check --content --path /api/auth   # 检查指定文档
-/doc-smith-check --content --check-slots      # 检查 AFS image slot 已替换
 ```
 
 ## 选项
@@ -25,7 +24,6 @@ user-invocable: false
 | `--structure` | `-s` | 只运行结构检查 |
 | `--content` | `-c` | 只运行内容检查 |
 | `--path <docPath>` | `-p` | 指定文档路径（可多次使用，仅与 `--content` 配合） |
-| `--check-slots` | - | 检查 AFS image slot 已替换（仅与 `--content` 配合） |
 
 ## 校验规则
 
@@ -42,7 +40,7 @@ user-invocable: false
 
 ### 内容校验 (--content)
 
-执行脚本：`node skills/doc-smith-check/scripts/check-content.mjs [--path <p>] [--check-slots]`
+执行脚本：`node skills/doc-smith-check/scripts/check-content.mjs [--path <p>]`
 
 校验 `dist/` 中的 HTML 和 `docs/` 中的元数据：
 
@@ -54,7 +52,6 @@ user-invocable: false
 | 内部链接有效 | 链接目标文档存在，无 `.md` 后缀 |
 | 图片可访问 | 本地图片文件存在，远程图片可达 |
 | 路径格式 | MD 源文件应使用 `/assets/` 格式，`../../assets/` 旧格式产生警告 |
-| AFS slot 已替换 | `--check-slots` 启用时检查无残留占位符 |
 
 ### 路径格式校验
 
@@ -74,5 +71,4 @@ user-invocable: false
 
 - 生成 document-structure.yaml 后：`/doc-smith-check --structure`
 - 生成文档内容后：`/doc-smith-check --content`
-- 图片生成后校验 slot：`/doc-smith-check --content --check-slots`
 - 结束前最终校验：`/doc-smith-check`

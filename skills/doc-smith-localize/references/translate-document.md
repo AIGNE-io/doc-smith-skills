@@ -94,7 +94,6 @@ shasum -a 256 .aigne/doc-smith/dist/{sourceLanguage}/docs/{docPath}.html | cut -
 - 保持 HTML 标签结构不变（所有标签原样保留，只翻译文本内容）
 - 不翻译代码块 `<pre><code>` 中的代码（只翻译注释）
 - 不翻译链接路径（`href`）和图片路径（`src`）
-- 不翻译 AFS image slot 注释（`<!-- afs:image ... -->`）
 - 应用术语表确保专业术语一致性
 - 不引入新的 `<script>` 标签或 HTML 事件属性
 
