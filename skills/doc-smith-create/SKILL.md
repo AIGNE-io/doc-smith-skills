@@ -72,7 +72,6 @@ documents:
 - HTML 必须生成在 `dist/{lang}/docs/{path}.html`
 - `docs/` 目录中不得残留 `.md` 文件（构建后删除）
 - 所有内部链接使用文档 path 格式（如 `/overview/doc-gen`），build.mjs 自动转换为相对 HTML 路径
-- 所有 AFS Image Slot 必须被替换
 - 资源引用使用 `/assets/xxx` 绝对路径格式（build.mjs 自动转换为相对路径）
 
 ### 4. 人类确认约束
@@ -98,7 +97,6 @@ documents:
 Task 类型：
 - **结构规划** Task（按需）：当项目较大时，委派 Task 分析源文件生成 `document-structure.yaml` 草稿
 - **内容生成** Task：通过 Task(references/content.md) 分发，每篇文档一个 Task
-- **图片生成** Task：通过 Task(references/generate-slot-image.md) 分发
 
 分发规则：
 - 文档数量 ≤ 5 时并行执行，> 5 时分批（每批 ≤ 5 个），前一批完成后再启动下一批
@@ -109,7 +107,6 @@ Task 类型：
 
 - `/doc-smith-check --structure` 通过
 - `/doc-smith-check --content` 通过
-- `/doc-smith-check --content --check-slots` 通过
 - `dist/` 目录包含所有文档的 HTML
 - `nav.js` 包含所有文档条目
 - 自动 git commit（在 `.aigne/doc-smith/` 目录下）
@@ -185,13 +182,6 @@ node skills/doc-smith-build/scripts/build.mjs \
 按 references/content.md 流程使用单独的 Task tool 并行生成以下文档（mediaFiles 见扫描结果）：
 - /overview, mediaFiles=[...]
 - /api/authentication, mediaFiles=[...]
-```
-
-### 并行生成图片
-
-```
-按 references/generate-slot-image.md 流程使用单独的 Task tool 并行生成以下图片：
-- docPath=/overview, slotId=architecture-overview, slotDesc="系统架构图"
 ```
 
 ### AI 巡检

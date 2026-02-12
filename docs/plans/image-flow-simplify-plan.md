@@ -89,27 +89,27 @@ head -12 skills/doc-smith-create/references/content.md | grep -q "doc-smith-imag
 ### Tests
 
 #### Happy Path
-- [ ] SKILL.md 中不存在 `AFS Image Slot` 字符串
-- [ ] SKILL.md 中不存在 `generate-slot-image` 引用
-- [ ] SKILL.md 中不存在 `--check-slots` 引用
-- [ ] SKILL.md 关键流程中无「并行生成图片」小节
-- [ ] `references/generate-slot-image.md` 文件不存在
+- [x] SKILL.md 中不存在 `AFS Image Slot` 字符串
+- [x] SKILL.md 中不存在 `generate-slot-image` 引用
+- [x] SKILL.md 中不存在 `--check-slots` 引用
+- [x] SKILL.md 关键流程中无「并行生成图片」小节
+- [x] `references/generate-slot-image.md` 文件不存在
 
 #### Bad Path
-- [ ] SKILL.md 中 Task 分发约束仍保留结构规划和内容生成两种类型
-- [ ] SKILL.md 中完成约束仍保留 `--structure` 和 `--content` 校验
+- [x] SKILL.md 中 Task 分发约束仍保留结构规划和内容生成两种类型
+- [x] SKILL.md 中完成约束仍保留 `--structure` 和 `--content` 校验
 
 #### Edge Cases
-- [ ] SKILL.md 其他约束（1-2、4-5）未被意外修改
+- [x] SKILL.md 其他约束（1-2、4-5）未被意外修改
 
 #### Security
-- [ ] N/A
+- [x] N/A
 
 #### Data Leak
-- [ ] N/A
+- [x] N/A
 
 #### Data Damage
-- [ ] N/A
+- [x] N/A
 
 ### E2E Gate
 
@@ -123,8 +123,8 @@ grep -c "afs:image\|check-slots\|generate-slot-image\|AFS Image Slot" skills/doc
 
 ### Acceptance Criteria
 
-- [ ] SKILL.md 约束和流程中所有 slot/图片生成阶段引用已移除
-- [ ] generate-slot-image.md 已删除
+- [x] SKILL.md 约束和流程中所有 slot/图片生成阶段引用已移除
+- [x] generate-slot-image.md 已删除
 
 ---
 
