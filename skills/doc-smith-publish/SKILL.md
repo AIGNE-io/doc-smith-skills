@@ -1,6 +1,7 @@
 ---
 name: doc-smith-publish
 description: Publish Doc-Smith generated documentation to online platforms. Use this skill when the user requests to publish, deploy, or release documentation.
+user-invocable: false
 ---
 
 # Doc-Smith 文档发布
