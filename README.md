@@ -14,7 +14,7 @@ Claude Code Skills for AI-powered documentation generation, translation, and pub
 ### Quick Install (Recommended)
 
 ```bash
-npx add-skill AIGNE-io/doc-smith-skills
+npx skills add AIGNE-io/doc-smith-skills
 ```
 
 ### Register as Plugin Marketplace
