@@ -22,6 +22,7 @@ skills:
 - **文档路径**（必需）：如 `/overview`、`/api/auth`
 - **自定义要求**（可选）：如 "重点说明安全注意事项"
 - **mediaFiles**（可选）：主流程预扫描的媒体文件路径列表，提供后步骤 4.2 跳过重复扫描
+- **状态文件路径**（可选）：如 `.aigne/doc-smith/cache/task-status/api-overview.status`。主流程提供时，完成后必须写入 1 行摘要到此文件
 
 ## 输出
 
@@ -315,16 +316,26 @@ Skill: doc-smith-check --content --path /api/overview
 2. 检查是否存在 `translations` 字段
 3. 如果存在，记录已有的翻译语言列表（如 `en`、`ja`），在步骤 9 的摘要中提醒
 
-### 9. 返回摘要
+### 9. 写入状态文件 & 返回摘要
 
-**严格控制摘要长度（≤ 10 行）**，避免消耗主 agent 上下文。不返回文档内容、章节列表或详细说明。
+#### 9.1 写入状态文件
 
-摘要格式：
+**如果提供了 `状态文件路径` 参数**，使用 Write 工具将 1 行摘要写入该路径：
+
 ```
-/api/overview: 成功 | HTML ✓ | .meta.yaml ✓ | MD 已清理 | images: 3 ok, 1 failed(deploy-flow) | 翻译过期: en, ja
+{docPath}: 成功 | HTML ✓ | .meta.yaml ✓ | MD 已清理 | images: 3 ok, 1 failed(deploy-flow) | 翻译过期: en, ja
 ```
 
-只包含：路径、状态（成功/失败）、文件验证结果、图片生成结果（如有）、翻译过期提醒（如有）。
+**失败时**也必须写入，内容以"失败"开头：
+```
+{docPath}: 失败 | 原因: build.mjs 执行报错
+```
+
+**写入状态文件是 Task 的最后一个动作。**
+
+#### 9.2 返回文本摘要
+
+返回与状态文件相同的 1 行摘要。（后台模式下此返回值不进入主 agent 上下文，但独立调用时仍有用。）
 
 ## 职责边界
 
@@ -337,6 +348,7 @@ Skill: doc-smith-check --content --path /api/overview
 - ✅ 调用 `/doc-smith-check --content --path <文档路径>` 校验 HTML
 - ✅ 更新已有文档时检查翻译过期并提醒
 - ✅ 返回摘要信息
+- ✅ 如果提供了状态文件路径，在所有步骤完成后写入 1 行状态摘要
 
 **不应执行**：
 - ❌ 不创建或修改 document-structure.yaml

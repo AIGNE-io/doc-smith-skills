@@ -82,12 +82,10 @@ documents:
 
 ### 5. 上下文管理约束
 
-主 agent 可以读取项目源文件，但必须为后续 Task 结果预留上下文空间。
-
-**判断原则**：主 agent 读取的源文件量 + 后续所有 Task 返回的摘要量，不能超出上下文预算。文档越多，Task 结果越多，主 agent 自身读取源文件的空间越小。
+Task 使用后台执行模式（`run_in_background: true`），执行日志不会回流到主 agent 上下文。主 agent 通过信号文件（`.status`）获取结果。
 
 **实践规则**：
-- 修改少量已有文档时，直接读取相关源文件没有问题
+- 主 agent 可自由读取项目源文件，不再受 Task 返回值的上下文预算限制
 - 首次生成时，先通过目录结构（`ls`/`Glob`）评估项目规模，再决定结构规划方式：
   - 小项目（源文件少、预计文档 ≤ 5 篇）：主 agent 可直接读取源文件并规划结构
   - 大项目（源文件多、预计文档 > 5 篇）：将结构规划委派给 Task（见"关键流程"）
@@ -99,9 +97,15 @@ Task 类型：
 - **内容生成** Task：按"并行生成文档内容"中的 prompt 模板分发，每篇文档一个 Task
 
 分发规则：
+- **所有内容生成 Task 必须使用 `run_in_background: true`**，避免执行日志回流到主 agent 上下文
 - 文档数量 ≤ 5 时并行执行，> 5 时分批（每批 ≤ 5 个），前一批完成后再启动下一批
 - 内容生成前先执行媒体资源扫描：`Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}`（排除 .aigne/ 和 node_modules/），将结果作为 mediaFiles 传递给每个 Task
-- 所有 Task 返回的摘要必须简短（≤ 10 行），避免返回文件内容
+
+信号文件机制：
+- 每个 Task 完成时在 `.aigne/doc-smith/cache/task-status/` 写入 `{slug}.status` 文件
+- slug 规则：docPath 去除 `/` 前缀后以 `-` 替换 `/`（如 `/api/overview` → `api-overview`）
+- 状态文件内容为 1 行摘要（如 `/overview: 成功 | HTML ✓ | .meta.yaml ✓`）
+- 主 agent 通过轮询 `.status` 文件判断 Task 是否完成（见"批次执行流程"）
 
 ### 7. 完成约束
 
@@ -178,7 +182,7 @@ node skills/doc-smith-build/scripts/build.mjs \
 
 ### 并行生成文档内容
 
-每篇文档使用单独的 Task tool 生成（≤ 5 篇并行，> 5 篇分批）。**必须使用以下模板构造 Task prompt，不得自行概括 content.md 内容**：
+每篇文档使用单独的 Task tool 生成（≤ 5 篇并行，> 5 篇分批）。**必须使用 `run_in_background: true` 分发 Task**。必须使用以下模板构造 Task prompt，不得自行概括 content.md 内容：
 
 ```
 你是文档内容生成代理。请先用 Read 工具读取 {CONTENT_MD_PATH} 作为你的完整工作流程，然后严格按照其中的步骤执行。
@@ -189,16 +193,18 @@ node skills/doc-smith-build/scripts/build.mjs \
 - 可链接文档列表：{LINKABLE_DOCS}
 - mediaFiles：{MEDIA_FILES}
 - 用户意图摘要：{INTENT_SUMMARY}
+- 状态文件路径：{STATUS_FILE_PATH}
 
 关键工具说明：
 - 使用 Skill 工具调用 /doc-smith-images 生成图片（步骤 5.5）
 - 使用 Skill 工具调用 /doc-smith-check 校验文档（步骤 7）
 
-完成检查清单（必须在返回摘要前逐项确认）：
+完成检查清单（必须在写入状态文件前逐项确认）：
 □ 步骤 5 图片使用：文档中已按需添加图片引用
 □ 步骤 5.5 图片生成：已扫描并处理所有 /assets/{key}/images/ 引用
 □ 步骤 6.5 HTML 构建：已执行 build.mjs --doc 并确认 HTML 生成
 □ 步骤 7 校验：已调用 /doc-smith-check --content --path {docPath}
+□ 状态文件：已将 1 行摘要写入 {STATUS_FILE_PATH}
 ```
 
 **模板变量说明**：
@@ -208,6 +214,44 @@ node skills/doc-smith-build/scripts/build.mjs \
 - `{LINKABLE_DOCS}`：所有文档路径列表（从 document-structure.yaml 提取）
 - `{MEDIA_FILES}`：媒体资源扫描结果
 - `{INTENT_SUMMARY}`：user-intent.md 的 2-3 句话摘要
+- `{STATUS_FILE_PATH}`：`.aigne/doc-smith/cache/task-status/{slug}.status`
+
+### 批次执行流程
+
+#### 准备阶段
+
+分发第一个 Task 前：
+1. `mkdir -p .aigne/doc-smith/cache/task-status`
+2. `rm -f .aigne/doc-smith/cache/task-status/*.status`（清空旧状态）
+
+#### 分发阶段
+
+每个 Task 使用 `run_in_background: true` 分发。批次内所有 Task 同时启动。
+
+#### 等待阶段
+
+每 15 秒检查 `.status` 文件数量：
+
+```bash
+ls .aigne/doc-smith/cache/task-status/*.status 2>/dev/null | wc -l
+```
+
+- 文件数 = 当前批次文档数 → 该批次完成
+- 超时：单批最多等待 10 分钟，超时后报告缺失文档
+- **不要读取后台 Task 的 output_file**（可能 300K+），只读 `.status` 文件
+
+#### 收集结果
+
+```bash
+cat .aigne/doc-smith/cache/task-status/*.status
+```
+
+每个文件 1 行，所有文档摘要汇总后通常不超过 20 行。
+
+#### 失败处理
+
+- `.status` 内容以"失败"开头 → 记录失败原因，不阻塞后续批次
+- 超时未产生 `.status` → 标记为超时，在最终报告中提示用户重试
 
 ### AI 巡检
 
@@ -239,5 +283,7 @@ cd .aigne/doc-smith && git add . && git commit -m "docsmith: xxx"
 │   └── assets/nav.js, docsmith.css, theme.css
 ├── assets/{key}/.meta.yaml, images/{lang}.png
 ├── glossary.yaml                  # 可选
-└── cache/translation-cache.yaml   # 发布用
+└── cache/
+    ├── translation-cache.yaml     # 发布用
+    └── task-status/{slug}.status  # Task 完成信号文件
 ```

@@ -22,6 +22,7 @@ model: inherit
 - **sourceLanguage**（必需）：源语言代码，如 `zh`
 - **force**（可选）：是否强制重新翻译，默认 `false`
 - **glossary**（可选）：术语表内容
+- **状态文件路径**（可选）：如 `.aigne/doc-smith/cache/task-status/api-overview-en.status`。主流程提供时，完成后必须写入 1 行摘要到此文件
 
 ## 输出
 
@@ -176,35 +177,32 @@ translations:
     translatedAt: "2026-01-21T10:00:00.000Z"
 ```
 
-### 7. 返回摘要
+### 7. 写入状态文件 & 返回摘要
 
-返回操作结果摘要：
+#### 7.1 写入状态文件
+
+**如果提供了 `状态文件路径` 参数**，使用 Write 工具将 1 行摘要写入该路径：
 
 **成功**：
 ```
-文档翻译完成:
-- 文档: /overview
-- 目标语言: en
-- 源文件: .aigne/doc-smith/dist/zh/docs/overview.html
-- 保存路径: .aigne/doc-smith/dist/en/docs/overview.html
-- Meta 已更新: .aigne/doc-smith/docs/overview/.meta.yaml
+/overview → en: 成功 | saved: dist/en/docs/overview.html | meta ✓
 ```
 
-**跳过**（源文档未变化）：
+**跳过**：
 ```
-跳过翻译（源文档未变化）:
-- 文档: /overview
-- 目标语言: en
-- 原因: sourceHash 未变化
+/overview → en: 跳过 | 原因: sourceHash 未变化
 ```
 
-**失败**：
+**失败**（也必须写入，内容以"失败"开头）：
 ```
-翻译失败:
-- 文档: /overview
-- 目标语言: en
-- 错误: {错误信息}
+/overview → en: 失败 | 原因: 源 HTML 缺少 <main data-ds="content"> 标签
 ```
+
+**写入状态文件是 Task 的最后一个动作。**
+
+#### 7.2 返回文本摘要
+
+返回与状态文件相同的 1 行摘要。（后台模式下此返回值不进入主 agent 上下文，但独立调用时仍有用。）
 
 ## 职责边界
 
@@ -217,6 +215,7 @@ translations:
 - ✅ 保存翻译结果到 `dist/{targetLanguage}/docs/`
 - ✅ 更新 `.meta.yaml`
 - ✅ 返回操作摘要
+- ✅ 如果提供了状态文件路径，在所有步骤完成后写入 1 行状态摘要
 
 **不应执行**：
 - ❌ 不扫描多个文档（由主流程负责）

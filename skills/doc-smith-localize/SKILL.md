@@ -50,9 +50,15 @@ description: Translate Doc-Smith generated documentation into multiple languages
 ### 4. Task 分发约束
 
 - 每个文档到每种语言为一个独立翻译任务
-- 通过 Task(references/translate-document.md) 分发，并行执行
+- 通过 Task(references/translate-document.md) 分发，**所有翻译 Task 必须使用 `run_in_background: true`**，避免执行日志回流到主 agent 上下文
 - 每批最多并行 5 个 Task，超过时分批执行
 - 如有术语表（`.aigne/doc-smith/glossary.yaml` 或 `.md`），传递给每个 Task
+
+信号文件机制：
+- 每个 Task 完成时在 `.aigne/doc-smith/cache/task-status/` 写入 `{slug}.status` 文件
+- slug 规则：docPath 去除 `/` 前缀后以 `-` 替换 `/`，再拼接 `-{targetLang}`（如 `/api/overview` → `en` = `api-overview-en`）
+- 状态文件内容为 1 行摘要（如 `/overview → en: 成功 | hash: abc123`）
+- 主 agent 通过轮询 `.status` 文件判断 Task 是否完成（见"批次执行流程"）
 
 ### 5. 图片翻译约束
 
@@ -105,11 +111,73 @@ dist/{source}/docs/{path}.html → dist/{target}/docs/{path}.html
 
 ### 并行翻译文档
 
+每个翻译任务使用单独的 Task tool 生成（≤ 5 个并行，> 5 个分批）。**必须使用 `run_in_background: true` 分发 Task**。必须使用以下模板构造 Task prompt：
+
 ```
-按 references/translate-document.md 流程使用单独的 Task tool 并行翻译以下文档：
-- docPath=/overview, targetLanguage=en, sourceLanguage=zh, force=false
-- docPath=/api/auth, targetLanguage=en, sourceLanguage=zh, force=false
+你是文档翻译代理。请先用 Read 工具读取 {TRANSLATE_DOC_MD_PATH} 作为你的完整工作流程，然后严格按照其中的步骤执行。
+
+你的翻译任务参数如下：
+- docPath：{DOC_PATH}
+- targetLanguage：{TARGET_LANG}
+- sourceLanguage：{SOURCE_LANG}
+- force：{FORCE}
+- glossary：{GLOSSARY}
+- 状态文件路径：{STATUS_FILE_PATH}
+
+完成检查清单（必须在写入状态文件前逐项确认）：
+□ 步骤 2 增量检查：已验证是否需要翻译
+□ 步骤 3 提取：已提取 4 个可翻译区域
+□ 步骤 4 翻译：已完成翻译并保持 HTML 结构
+□ 步骤 5 组装：已保存目标语言 HTML
+□ 步骤 6 Meta：已更新 .meta.yaml
+□ 状态文件：已将 1 行摘要写入 {STATUS_FILE_PATH}
 ```
+
+**模板变量说明**：
+- `{TRANSLATE_DOC_MD_PATH}`：`references/translate-document.md` 的绝对路径
+- `{DOC_PATH}`：文档路径，如 `/overview`
+- `{TARGET_LANG}`：目标语言代码，如 `en`
+- `{SOURCE_LANG}`：源语言代码，如 `zh`
+- `{FORCE}`：是否强制翻译
+- `{GLOSSARY}`：术语表内容（如有）
+- `{STATUS_FILE_PATH}`：`.aigne/doc-smith/cache/task-status/{slug}.status`
+
+### 批次执行流程
+
+#### 准备阶段
+
+分发第一个 Task 前：
+1. `mkdir -p .aigne/doc-smith/cache/task-status`
+2. `rm -f .aigne/doc-smith/cache/task-status/*.status`（清空旧状态）
+
+#### 分发阶段
+
+每个 Task 使用 `run_in_background: true` 分发。批次内所有 Task 同时启动。
+
+#### 等待阶段
+
+每 15 秒检查 `.status` 文件数量：
+
+```bash
+ls .aigne/doc-smith/cache/task-status/*.status 2>/dev/null | wc -l
+```
+
+- 文件数 = 当前批次任务数 → 该批次完成
+- 超时：单批最多等待 10 分钟，超时后报告缺失文档
+- **不要读取后台 Task 的 output_file**（可能 300K+），只读 `.status` 文件
+
+#### 收集结果
+
+```bash
+cat .aigne/doc-smith/cache/task-status/*.status
+```
+
+每个文件 1 行，所有翻译摘要汇总后通常不超过 20 行。
+
+#### 失败处理
+
+- `.status` 内容以"失败"开头 → 记录失败原因，不阻塞后续批次
+- 超时未产生 `.status` → 标记为超时，在最终报告中提示用户重试
 
 ### 翻译图片
 
