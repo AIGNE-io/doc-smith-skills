@@ -2,7 +2,7 @@
 
 English | [中文](./README.zh.md)
 
-Claude Code Skills for AI-powered documentation generation and management.
+Claude Code Skills for AI-powered documentation generation, translation, and publishing.
 
 ## Prerequisites
 
@@ -51,12 +51,17 @@ Simply tell Claude Code:
 
 | Skill | Description |
 |-------|-------------|
-| [doc-smith-create](#doc-smith-create) | Generate and update comprehensive documentation from workspace data sources |
-| [doc-smith-images](#doc-smith-images) | Generate images using AI (diagrams, flowcharts, architecture diagrams) |
-| [doc-smith-check](#doc-smith-check) | Validate documentation structure and content integrity |
+| [doc-smith-create](#doc-smith-create) | Generate and update structured documentation from project data sources |
 | [doc-smith-localize](#doc-smith-localize) | Translate documents to multiple languages |
-| [doc-smith-publish](#doc-smith-publish) | Publish documents to online platforms |
-| [doc-smith-clear](#doc-smith-clear) | Clear site authorization and deployment configuration |
+| [doc-smith-publish](#doc-smith-publish) | Publish documents to DocSmith Cloud for online preview |
+
+Internal skills (called automatically by the above, not invoked directly):
+
+| Skill | Description |
+|-------|-------------|
+| doc-smith-build | Build Markdown documentation into static HTML |
+| doc-smith-check | Validate document structure and content integrity |
+| doc-smith-images | Generate images using AI (diagrams, flowcharts, architecture diagrams) |
 
 ---
 
@@ -76,7 +81,8 @@ Generate comprehensive documentation from code repositories, text files, and med
 - Analyzes source code and project structure
 - Infers user intent and target audience
 - Plans document structure with user confirmation
-- Generates organized Markdown documentation
+- Generates organized documentation with HTML output
+- AI-generated images for diagrams and architecture charts
 - Supports technical docs, user guides, API references, and tutorials
 
 ---
@@ -91,62 +97,79 @@ Translate documents to multiple languages with batch processing and terminology 
 
 # Translate to multiple languages
 /doc-smith-localize --lang en --lang ja
+
+# Translate specific document
+/doc-smith-localize --lang en --path /overview
+
+# Force re-translate
+/doc-smith-localize --lang en --force
 ```
 
 **Features:**
+- HTML-to-HTML translation (no intermediate Markdown step)
 - Batch translation with progress tracking
 - Terminology consistency across documents
 - Image text translation support
-- Incremental translation (skip already translated)
+- Incremental translation with hash-based change detection
 
 ---
 
 ### doc-smith-publish
 
-Publish generated documents to online platforms.
+Publish generated documents to DocSmith Cloud for online preview.
 
 ```bash
-# Publish to last used target (reads appUrl from config.yaml)
+# Publish with default settings
 /doc-smith-publish
 
-# Publish to specific URL
-/doc-smith-publish --url https://example.com/docs
+# Publish specific directory
+/doc-smith-publish --dir .aigne/doc-smith/dist
+
+# Publish to custom hub
+/doc-smith-publish --hub https://custom.hub.io
 ```
 
 **Features:**
-- Publish to ArcBlock-powered documentation sites
+- One-click publish to DocSmith Cloud
 - Automatic asset upload and optimization
-- Version management support
+- Returns online preview URL
 
 ## Workspace Structure
 
-DocSmith creates a workspace in `.aigne/doc-smith/` directory:
+DocSmith creates a workspace in `.aigne/doc-smith/` directory with its own git repository:
 
 ```
 my-project/                            # Your project directory (cwd)
 ├── .aigne/
-│   └── doc-smith/                     # DocSmith workspace
+│   └── doc-smith/                     # DocSmith workspace (independent git repo)
 │       ├── config.yaml                # Workspace configuration
 │       ├── intent/
 │       │   └── user-intent.md         # User intent description
 │       ├── planning/
 │       │   └── document-structure.yaml # Document structure plan
-│       ├── docs/                      # Generated documentation
-│       │   ├── overview/
-│       │   │   ├── .meta.yaml         # Metadata (kind/source/default)
-│       │   │   ├── zh.md              # Chinese version
-│       │   │   └── en.md              # English version
-│       │   └── api/
-│       │       └── authentication/
-│       │           ├── .meta.yaml
-│       │           ├── zh.md
-│       │           └── en.md
-│       ├── assets/                    # Generated images
+│       ├── docs/                      # Document metadata
+│       │   └── overview/
+│       │       └── .meta.yaml         # Metadata (kind/source/default)
+│       ├── dist/                      # Built HTML output
+│       │   ├── index.html             # Redirect to default language
+│       │   ├── zh/
+│       │   │   ├── index.html
+│       │   │   └── docs/
+│       │   │       └── overview.html
+│       │   ├── en/
+│       │   │   ├── index.html
+│       │   │   └── docs/
+│       │   │       └── overview.html
+│       │   └── assets/
+│       │       ├── docsmith.css       # Built-in styles
+│       │       ├── theme.css          # User theme
+│       │       └── nav.js            # Navigation data (sidebar + language switcher)
+│       ├── assets/                    # Generated image assets
 │       │   └── architecture/
 │       │       ├── .meta.yaml
 │       │       └── images/
-│       │           ├── zh.png         # Chinese version
-│       │           └── en.png         # English version
+│       │           ├── zh.png
+│       │           └── en.png
 │       └── cache/                     # Temporary data (not in git)
 ├── src/                               # Project source code (data source)
 └── ...

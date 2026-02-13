@@ -2,7 +2,7 @@
 
 [English](./README.md) | 中文
 
-AI 驱动的文档生成和管理 Claude Code Skills。
+AI 驱动的文档生成、翻译和发布 Claude Code Skills。
 
 ## 前置条件
 
@@ -52,11 +52,16 @@ npx add-skill AIGNE-io/doc-smith-skills
 | Skill | 说明 |
 |-------|------|
 | [doc-smith-create](#doc-smith-create) | 从工作区数据源生成和更新结构化文档 |
-| [doc-smith-images](#doc-smith-images) | 使用 AI 生成图片（图表、流程图、架构图） |
-| [doc-smith-check](#doc-smith-check) | 验证文档结构和内容完整性 |
 | [doc-smith-localize](#doc-smith-localize) | 将文档翻译成多种语言 |
-| [doc-smith-publish](#doc-smith-publish) | 发布文档到在线平台 |
-| [doc-smith-clear](#doc-smith-clear) | 清除站点授权和部署配置 |
+| [doc-smith-publish](#doc-smith-publish) | 发布文档到 DocSmith Cloud 在线预览 |
+
+内部 Skills（由以上 Skills 自动调用，无需手动使用）：
+
+| Skill | 说明 |
+|-------|------|
+| doc-smith-build | 将 Markdown 文档构建为静态 HTML |
+| doc-smith-check | 验证文档结构和内容完整性 |
+| doc-smith-images | 使用 AI 生成图片（图表、流程图、架构图） |
 
 ---
 
@@ -76,7 +81,8 @@ npx add-skill AIGNE-io/doc-smith-skills
 - 分析源代码和项目结构
 - 推断用户意图和目标受众
 - 规划文档结构并与用户确认
-- 生成组织良好的 Markdown 文档
+- 生成组织良好的文档，输出为 HTML 格式
+- AI 生成图片（图表、架构图等）
 - 支持技术文档、用户指南、API 参考和教程
 
 ---
@@ -91,62 +97,79 @@ npx add-skill AIGNE-io/doc-smith-skills
 
 # 翻译到多个语言
 /doc-smith-localize --lang en --lang ja
+
+# 只翻译指定文档
+/doc-smith-localize --lang en --path /overview
+
+# 强制重新翻译
+/doc-smith-localize --lang en --force
 ```
 
 **功能特性：**
+- HTML 到 HTML 直接翻译（无中间 Markdown 步骤）
 - 批量翻译，支持进度跟踪
 - 跨文档术语一致性
 - 图片文字翻译支持
-- 增量翻译（跳过已翻译内容）
+- 基于 hash 的增量翻译（自动跳过未变更内容）
 
 ---
 
 ### doc-smith-publish
 
-发布生成的文档到在线平台。
+将生成的文档一键发布到 DocSmith Cloud，获取在线预览地址。
 
 ```bash
-# 发布到上次使用的目标（从 config.yaml 读取 appUrl）
+# 使用默认设置发布
 /doc-smith-publish
 
-# 发布到指定 URL
-/doc-smith-publish --url https://example.com/docs
+# 指定发布目录
+/doc-smith-publish --dir .aigne/doc-smith/dist
+
+# 发布到自定义 Hub
+/doc-smith-publish --hub https://custom.hub.io
 ```
 
 **功能特性：**
-- 发布到 ArcBlock 驱动的文档站点
+- 一键发布到 DocSmith Cloud
 - 自动资源上传和优化
-- 版本管理支持
+- 返回在线预览 URL
 
 ## Workspace 目录结构
 
-DocSmith 在 `.aigne/doc-smith/` 目录创建 workspace：
+DocSmith 在 `.aigne/doc-smith/` 目录创建独立的 workspace（含独立 git 仓库）：
 
 ```
 my-project/                            # 用户的项目目录（cwd）
 ├── .aigne/
-│   └── doc-smith/                     # DocSmith workspace
+│   └── doc-smith/                     # DocSmith workspace（独立 git 仓库）
 │       ├── config.yaml                # Workspace 配置文件
 │       ├── intent/
 │       │   └── user-intent.md         # 用户意图描述
 │       ├── planning/
 │       │   └── document-structure.yaml # 文档结构计划
-│       ├── docs/                      # 生成的文档
-│       │   ├── overview/
-│       │   │   ├── .meta.yaml         # 元信息 (kind/source/default)
-│       │   │   ├── zh.md              # 中文版本
-│       │   │   └── en.md              # 英文版本
-│       │   └── api/
-│       │       └── authentication/
-│       │           ├── .meta.yaml
-│       │           ├── zh.md
-│       │           └── en.md
+│       ├── docs/                      # 文档元数据
+│       │   └── overview/
+│       │       └── .meta.yaml         # 元信息 (kind/source/default)
+│       ├── dist/                      # 构建后的 HTML 输出
+│       │   ├── index.html             # 重定向到默认语言
+│       │   ├── zh/
+│       │   │   ├── index.html
+│       │   │   └── docs/
+│       │   │       └── overview.html
+│       │   ├── en/
+│       │   │   ├── index.html
+│       │   │   └── docs/
+│       │   │       └── overview.html
+│       │   └── assets/
+│       │       ├── docsmith.css       # 内置基础样式
+│       │       ├── theme.css          # 用户主题
+│       │       └── nav.js            # 导航数据（侧边栏 + 语言切换）
 │       ├── assets/                    # 生成的图片资源
 │       │   └── architecture/
 │       │       ├── .meta.yaml
 │       │       └── images/
-│       │           ├── zh.png         # 中文版本
-│       │           └── en.png         # 英文版本
+│       │           ├── zh.png
+│       │           └── en.png
 │       └── cache/                     # 临时数据（不纳入 git）
 ├── src/                               # 项目源代码（数据源）
 └── ...

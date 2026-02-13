@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 
 /**
  * 将 Image Agent 生成的图片保存到指定路径
@@ -30,15 +31,30 @@ export default async function saveImage(input) {
   const outputDir = path.dirname(savePath);
   await fs.mkdir(outputDir, { recursive: true });
 
-  // 复制图片到目标路径
+  // 获取源文件大小
+  const sourceStats = await fs.stat(sourcePath);
+  const sourceSizeKB = sourceStats.size / 1024;
+
+  // 压缩并保存图片
   try {
-    await fs.copyFile(sourcePath, savePath);
+    await sharp(sourcePath)
+      .png({ compressionLevel: 9, palette: true })
+      .toFile(savePath);
+
     const stats = await fs.stat(savePath);
     const sizeKB = (stats.size / 1024).toFixed(1);
+    const ratio = ((1 - stats.size / sourceStats.size) * 100).toFixed(0);
 
-    return { message: `图片已保存到 ${savePath}（${sizeKB} KB）` };
-  } catch (err) {
-    return { message: `保存失败：${err.message}` };
+    return { message: `图片已保存到 ${savePath}（${sizeKB} KB，压缩 ${ratio}%）` };
+  } catch {
+    // sharp 失败时回退到直接复制
+    try {
+      await fs.copyFile(sourcePath, savePath);
+      const sizeKB = sourceSizeKB.toFixed(1);
+      return { message: `图片已保存到 ${savePath}（${sizeKB} KB，未压缩）` };
+    } catch (err) {
+      return { message: `保存失败：${err.message}` };
+    }
   }
 }
 

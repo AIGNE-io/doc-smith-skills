@@ -23,7 +23,7 @@ export default async function prepareEditInput(input) {
     sourceLocale = "zh",
     targetLocale = "",
     aspectRatio = "4:3",
-    size = "2K",
+    size = "1K",
   } = input;
 
   try {
@@ -132,7 +132,7 @@ prepareEditInput.input_schema = {
     size: {
       type: "string",
       description: "图片尺寸",
-      default: "2K",
+      default: "1K",
     },
   },
 };

@@ -37,7 +37,7 @@ input_schema:
     size:
       type: string
       description: 图片尺寸
-      default: "2K"
+      default: "1K"
     aspectRatio:
       type: string
       description: 宽高比
