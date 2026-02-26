@@ -1,67 +1,109 @@
-# doc-smith-skills
+# DocSmith Skills
 
-English | [中文](./README.zh.md)
+<p align="center">
+  <img src="./logo/logo.svg" alt="DocSmith Skills" width="120">
+</p>
 
-Claude Code Skills for AI-powered documentation generation, translation, and publishing.
+<p align="center">
+  <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FAIGNE-io%2Fdoc-smith-skills%2Fmain%2F.claude-plugin%2Fmarketplace.json&query=%24.metadata.version&label=version&style=for-the-badge&color=blue" alt="Version">
+  <img src="https://img.shields.io/badge/Agent_Skill-blueviolet?style=for-the-badge" alt="Agent Skill">
+  <img src="https://img.shields.io/badge/MCP-Compatible-blue?style=for-the-badge" alt="MCP Compatible">
+  <img src="https://img.shields.io/badge/license-Elastic--2.0-green?style=for-the-badge" alt="License">
+  <a href="https://github.com/AIGNE-io/doc-smith-skills/stargazers">
+    <img src="https://img.shields.io/github/stars/AIGNE-io/doc-smith-skills?style=for-the-badge" alt="GitHub Stars">
+  </a>
+</p>
 
-## Prerequisites
+<p align="center">
+  English | <a href="./README.zh.md">中文</a>
+</p>
 
-- [Claude Code](https://claude.com/claude-code) installed
-- AIGNE CLI installed: `npm i -g @aigne/cli`
+AI-powered documentation generation, translation, and publishing — all from your coding agent.
+Analyze your project, plan document structure, generate beautiful HTML docs, translate to any language, and publish online.
+
+## How it Works
+
+```mermaid
+flowchart LR
+    A[Analyze Project] --> B[Plan Structure]
+    B --> C[Generate Docs]
+    C --> D[Translate]
+    D --> E[Publish]
+
+    A -.- A1[Source code & project files]
+    B -.- B1[User confirms outline]
+    C -.- C1[HTML with AI images]
+    D -.- D1[Multi-language support]
+    E -.- E1[DocSmith Cloud URL]
+```
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Smart Analysis** | Scans source code, README, configs to understand your project |
+| **Structured Planning** | Generates document outline for user review before writing |
+| **HTML Generation** | Produces clean, navigable HTML documentation |
+| **AI Images** | Auto-generates diagrams, flowcharts, and architecture charts |
+| **Multi-language** | Translates docs to any language with terminology consistency |
+| **Incremental Updates** | Hash-based change detection — only re-translates what changed |
+| **One-click Publish** | Deploy to DocSmith Cloud and get a shareable preview URL |
 
 ## Installation
-
-### Quick Install (Recommended)
 
 ```bash
 npx skills add AIGNE-io/doc-smith-skills
 ```
 
-### Register as Plugin Marketplace
+> Powered by [skills](https://github.com/vercel-labs/skills) — supports Claude Code, Cursor, Codex, Gemini CLI, and [35+ more agents](https://github.com/vercel-labs/skills#supported-agents).
 
-Run the following command in Claude Code:
+Or simply tell your AI coding agent:
+
+> Please install Skills from github.com/AIGNE-io/doc-smith-skills
+
+<details>
+<summary><b>Via Claude Code Plugin Marketplace</b></summary>
 
 ```bash
+# Register marketplace
 /plugin marketplace add AIGNE-io/doc-smith-skills
-```
 
-### Install Skills
-
-**Option 1: Via Browse UI**
-
-1. Select **Browse and install plugins**
-2. Select **doc-smith-skills**
-3. Select the plugin(s) you want to install
-4. Select **Install now**
-
-**Option 2: Direct Install**
-
-```bash
-# Install specific plugin
+# Install plugin
 /plugin install doc-smith@doc-smith-skills
 ```
 
-**Option 3: Ask the Agent**
+</details>
 
-Simply tell Claude Code:
+## Quick Start
 
-> Please install Skills from github.com/ArcBlock/doc-smith-skills
+```bash
+# Generate documentation for your project
+/doc-smith-create Generate English documentation for the current project
+
+# Translate to other languages
+/doc-smith-localize --lang en --lang ja
+
+# Publish online
+/doc-smith-publish
+```
+
+That's it! DocSmith handles analysis, generation, translation, and publishing automatically.
 
 ## Available Skills
 
 | Skill | Description |
 |-------|-------------|
-| [doc-smith-create](#doc-smith-create) | Generate and update structured documentation from project data sources |
+| [doc-smith-create](#doc-smith-create) | Generate structured documentation from project sources |
 | [doc-smith-localize](#doc-smith-localize) | Translate documents to multiple languages |
-| [doc-smith-publish](#doc-smith-publish) | Publish documents to DocSmith Cloud for online preview |
+| [doc-smith-publish](#doc-smith-publish) | Publish to DocSmith Cloud for online preview |
 
-Internal skills (called automatically by the above, not invoked directly):
+Internal skills (called automatically, not invoked directly):
 
 | Skill | Description |
 |-------|-------------|
-| doc-smith-build | Build Markdown documentation into static HTML |
+| doc-smith-build | Build Markdown into static HTML |
 | doc-smith-check | Validate document structure and content integrity |
-| doc-smith-images | Generate images using AI (diagrams, flowcharts, architecture diagrams) |
+| doc-smith-images | Generate AI images (diagrams, flowcharts, architecture) |
 
 ---
 
@@ -70,20 +112,21 @@ Internal skills (called automatically by the above, not invoked directly):
 Generate comprehensive documentation from code repositories, text files, and media resources.
 
 ```bash
-# Generate English documentation for current project
 /doc-smith-create Generate English documentation for the current project
-
-# Generate Chinese documentation
 /doc-smith-create 为当前项目生成中文文档
 ```
 
-**Features:**
+<details>
+<summary><b>Features & Details</b></summary>
+
 - Analyzes source code and project structure
 - Infers user intent and target audience
 - Plans document structure with user confirmation
 - Generates organized documentation with HTML output
 - AI-generated images for diagrams and architecture charts
 - Supports technical docs, user guides, API references, and tutorials
+
+</details>
 
 ---
 
@@ -92,25 +135,31 @@ Generate comprehensive documentation from code repositories, text files, and med
 Translate documents to multiple languages with batch processing and terminology consistency.
 
 ```bash
-# Translate all docs to English
 /doc-smith-localize --lang en
-
-# Translate to multiple languages
 /doc-smith-localize --lang en --lang ja
-
-# Translate specific document
-/doc-smith-localize --lang en --path /overview
-
-# Force re-translate
-/doc-smith-localize --lang en --force
 ```
 
-**Features:**
+<details>
+<summary><b>Options</b></summary>
+
+| Option | Description |
+|--------|-------------|
+| `--lang <code>` | Target language code (repeatable) |
+| `--path <path>` | Translate specific document only |
+| `--force` | Force re-translate all documents |
+
+</details>
+
+<details>
+<summary><b>Features & Details</b></summary>
+
 - HTML-to-HTML translation (no intermediate Markdown step)
 - Batch translation with progress tracking
 - Terminology consistency across documents
 - Image text translation support
 - Incremental translation with hash-based change detection
+
+</details>
 
 ---
 
@@ -119,27 +168,37 @@ Translate documents to multiple languages with batch processing and terminology 
 Publish generated documents to DocSmith Cloud for online preview.
 
 ```bash
-# Publish with default settings
 /doc-smith-publish
-
-# Publish specific directory
-/doc-smith-publish --dir .aigne/doc-smith/dist
-
-# Publish to custom hub
-/doc-smith-publish --hub https://custom.hub.io
 ```
 
-**Features:**
+<details>
+<summary><b>Options</b></summary>
+
+| Option | Description |
+|--------|-------------|
+| `--dir <path>` | Publish specific directory (default: `.aigne/doc-smith/dist`) |
+| `--hub <url>` | Custom hub URL |
+
+</details>
+
+<details>
+<summary><b>Features & Details</b></summary>
+
 - One-click publish to DocSmith Cloud
 - Automatic asset upload and optimization
 - Returns online preview URL
 
+</details>
+
 ## Workspace Structure
 
-DocSmith creates a workspace in `.aigne/doc-smith/` directory with its own git repository:
+DocSmith creates a workspace in `.aigne/doc-smith/` with its own git repository:
+
+<details>
+<summary><b>View directory layout</b></summary>
 
 ```
-my-project/                            # Your project directory (cwd)
+my-project/
 ├── .aigne/
 │   └── doc-smith/                     # DocSmith workspace (independent git repo)
 │       ├── config.yaml                # Workspace configuration
@@ -148,32 +207,54 @@ my-project/                            # Your project directory (cwd)
 │       ├── planning/
 │       │   └── document-structure.yaml # Document structure plan
 │       ├── docs/                      # Document metadata
-│       │   └── overview/
-│       │       └── .meta.yaml         # Metadata (kind/source/default)
 │       ├── dist/                      # Built HTML output
-│       │   ├── index.html             # Redirect to default language
-│       │   ├── zh/
-│       │   │   ├── index.html
-│       │   │   └── docs/
-│       │   │       └── overview.html
-│       │   ├── en/
-│       │   │   ├── index.html
-│       │   │   └── docs/
-│       │   │       └── overview.html
-│       │   └── assets/
-│       │       ├── docsmith.css       # Built-in styles
-│       │       ├── theme.css          # User theme
-│       │       └── nav.js            # Navigation data (sidebar + language switcher)
+│       │   ├── zh/                    # Chinese docs
+│       │   ├── en/                    # English docs
+│       │   └── assets/               # Styles, scripts, images
 │       ├── assets/                    # Generated image assets
-│       │   └── architecture/
-│       │       ├── .meta.yaml
-│       │       └── images/
-│       │           ├── zh.png
-│       │           └── en.png
 │       └── cache/                     # Temporary data (not in git)
-├── src/                               # Project source code (data source)
-└── ...
 ```
+
+</details>
+
+## FAQ
+
+<details>
+<summary><b>What project types does DocSmith support?</b></summary>
+
+DocSmith works with any project — it analyzes source code, configuration files, README, and other project files regardless of language or framework.
+
+</details>
+
+<details>
+<summary><b>Where is the workspace located?</b></summary>
+
+All DocSmith data lives in `.aigne/doc-smith/` under your project root. It uses its own git repository, so it won't interfere with your project's version control.
+
+</details>
+
+<details>
+<summary><b>How does incremental translation work?</b></summary>
+
+DocSmith uses content hashing to detect changes. When you run `/doc-smith-localize`, only documents that have changed since the last translation will be re-translated. Use `--force` to override this behavior.
+
+</details>
+
+<details>
+<summary><b>Can I customize the output theme?</b></summary>
+
+Yes. DocSmith generates a `theme.css` file in the dist assets directory. You can modify it to customize colors, fonts, and layout.
+
+</details>
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a [Pull Request](https://github.com/AIGNE-io/doc-smith-skills/pulls).
+
+## Support
+
+- [GitHub Issues](https://github.com/AIGNE-io/doc-smith-skills/issues) — Bug reports and feature requests
+- [ArcBlock](https://www.arcblock.io) — Learn more about ArcBlock
 
 ## Author
 
@@ -183,4 +264,4 @@ GitHub: [@ArcBlock](https://github.com/ArcBlock)
 
 ## License
 
-Elastic-2.0 License
+Elastic-2.0
