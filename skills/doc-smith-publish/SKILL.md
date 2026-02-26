@@ -50,6 +50,14 @@ test -d {skill_path}/scripts/node_modules || (cd {skill_path}/scripts && npm ins
 
 如果 config.yaml 不存在或字段缺失，使用目录名作为标题。
 
+### 步骤 3.5：检测 GitHub 仓库信息
+
+发布脚本会自动执行以下检测（无需手动操作）：
+
+1. 执行 `git remote get-url origin`，判断当前项目是否托管在 GitHub
+2. 如果是 GitHub 仓库，调用 GitHub API 获取仓库 owner 的头像 URL 作为 coverImage
+3. 这两个字段会自动附加到发布请求中，如果获取失败则静默忽略
+
 ### 步骤 4：执行发布
 
 构造配置 JSON 并调用发布脚本：
@@ -68,6 +76,8 @@ node {skill_path}/scripts/publish.mjs --config-stdin <<'EOF'
 }
 EOF
 ```
+
+> **注意**：`githubRepo` 和 `coverImage` 由脚本自动检测，通常不需要在配置中手动指定。如需覆盖，可在 `metadata` 中添加 `"githubRepo": "..."` 和 `"coverImage": "..."`。
 
 **变量说明**：
 - `{skill_path}`：本 Skill 目录路径

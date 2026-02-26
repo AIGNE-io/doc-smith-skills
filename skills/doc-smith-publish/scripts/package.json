@@ -1,6 +1,6 @@
 {
   "name": "docsmith-publish-scripts",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "type": "module",
   "description": "Scripts for publishing to DocSmith Cloud",
   "main": "publish.mjs",

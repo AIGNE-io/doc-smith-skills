@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { stat } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import chalk from "chalk";
@@ -16,6 +17,48 @@ import { uploadFile } from "./utils/upload.mjs";
 import { getPublishHistory, savePublishHistory } from "./utils/history.mjs";
 
 /**
+ * Get GitHub repository URL from git remote
+ * @returns {string} GitHub repository URL or empty string
+ */
+function getGithubRepoUrl() {
+  try {
+    const gitRemote = execSync("git remote get-url origin", {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "ignore"],
+    }).trim();
+
+    if (gitRemote.includes("github.com")) {
+      return gitRemote;
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Get GitHub owner avatar URL via GitHub API
+ * @param {string} repoUrl - GitHub repository URL
+ * @returns {Promise<string>} Avatar URL or empty string
+ */
+async function getGithubAvatar(repoUrl) {
+  try {
+    const match = repoUrl.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/);
+    if (!match) return "";
+
+    const [, owner, repo] = match;
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+
+    if (!response.ok) return "";
+
+    const data = await response.json();
+    return data.owner?.avatar_url || "";
+  } catch {
+    return "";
+  }
+}
+
+/**
  * Main publish function
  */
 async function publish(options) {
@@ -26,6 +69,8 @@ async function publish(options) {
     desc,
     visibility = "public",
     workspace,
+    githubRepo: githubRepoOverride,
+    coverImage: coverImageOverride,
   } = options;
 
   let cleanup = null;
@@ -114,6 +159,18 @@ async function publish(options) {
       }
     }
 
+    // Detect GitHub repo info
+    let githubRepo = githubRepoOverride || "";
+    let coverImage = coverImageOverride || "";
+
+    if (!githubRepo) {
+      githubRepo = getGithubRepoUrl();
+    }
+
+    if (githubRepo && !coverImage) {
+      coverImage = await getGithubAvatar(githubRepo);
+    }
+
     // Execute publish action
     console.log(chalk.cyan("\nPublishing..."));
 
@@ -127,6 +184,8 @@ async function publish(options) {
     if (title) actionData.title = title;
     if (desc) actionData.description = desc;
     if (visibility) actionData.visibility = visibility;
+    if (githubRepo) actionData.githubRepo = githubRepo;
+    if (coverImage) actionData.coverImage = coverImage;
 
     let actionResult;
     try {
@@ -223,6 +282,8 @@ function parseConfig(config) {
     if (config.metadata.title) options.title = config.metadata.title;
     if (config.metadata.description) options.desc = config.metadata.description;
     if (config.metadata.visibility) options.visibility = config.metadata.visibility;
+    if (config.metadata.githubRepo) options.githubRepo = config.metadata.githubRepo;
+    if (config.metadata.coverImage) options.coverImage = config.metadata.coverImage;
   }
 
   // Parse hub URL
