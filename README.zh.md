@@ -18,8 +18,29 @@
   <a href="./README.md">English</a> | 中文
 </p>
 
-AI 驱动的文档生成、翻译和发布 — 一切通过你的 AI 编程助手完成。
-分析项目、规划结构、生成精美 HTML 文档、翻译成任意语言、一键发布上线。
+<p align="center">
+  <a href="https://docsmith.aigne.io">官方网站</a> · <a href="https://docsmith.aigne.io/en/showcase">案例展示</a> · <a href="https://github.com/AIGNE-io/doc-smith-skills/issues">报告问题</a>
+</p>
+
+一条斜杠命令，将代码仓库变成精美文档站 — 分析、生成、翻译、发布，全在 AI 编程助手中完成。
+
+> **看看实际效果** — 浏览 DocSmith 生成的真实文档站点：[案例展示](https://docsmith.aigne.io/en/showcase)
+
+## 目录
+
+- [工作流程](#工作流程)
+- [核心能力](#核心能力)
+- [环境要求](#环境要求)
+- [安装](#安装)
+- [快速开始](#快速开始)
+- [可用 Skills](#可用-skills)
+  - [doc-smith-create](#doc-smith-create)
+  - [doc-smith-localize](#doc-smith-localize)
+  - [doc-smith-publish](#doc-smith-publish)
+- [Workspace 目录结构](#workspace-目录结构)
+- [常见问题](#常见问题)
+- [贡献](#贡献)
+- [许可](#许可)
 
 ## 工作流程
 
@@ -49,13 +70,18 @@ flowchart LR
 | **增量更新** | 基于 hash 的变更检测 — 只重新翻译有变化的内容 |
 | **一键发布** | 部署到 DocSmith Cloud，获取可分享的预览链接 |
 
+## 环境要求
+
+- 支持 Skills 的 AI 编程助手 — [Claude Code](https://claude.com/claude-code)、[Cursor](https://cursor.sh)、[Codex](https://openai.com/codex)、[Gemini CLI](https://github.com/google-gemini/gemini-cli) 或 [35+ 更多](https://github.com/vercel-labs/skills#supported-agents)
+- [Node.js](https://nodejs.org) >= 18
+
 ## 安装
 
 ```bash
 npx skills add AIGNE-io/doc-smith-skills
 ```
 
-> 基于 [skills](https://github.com/vercel-labs/skills) — 支持 Claude Code、Cursor、Codex、Gemini CLI 及 [35+ 更多 Agent](https://github.com/vercel-labs/skills#supported-agents)。
+> 基于 [skills](https://github.com/vercel-labs/skills) — AI 编程助手的通用技能格式。
 
 或者直接告诉你的 AI 编程助手：
 
@@ -76,18 +102,31 @@ npx skills add AIGNE-io/doc-smith-skills
 
 ## 快速开始
 
+**第 1 步** — 生成文档：
+
 ```bash
-# 为当前项目生成文档
 /doc-smith-create 为当前项目生成中文文档
+```
 
-# 翻译到其他语言
+DocSmith 会分析项目，然后展示文档大纲供你确认。
+确认后，它会在 `.aigne/doc-smith/dist/` 目录中生成完整的 HTML 文档和 AI 图片。
+
+**第 2 步** — 翻译到其他语言（可选）：
+
+```bash
+/doc-smith-localize 把文档翻译成英文和日文
 /doc-smith-localize --lang en --lang ja
+```
 
-# 发布上线
+只有变更过的文档会被重新翻译。使用 `--force` 强制全量翻译。
+
+**第 3 步** — 发布上线：
+
+```bash
 /doc-smith-publish
 ```
 
-就这么简单！DocSmith 会自动完成分析、生成、翻译和发布。
+将文档上传到 DocSmith Cloud，返回可分享的在线链接。
 
 ## 可用 Skills
 
@@ -135,7 +174,8 @@ npx skills add AIGNE-io/doc-smith-skills
 将文档翻译成多种语言，支持批量翻译和术语一致性。
 
 ```bash
-/doc-smith-localize --lang en
+/doc-smith-localize 把文档翻译成英文
+/doc-smith-localize Translate docs to English and Japanese
 /doc-smith-localize --lang en --lang ja
 ```
 
@@ -254,6 +294,7 @@ DocSmith 使用内容 hash 检测变更。运行 `/doc-smith-localize` 时，只
 ## 支持
 
 - [GitHub Issues](https://github.com/AIGNE-io/doc-smith-skills/issues) — Bug 报告和功能建议
+- [官方网站](https://docsmith.aigne.io) — 文档和案例展示
 - [ArcBlock](https://www.arcblock.io) — 了解更多关于 ArcBlock
 
 ## 作者
@@ -264,4 +305,4 @@ GitHub: [@ArcBlock](https://github.com/ArcBlock)
 
 ## 许可
 
-Elastic-2.0
+[Elastic-2.0](./LICENSE)

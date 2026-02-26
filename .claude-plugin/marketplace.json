@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "DocSmith - AI-powered documentation generation, translation, and publishing skills",
-    "version": "0.0.3"
+    "version": "0.0.4"
   },
   "plugins": [
     {
@@ -20,7 +20,6 @@
         "./skills/doc-smith-check",
         "./skills/doc-smith-publish",
         "./skills/doc-smith-localize",
-        "./skills/doc-smith-clear",
         "./skills/doc-smith-build"
       ]
     }
