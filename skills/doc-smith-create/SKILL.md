@@ -180,6 +180,22 @@ node skills/doc-smith-build/scripts/build.mjs \
   --nav --workspace .aigne/doc-smith --output .aigne/doc-smith/dist
 ```
 
+### 图片后端预检测
+
+**在分发内容生成 Task 之前**，主 agent 执行一次图片后端检测，确定可用后端。后台 Task 无法与用户交互，因此必须在前台完成检测。
+
+检测逻辑与 `doc-smith-images` 的「后端检测」部分相同：
+1. 检查 `GEMINI_API_KEY` 是否已设置 → 选定 `gemini-sdk`
+2. 否则检查 AFS CLI 是否可用 → 选定 `afs-cli`
+3. 均不可用 → **必须使用 AskUserQuestion 让用户选择**（配置 API Key / 安装 AFS CLI / 跳过图片生成），禁止自动默认为 skip
+
+检测结果记为 `{IMAGE_BACKEND}`（值为 `gemini-sdk`、`afs-cli` 或 `skip`），传入每个 Task 的 prompt 模板。只有用户明确选择跳过时才可设为 `skip`。
+
+若 `{IMAGE_BACKEND}` 为 `gemini-sdk`，还需确保依赖已安装：
+```bash
+ls <skill-directory>/scripts/node_modules/@google/genai 2>/dev/null || (cd <skill-directory>/scripts && npm install)
+```
+
 ### 并行生成文档内容
 
 每篇文档使用单独的 Task tool 生成（≤ 5 篇并行，> 5 篇分批）。**必须使用 `run_in_background: true` 分发 Task**。必须使用以下模板构造 Task prompt，不得自行概括 content.md 内容：
@@ -194,9 +210,10 @@ node skills/doc-smith-build/scripts/build.mjs \
 - mediaFiles：{MEDIA_FILES}
 - 用户意图摘要：{INTENT_SUMMARY}
 - 状态文件路径：{STATUS_FILE_PATH}
+- 图片后端：{IMAGE_BACKEND}
 
 关键工具说明：
-- 使用 Skill 工具调用 /doc-smith-images 生成图片（步骤 5.5）
+- 使用 Skill 工具调用 /doc-smith-images 生成图片（步骤 5.5），必须传入 --backend {IMAGE_BACKEND}
 - 使用 Skill 工具调用 /doc-smith-check 校验文档（步骤 7）
 
 完成检查清单（必须在写入状态文件前逐项确认）：
@@ -215,14 +232,14 @@ node skills/doc-smith-build/scripts/build.mjs \
 - `{MEDIA_FILES}`：媒体资源扫描结果
 - `{INTENT_SUMMARY}`：user-intent.md 的 2-3 句话摘要
 - `{STATUS_FILE_PATH}`：`.aigne/doc-smith/cache/task-status/{slug}.status`
+- `{IMAGE_BACKEND}`：图片后端检测结果（`gemini-sdk`、`afs-cli` 或 `skip`）
 
 ### 批次执行流程
 
 #### 准备阶段
 
 分发第一个 Task 前：
-1. `mkdir -p .aigne/doc-smith/cache/task-status`
-2. `rm -f .aigne/doc-smith/cache/task-status/*.status`（清空旧状态）
+1. `rm -rf .aigne/doc-smith/cache/task-status && mkdir -p .aigne/doc-smith/cache/task-status`（重建目录，清空旧状态）
 
 #### 分发阶段
 
@@ -233,7 +250,7 @@ node skills/doc-smith-build/scripts/build.mjs \
 每 15 秒检查 `.status` 文件数量：
 
 ```bash
-ls .aigne/doc-smith/cache/task-status/*.status 2>/dev/null | wc -l
+find .aigne/doc-smith/cache/task-status -name '*.status' | wc -l
 ```
 
 - 文件数 = 当前批次文档数 → 该批次完成
@@ -243,7 +260,7 @@ ls .aigne/doc-smith/cache/task-status/*.status 2>/dev/null | wc -l
 #### 收集结果
 
 ```bash
-cat .aigne/doc-smith/cache/task-status/*.status
+find .aigne/doc-smith/cache/task-status -name '*.status' -exec cat {} +
 ```
 
 每个文件 1 行，所有文档摘要汇总后通常不超过 20 行。

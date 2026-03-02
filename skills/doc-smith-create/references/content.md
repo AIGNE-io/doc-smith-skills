@@ -23,6 +23,7 @@ skills:
 - **自定义要求**（可选）：如 "重点说明安全注意事项"
 - **mediaFiles**（可选）：主流程预扫描的媒体文件路径列表，提供后步骤 4.2 跳过重复扫描
 - **状态文件路径**（可选）：如 `.aigne/doc-smith/cache/task-status/api-overview.status`。主流程提供时，完成后必须写入 1 行摘要到此文件
+- **图片后端**（可选）：`gemini-sdk`、`afs-cli` 或 `skip`。由主流程预检测后传入，调用 `/doc-smith-images` 时透传为 `--backend` 参数
 
 ## 输出
 
@@ -220,8 +221,10 @@ Glob: **/*.{png,jpg,jpeg,gif,svg,mp4,webp}
    ```
    /doc-smith-images "{alt 文本}" \
      --savePath .aigne/doc-smith/assets/{key}/images/{locale}.png \
-     --ratio 4:3
+     --ratio 4:3 \
+     --backend {图片后端}
    ```
+   其中 `{图片后端}` 为主流程传入的图片后端参数。若为 `skip`，跳过所有图片生成。
 
 4. **失败处理**：
    - 跳过失败的图片，继续处理下一个

@@ -134,28 +134,48 @@ Document Content:
 Task: Based on the description "{desc}" and the document content above, determine the appropriate diagram type and create a professional diagram that clearly illustrates the concepts, flow, or architecture described.
 ```
 
-### 图片编辑模式（TODO: AFS CLI 暂不支持）
+### 图片编辑模式
+
+编辑模式**不使用上方的系统提示词**。过长的生成性指令会导致模型重新生成而非编辑。
+
+编辑模式提供两个模板，根据场景选用：
+
+#### 翻译专用模板
+
+当编辑目的是翻译图片中的文字时使用。调用方需先识别原图中的文字，构建映射表。
 
 ```
-Your task is to update an existing diagram based on the current document content and user feedback.
+CRITICAL: You are EDITING an existing image, NOT creating a new one.
+The provided image is your base. Keep ALL visual elements (layout, colors, icons, arrows, positions, sizes) exactly as they are.
+ONLY replace the text labels as specified below.
 
-CRITICAL INSTRUCTIONS:
-1. Use the existing image as the primary reference - maintain its overall structure, layout, and visual style
-2. Analyze the document content to understand what changes are needed
-3. Apply user feedback - follow the user's specific modification requests while maintaining visual consistency
-4. Maintain visual consistency - keep the same style, color scheme, and general layout (unless feedback requests otherwise)
-5. Make necessary updates - update content, add/remove elements, adjust relationships based on the document and feedback
-6. Preserve what works - keep elements that are still accurate and relevant
+Translate the following text labels in the image:
+{translationMapping}
 
-Task Parameters:
-- Description: {desc}
-- Visual Style: modern (maintain consistency with existing image)
-- Aspect Ratio: {aspectRatio}
-- Language: {locale}
+Do NOT change anything else — no layout changes, no color changes, no repositioning, no adding or removing elements.
+Return the edited image.
+```
 
-User Feedback:
-{feedback}
+`{translationMapping}` 示例：
 
-Document Content:
-{documentContent}
+```
+- "用户认证" → "User Auth"
+- "数据处理" → "Data Processing"
+- "API 网关" → "API Gateway"
+```
+
+#### 通用编辑模板
+
+当编辑目的是修改元素、调整样式等非翻译场景时使用。
+
+```
+CRITICAL: You are EDITING an existing image, NOT creating a new one.
+The provided image is your base. Keep ALL visual elements (layout, colors, icons, arrows, positions, sizes) exactly as they are.
+ONLY modify what is explicitly requested below.
+
+Modification request:
+{desc}
+
+Important: Make minimal changes. Everything not mentioned above must remain exactly as in the original image.
+Return the edited image.
 ```

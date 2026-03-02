@@ -65,6 +65,7 @@ description: Translate Doc-Smith generated documentation into multiple languages
 - 未指定 `--skip-images` 时，扫描 assets 中的图片资源
 - 跳过条件（满足任一）：`generation.shared: true`、目标语言已存在、源语言图片不存在
 - 使用 `/doc-smith-images --update` 翻译图片文字
+- 翻译后将图片同步到 `dist/assets/{key}/images/` 发布目录
 - 翻译后更新图片 .meta.yaml 的 languages 和 translations
 
 ### 6. Config 更新约束
@@ -147,8 +148,7 @@ dist/{source}/docs/{path}.html → dist/{target}/docs/{path}.html
 #### 准备阶段
 
 分发第一个 Task 前：
-1. `mkdir -p .aigne/doc-smith/cache/task-status`
-2. `rm -f .aigne/doc-smith/cache/task-status/*.status`（清空旧状态）
+1. `rm -rf .aigne/doc-smith/cache/task-status && mkdir -p .aigne/doc-smith/cache/task-status`（重建目录，清空旧状态）
 
 #### 分发阶段
 
@@ -159,7 +159,7 @@ dist/{source}/docs/{path}.html → dist/{target}/docs/{path}.html
 每 15 秒检查 `.status` 文件数量：
 
 ```bash
-ls .aigne/doc-smith/cache/task-status/*.status 2>/dev/null | wc -l
+find .aigne/doc-smith/cache/task-status -name '*.status' | wc -l
 ```
 
 - 文件数 = 当前批次任务数 → 该批次完成
@@ -169,7 +169,7 @@ ls .aigne/doc-smith/cache/task-status/*.status 2>/dev/null | wc -l
 #### 收集结果
 
 ```bash
-cat .aigne/doc-smith/cache/task-status/*.status
+find .aigne/doc-smith/cache/task-status -name '*.status' -exec cat {} +
 ```
 
 每个文件 1 行，所有翻译摘要汇总后通常不超过 20 行。
@@ -179,13 +179,32 @@ cat .aigne/doc-smith/cache/task-status/*.status
 - `.status` 内容以"失败"开头 → 记录失败原因，不阻塞后续批次
 - 超时未产生 `.status` → 标记为超时，在最终报告中提示用户重试
 
+### 图片后端预检测
+
+**在翻译图片之前**，主 agent 执行一次图片后端检测。检测逻辑与 `doc-smith-images` 的「后端检测」部分相同：
+1. 检查 `GEMINI_API_KEY` 是否已设置 → 选定 `gemini-sdk`
+2. 否则检查 AFS CLI 是否可用 → 选定 `afs-cli`
+3. 均不可用 → **必须使用 AskUserQuestion 让用户选择**（配置 API Key / 安装 AFS CLI / 跳过图片翻译），禁止自动默认为 skip
+
+检测结果记为 `{IMAGE_BACKEND}`，后续所有图片翻译调用统一使用 `--backend {IMAGE_BACKEND}`。只有用户明确选择跳过时才可设为 `skip`。
+
 ### 翻译图片
 
 ```bash
 /doc-smith-images "将图片中的文字从 {source} 翻译成 {target}，保持布局和风格不变" \
   --update .aigne/doc-smith/assets/{key}/images/{source}.png \
   --savePath .aigne/doc-smith/assets/{key}/images/{target}.png \
-  --locale {target}
+  --locale {target} \
+  --backend {IMAGE_BACKEND}
+```
+
+### 同步图片到 dist
+
+翻译后的图片保存在 assets 源目录，需同步到 dist 发布目录：
+
+```bash
+cp .aigne/doc-smith/assets/{key}/images/{target}.png \
+   .aigne/doc-smith/dist/assets/{key}/images/{target}.png
 ```
 
 ### 更新图片引用
