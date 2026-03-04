@@ -10,6 +10,9 @@ export const DOCSMITH_HUB_URL_DEFAULT = "https://docsmith.aigne.io";
 // Hub blocklet DID (shared infrastructure with the vibe platform)
 export const HUB_BLOCKLET_DID = "z2qa3cy63otaA2A7zHADRichVkSGVyevtYhYQ";
 
+// DocSmith Web blocklet DID (for cache purge after publish)
+export const DOCSMITH_WEB_DID = "z2qa995K82paxKr136UcmB7TVoXSi4BULdLfK";
+
 // API endpoints
 export const API_PATHS = {
   // Upload file (HTML or ZIP)
@@ -24,6 +27,8 @@ export const API_PATHS = {
   VIBE_ACTION: (did) => `/api/vibes/${did}/action`,
   // Get vibe info
   VIBE_INFO: (did) => `/api/vibes/${did}`,
+  // Purge showcase cache
+  SHOWCASE_CACHE_PURGE: "/api/showcase",
 };
 
 // Well-known service path for authorization

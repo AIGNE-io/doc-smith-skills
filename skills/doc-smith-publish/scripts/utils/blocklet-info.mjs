@@ -1,6 +1,6 @@
 import { joinURL } from "ufo";
 
-import { HUB_BLOCKLET_DID } from "./constants.mjs";
+import { HUB_BLOCKLET_DID, DOCSMITH_WEB_DID } from "./constants.mjs";
 
 // Cache for resolved base URLs
 const apiBaseUrlCache = new Map();
@@ -48,6 +48,33 @@ async function getBlockletMountPoint(hubUrl, did) {
  * @param {string} hubUrl - The DocSmith hub URL
  * @returns {Promise<string>} The API base URL (origin + mount path)
  */
+/**
+ * Get the base URL for DocSmith Web blocklet.
+ * @param {string} hubUrl - The DocSmith hub URL
+ * @returns {Promise<string|null>} The base URL or null if not found
+ */
+export async function getDocsmithWebBaseUrl(hubUrl) {
+  const cacheKey = `docsmith-web:${hubUrl}`;
+  if (apiBaseUrlCache.has(cacheKey)) {
+    return apiBaseUrlCache.get(cacheKey);
+  }
+
+  const { origin } = new URL(hubUrl);
+
+  try {
+    const mountPoint = await getBlockletMountPoint(hubUrl, DOCSMITH_WEB_DID);
+    if (mountPoint) {
+      const baseUrl = joinURL(origin, mountPoint);
+      apiBaseUrlCache.set(cacheKey, baseUrl);
+      return baseUrl;
+    }
+  } catch {
+    // Ignore
+  }
+
+  return null;
+}
+
 export async function getApiBaseUrl(hubUrl) {
   if (apiBaseUrlCache.has(hubUrl)) {
     return apiBaseUrlCache.get(hubUrl);

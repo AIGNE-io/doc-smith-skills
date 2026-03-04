@@ -10,8 +10,8 @@ import yaml from "js-yaml";
 
 import { DOCSMITH_HUB_URL_DEFAULT, API_PATHS, isMainModule } from "./utils/constants.mjs";
 import { getAccessToken } from "./utils/auth.mjs";
-import { getApiBaseUrl } from "./utils/blocklet-info.mjs";
-import { apiPatch, subscribeToSSE, pollConversionStatus } from "./utils/http.mjs";
+import { getApiBaseUrl, getDocsmithWebBaseUrl } from "./utils/blocklet-info.mjs";
+import { apiPost, apiPatch, subscribeToSSE, pollConversionStatus } from "./utils/http.mjs";
 import { zipDirectory } from "./utils/zip.mjs";
 import { uploadFile } from "./utils/upload.mjs";
 import { getPublishHistory, savePublishHistory } from "./utils/history.mjs";
@@ -236,6 +236,19 @@ async function publish(options) {
         await savePublishHistory(sourcePath, hub, did, title || "", workspace);
       } catch (e) {
         // Ignore history save errors
+      }
+
+      // Purge showcase cache on hub
+      try {
+        const webBaseUrl = await getDocsmithWebBaseUrl(hub);
+        if (webBaseUrl) {
+          const purgeUrl = joinURL(webBaseUrl, API_PATHS.SHOWCASE_CACHE_PURGE);
+          await apiPost(purgeUrl, {}, accessToken, hub);
+          console.log(chalk.gray("Showcase cache purged."));
+        }
+      } catch (e) {
+        // Non-fatal: log and continue
+        console.log(chalk.gray(`Cache purge skipped: ${e.message}`));
       }
 
       return {
