@@ -13,11 +13,7 @@
  * - data-ds="footer"  - Page footer
  */
 
-/* ============================================
-   Google Fonts - Refined Typography
-   ============================================ */
-
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Google Fonts: moved to HTML <head> <link> tags for parallel loading */
 
 /* ============================================
    CSS Variables - Design Tokens
@@ -639,9 +635,45 @@ body {
   border-top: 1px solid var(--color-border-light);
   background: var(--color-bg-secondary);
   text-align: center;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--color-text-muted);
   transition: background-color var(--transition-base), border-color var(--transition-base);
+}
+
+.docsmith-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  transition: color 0.2s ease, background-color 0.2s ease;
+  letter-spacing: 0.01em;
+}
+
+.docsmith-badge:hover {
+  color: var(--color-primary-600);
+  background-color: var(--color-primary-50);
+}
+
+[data-theme="dark"] .docsmith-badge:hover {
+  color: var(--color-primary-400);
+}
+
+.docsmith-badge strong {
+  font-weight: 600;
+}
+
+.docsmith-badge-icon {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.docsmith-badge:hover .docsmith-badge-icon {
+  opacity: 1;
+  transform: translateY(-1px);
 }
 
 /* ============================================
