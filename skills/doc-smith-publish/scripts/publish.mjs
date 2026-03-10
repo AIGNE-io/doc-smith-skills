@@ -17,10 +17,12 @@ import { uploadFile } from "./utils/upload.mjs";
 import { getPublishHistory, savePublishHistory } from "./utils/history.mjs";
 
 /**
- * Get GitHub repository URL from git remote
+ * Get GitHub repository URL from git remote, with config.yaml fallback
+ * @param {string} [workspace] - Workspace directory path for config.yaml fallback
  * @returns {string} GitHub repository URL or empty string
  */
-function getGithubRepoUrl() {
+function getGithubRepoUrl(workspace) {
+  // Try git remote first
   try {
     const gitRemote = execSync("git remote get-url origin", {
       encoding: "utf8",
@@ -30,10 +32,29 @@ function getGithubRepoUrl() {
     if (gitRemote.includes("github.com")) {
       return gitRemote;
     }
-    return "";
   } catch {
-    return "";
+    // git remote failed, try config.yaml fallback
   }
+
+  // Fallback: read from config.yaml sources[].url
+  if (workspace) {
+    try {
+      const configPath = join(workspace, "config.yaml");
+      if (existsSync(configPath)) {
+        const config = yaml.load(readFileSync(configPath, "utf-8")) || {};
+        const sources = config.sources || [];
+        for (const source of sources) {
+          if (source.url && source.url.includes("github.com")) {
+            return source.url;
+          }
+        }
+      }
+    } catch {
+      // Ignore config read errors
+    }
+  }
+
+  return "";
 }
 
 /**
@@ -164,7 +185,7 @@ async function publish(options) {
     let coverImage = coverImageOverride || "";
 
     if (!githubRepo) {
-      githubRepo = getGithubRepoUrl();
+      githubRepo = getGithubRepoUrl(workspace);
     }
 
     if (githubRepo && !coverImage) {
