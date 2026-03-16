@@ -100,6 +100,16 @@ Or simply tell your AI coding agent:
 
 </details>
 
+## Use with OpenClaw
+
+Publish your documentation via OpenClaw:
+
+1. Visit [DocSmith OpenClaw page](https://docsmith.aigne.io/openclaw)
+2. Sign in and click "Generate Publish Prompt"
+3. Copy the prompt and paste it into OpenClaw
+
+The prompt includes skill installation, credential setup, and publish instructions — OpenClaw handles the rest. The credential is saved automatically and persists across sessions.
+
 ## Quick Start
 
 **Step 1** — Generate documentation:
