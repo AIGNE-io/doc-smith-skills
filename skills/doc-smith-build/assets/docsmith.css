@@ -845,6 +845,21 @@ body {
   line-height: 1.7;
 }
 
+/* Override highlight.js background to use DocSmith theme */
+[data-ds="content"] pre code.hljs {
+  background: transparent;
+  padding: 0;
+}
+
+/* Subtle fade-in when highlighting completes */
+[data-ds="content"] pre code:not(.hljs) {
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+[data-ds="content"] pre code.hljs {
+  opacity: 1;
+}
+
 /* ============================================
    Tables
    ============================================ */

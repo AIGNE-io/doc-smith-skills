@@ -673,6 +673,9 @@ function renderTemplate(options) {
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="${assetPath}/docsmith.css">
   <link rel="stylesheet" href="${assetPath}/theme.css">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js" defer></script>
   <script src="${assetPath}/nav.js" defer></script>
   <script>
     // Initialize theme from localStorage or system preference
@@ -719,6 +722,9 @@ function renderTemplate(options) {
     </a>
   </footer>
 
+  <script>document.addEventListener('DOMContentLoaded', function() {
+    if (typeof hljs !== 'undefined') hljs.highlightAll();
+  });</script>
 </body>
 </html>`;
 }
