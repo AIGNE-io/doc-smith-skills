@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FAIGNE-io%2Fdoc-smith-skills%2Fmain%2F.claude-plugin%2Fmarketplace.json&query=%24.metadata.version&label=version&style=for-the-badge&color=blue" alt="Version">
   <img src="https://img.shields.io/badge/Agent_Skill-blueviolet?style=for-the-badge" alt="Agent Skill">
   <img src="https://img.shields.io/badge/MCP-Compatible-blue?style=for-the-badge" alt="MCP Compatible">
-  <img src="https://img.shields.io/badge/license-Elastic--2.0-green?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/license-Apache--2.0-green?style=for-the-badge" alt="License">
   <a href="https://github.com/AIGNE-io/doc-smith-skills/stargazers">
     <img src="https://img.shields.io/github/stars/AIGNE-io/doc-smith-skills?style=for-the-badge" alt="GitHub Stars">
   </a>
@@ -315,4 +315,4 @@ GitHub: [@ArcBlock](https://github.com/ArcBlock)
 
 ## License
 
-[Elastic-2.0](./LICENSE)
+[Apache-2.0](./LICENSE)
